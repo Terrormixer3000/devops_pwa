@@ -1,6 +1,10 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
 import { AppSettings, AzureListResponse } from "@/types";
 
+type DemoAxiosInstance = AxiosInstance & {
+  __demoMode?: true;
+};
+
 // Benutzerdefinierter Fehlertyp fuer API-Fehler
 export class ApiError extends Error {
   constructor(
@@ -15,6 +19,15 @@ export class ApiError extends Error {
 
 // Erstellt einen Axios-Client fuer die Azure DevOps Standard-API
 export function createAzureClient(settings: AppSettings): AxiosInstance {
+  // Im Demo-Modus reicht ein markierter Client, damit die Services auf Mock-Daten umschalten.
+  if (settings.demoMode) {
+    const client = axios.create({
+      baseURL: "https://demo.dev.azure.local",
+    }) as DemoAxiosInstance;
+    client.__demoMode = true;
+    return client;
+  }
+
   // PAT Base64-kodieren (kein Benutzername, nur Token)
   const token = btoa(`:${settings.pat}`);
   const client = axios.create({
@@ -43,6 +56,15 @@ export function createAzureClient(settings: AppSettings): AxiosInstance {
 
 // Erstellt einen Axios-Client fuer die Azure DevOps Release-API (anderer Host!)
 export function createVsrmClient(settings: AppSettings): AxiosInstance {
+  // Release-Services pruefen nur die Demo-Markierung und rufen dann keine echte API auf.
+  if (settings.demoMode) {
+    const client = axios.create({
+      baseURL: "https://demo.vsrm.azure.local",
+    }) as DemoAxiosInstance;
+    client.__demoMode = true;
+    return client;
+  }
+
   const token = btoa(`:${settings.pat}`);
   return axios.create({
     baseURL: `https://vsrm.dev.azure.com/${settings.organization}`,
@@ -51,6 +73,10 @@ export function createVsrmClient(settings: AppSettings): AxiosInstance {
       "Content-Type": "application/json",
     },
   });
+}
+
+export function isDemoClient(client: AxiosInstance | null | undefined): boolean {
+  return !!(client as DemoAxiosInstance | null | undefined)?.__demoMode;
 }
 
 export type { AzureListResponse };
