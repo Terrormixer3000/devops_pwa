@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { AppBar } from "@/components/layout/AppBar";
@@ -32,20 +32,13 @@ export default function NewPRPage() {
 
   // Branches laden
   const { data: branches } = useQuery({
-    queryKey: ["branches", repo?.id],
+    queryKey: ["branches", repo?.id, settings?.project, settings?.demoMode],
     queryFn: () => client && settings && repo
       ? repositoriesService.getBranches(client, settings.project, repo.id)
       : Promise.resolve([]),
     enabled: !!client && !!settings && !!repo,
   });
-
-  // Standard-Zielbranch setzen
-  useEffect(() => {
-    if (repo?.defaultBranch && !form.targetRefName) {
-      const branch = repo.defaultBranch.replace("refs/heads/", "");
-      setForm((f) => ({ ...f, targetRefName: branch }));
-    }
-  }, [repo, form.targetRefName]);
+  const defaultTargetBranch = repo?.defaultBranch?.replace("refs/heads/", "") || "";
 
   // PR erstellen
   const createMutation = useMutation({
@@ -55,7 +48,7 @@ export default function NewPRPage() {
         title: form.title,
         description: form.description,
         sourceRefName: `refs/heads/${form.sourceRefName}`,
-        targetRefName: `refs/heads/${form.targetRefName}`,
+        targetRefName: `refs/heads/${form.targetRefName || defaultTargetBranch}`,
         isDraft: form.isDraft,
       });
     },
@@ -64,7 +57,7 @@ export default function NewPRPage() {
     },
   });
 
-  const isValid = form.title && form.sourceRefName && form.targetRefName;
+  const isValid = form.title && form.sourceRefName && (form.targetRefName || defaultTargetBranch);
 
   return (
     <div className="min-h-screen">
@@ -114,7 +107,7 @@ export default function NewPRPage() {
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-slate-300">In Branch *</label>
           <select
-            value={form.targetRefName}
+            value={form.targetRefName || defaultTargetBranch}
             onChange={(e) => setForm((f) => ({ ...f, targetRefName: e.target.value }))}
             className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-blue-500 text-sm"
           >

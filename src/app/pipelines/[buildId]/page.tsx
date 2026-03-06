@@ -8,8 +8,6 @@ import { AppBar } from "@/components/layout/AppBar";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
-import { Modal } from "@/components/ui/Modal";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { useAzureClient } from "@/lib/hooks/useAzureClient";
 import { pipelinesService } from "@/lib/services/pipelinesService";
@@ -30,7 +28,7 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
 
   // Build-Details laden
   const { data: build, isLoading, error } = useQuery({
-    queryKey: ["build", buildIdNum],
+    queryKey: ["build", buildIdNum, settings?.project, settings?.demoMode],
     queryFn: () => client && settings
       ? pipelinesService.getBuild(client, settings.project, buildIdNum)
       : Promise.reject("Kein Client"),
@@ -40,7 +38,7 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
 
   // Timeline laden
   const { data: timeline } = useQuery({
-    queryKey: ["build-timeline", buildIdNum],
+    queryKey: ["build-timeline", buildIdNum, settings?.project, settings?.demoMode],
     queryFn: () => client && settings
       ? pipelinesService.getBuildTimeline(client, settings.project, buildIdNum)
       : Promise.resolve({ records: [] }),
@@ -50,7 +48,7 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
 
   // Artefakte laden
   const { data: artifacts } = useQuery({
-    queryKey: ["build-artifacts", buildIdNum],
+    queryKey: ["build-artifacts", buildIdNum, settings?.project, settings?.demoMode],
     queryFn: () => client && settings
       ? pipelinesService.getArtifacts(client, settings.project, buildIdNum)
       : Promise.resolve([]),
@@ -59,7 +57,7 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
 
   // Log laden
   const { data: logContent, isLoading: logLoading } = useQuery({
-    queryKey: ["build-log", buildIdNum, selectedLog?.logId],
+    queryKey: ["build-log", buildIdNum, selectedLog?.logId, settings?.project, settings?.demoMode],
     queryFn: () => client && settings && selectedLog
       ? pipelinesService.getBuildLog(client, settings.project, buildIdNum, selectedLog.logId)
       : Promise.resolve(""),
@@ -141,7 +139,7 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
                 <TimelineItem
                   key={record.id}
                   record={record}
-                  children={timeline?.records.filter((r) => r.parentId === record.id) || []}
+                  childRecords={timeline?.records.filter((r) => r.parentId === record.id) || []}
                 />
               ))
             )}
@@ -216,11 +214,11 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
 }
 
 // Timeline-Eintrag mit Unterpunkten
-function TimelineItem({ record, children }: { record: TimelineRecord; children: TimelineRecord[] }) {
+function TimelineItem({ record, childRecords }: { record: TimelineRecord; childRecords: TimelineRecord[] }) {
   const [expanded, setExpanded] = useState(record.state !== "completed" || record.result === "failed");
 
   const icon = getRecordIcon(record);
-  const taskChildren = children.filter((c) => c.type === "Task").sort((a, b) => (a.order || 0) - (b.order || 0));
+  const taskChildren = childRecords.filter((c) => c.type === "Task").sort((a, b) => (a.order || 0) - (b.order || 0));
 
   return (
     <div>

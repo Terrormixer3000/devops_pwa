@@ -24,7 +24,7 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
 
   // Release-Details laden
   const { data: release, isLoading, error } = useQuery({
-    queryKey: ["release", releaseIdNum],
+    queryKey: ["release", releaseIdNum, settings?.project, settings?.demoMode],
     queryFn: () => vsrmClient && settings
       ? releasesService.getRelease(vsrmClient, settings.project, releaseIdNum)
       : Promise.reject("Kein Client"),

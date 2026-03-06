@@ -31,12 +31,19 @@ function AppInit() {
 
   useEffect(() => {
     // Repositories laden wenn Einstellungen vorhanden
-    if (!isConfigured || !settings) return;
+    if (!isConfigured || !settings) {
+      setRepositories([]);
+      return;
+    }
+    // Der gleiche Initialisierungspfad funktioniert fuer Live- und Demo-Modus.
     const client = createAzureClient(settings);
     repositoriesService
       .listRepositories(client, settings.project)
       .then((repos) => setRepositories(repos))
-      .catch(console.error);
+      .catch((error) => {
+        console.error(error);
+        setRepositories([]);
+      });
   }, [isConfigured, settings, setRepositories]);
 
   return null;
