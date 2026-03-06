@@ -1,26 +1,118 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Azure DevOps Fluent UI Farbpalette (Dark Mode) */
+@theme {
+  /* Hintergrund-Ebenen: warme Dunkelgrautöne wie in Azure DevOps */
+  --color-slate-950: #0f0e0d;
+  --color-slate-900: #1b1a19;
+  --color-slate-800: #252423;
+  --color-slate-700: #323130;
+  --color-slate-600: #484644;
+  --color-slate-500: #605e5c;
+  --color-slate-400: #797775;
+  --color-slate-300: #a19f9d;
+  --color-slate-200: #c8c6c4;
+  --color-slate-100: #f3f2f1;
+  --color-slate-50:  #faf9f8;
+
+  /* Azure-Blau als Primärfarbe */
+  --color-blue-700: #005a9e;
+  --color-blue-600: #0078d4;
+  --color-blue-500: #106ebe;
+  --color-blue-400: #2b88d8;
+  --color-blue-300: #71afe5;
+  --color-blue-200: #c7e0f4;
+  --color-blue-100: #deecf9;
+  --color-blue-50:  #eff6fc;
+
+  /* Status-Farben: Fluent UI Semantik */
+  --color-green-600: #0b6a0b;
+  --color-green-500: #107c10;
+  --color-green-400: #57a300;
+  --color-green-300: #7fba00;
+
+  --color-red-700:  #a4262c;
+  --color-red-600:  #c4314b;
+  --color-red-500:  #d13438;
+  --color-red-400:  #e81123;
+  --color-red-300:  #ea4a50;
+
+  --color-yellow-600: #c19c00;
+  --color-yellow-500: #d29200;
+  --color-yellow-400: #ffb900;
+  --color-yellow-300: #ffd70f;
+
+  --color-purple-700: #5c2d91;
+  --color-purple-600: #6b3fa0;
+  --color-purple-500: #8764b8;
+  --color-purple-400: #a77ac1;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Sichere Bereiche fuer iPhone Notch/Home-Indicator */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Sanfte Animation fuer Bottom-Sheets */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
   }
 }
 
+.animate-slide-up {
+  animation: slide-up 0.25s ease-out;
+}
+
+/* Scrollbar ausblenden auf mobilen Geraeten */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Diff-Farben fuer Code-Unterschiede */
+.diff-add {
+  background-color: rgba(34, 197, 94, 0.12);
+}
+.diff-delete {
+  background-color: rgba(239, 68, 68, 0.12);
+}
+.diff-add-line-num {
+  background-color: rgba(34, 197, 94, 0.2);
+  color: rgba(34, 197, 94, 0.8);
+}
+.diff-delete-line-num {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: rgba(239, 68, 68, 0.8);
+}
+
+/* Sticky Subnav direkt unterhalb der AppBar (AppBar-Hoehe + Safe-Area-Inset) */
+.sticky-below-appbar {
+  position: sticky;
+  top: calc(3.5rem + env(safe-area-inset-top));
+  z-index: 30;
+}
+
+/* Globale Basis-Stile */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* Azure DevOps Basis-Hintergrund */
+  background-color: #1b1a19;
+  color: #f3f2f1;
+  overscroll-behavior: none;
 }
