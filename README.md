@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Azure DevOps Mobile Client
 
-## Getting Started
+Mobile-first Progressive Web App (PWA) als Azure DevOps Client für iPhone.
 
-First, run the development server:
+## Funktionen
+
+- **Pull Requests** – Liste, Details, Kommentare, Approval, Complete, Erstellen
+- **Code Explorer** – Branches, Commits, Dateistruktur, Dateiinhalt
+- **Pipelines** – Build-Liste, Details, Timeline, Logs, Artefakte, starten/abbrechen
+- **Release-Pipelines** – Liste, starten, Approvals erteilen/ablehnen
+- **Repository-Auswahl** – Favoriten, Mehrfachauswahl, persistente Auswahl
+- **Dashboard** – Schnellzugriff und Übersicht
+
+## Starten
+
+### Voraussetzungen
+- Node.js >= 18
+- npm
+
+### Installation
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+App öffnen unter: `http://localhost:3000`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Produktions-Build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## Einrichtung
 
-To learn more about Next.js, take a look at the following resources:
+1. App öffnen → automatisch zu `/settings` weitergeleitet (wenn nicht konfiguriert)
+2. **Organisation** eingeben (z.B. `meine-firma` aus `dev.azure.com/meine-firma`)
+3. **Standardprojekt** eingeben
+4. **Personal Access Token (PAT)** eingeben
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### PAT-Berechtigungen
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Der PAT benötigt mindestens:
+- Code: Read
+- Pull Request Threads: Read & Write
+- Build: Read & Execute
+- Release: Read, Write & Execute
 
-## Deploy on Vercel
+## Als PWA installieren (iPhone)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Safari öffnen → URL der App eingeben
+2. Teilen-Symbol → "Zum Home-Bildschirm"
+3. App erscheint als Icon auf dem Home-Bildschirm
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Technologiestack
+
+| Bereich | Technologie |
+|---------|-------------|
+| Framework | Next.js 15 (App Router) |
+| Sprache | TypeScript |
+| Styling | Tailwind CSS v4 |
+| State | Zustand |
+| Datenfetching | TanStack React Query |
+| HTTP | Axios |
+| Icons | Lucide React |
+| PWA | next-pwa (Workbox) |
+| API | Azure DevOps REST API v7.1 |
+
+## Projektstruktur
+
+```
+src/
+├── app/              # Seiten (Next.js App Router)
+├── components/       # UI-Komponenten und Layout
+├── lib/
+│   ├── api/          # Axios-Client Factory
+│   ├── hooks/        # React Hooks
+│   ├── services/     # API-Serviceschicht
+│   └── stores/       # Zustand Stores
+└── types/            # TypeScript Typen
+agent-memory/         # Persistente Wissensbasis fuer Agenten
+```
+
+## Agent Memory System
+
+Das Verzeichnis `agent-memory/` enthält Markdown-Dateien mit persistentem Kontext für Claude Code und OpenAI Codex:
+
+- `project-overview.md` – Projektziel und Technologien
+- `architecture.md` – Projektstruktur und Module
+- `api-integration.md` – Azure DevOps REST API Dokumentation
+- `repository-context-system.md` – Repo-Auswahl und Favoriten
+- `progress.md` – Implementierungsfortschritt
+- `decisions.md` – Architekturentscheidungen
+- `current-focus.md` – Aktueller Entwicklungsfokus
+
+## Datenschutz
+
+PAT und Einstellungen werden ausschliesslich lokal im Browser (`localStorage`) gespeichert. Es findet keine Übertragung an externe Server statt.
