@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+:root {
+  /* Gemeinsame Hoehen fuer AppBar und Bottom Navigation */
+  --app-bar-height: 3.5rem;
+  --bottom-nav-content-height: 3.6rem;
+  /* iOS liefert in PWAs oft einen sehr grossen Bottom-Inset. Wir reduzieren ihn nur leicht, damit die Nav luftiger bleibt. */
+  --bottom-nav-safe-area: max(0px, calc(env(safe-area-inset-bottom) - 0.35rem));
+  --bottom-nav-height: calc(var(--bottom-nav-content-height) + var(--bottom-nav-safe-area));
+}
+
 /* Azure DevOps Fluent UI Farbpalette (Dark Mode) */
 @theme {
   /* Hintergrund-Ebenen: warme Dunkelgrautöne wie in Azure DevOps */
@@ -57,6 +66,10 @@
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+.bottom-nav-safe-area {
+  padding-bottom: var(--bottom-nav-safe-area);
+}
+
 /* Sanfte Animation fuer Bottom-Sheets */
 @keyframes slide-up {
   from {
@@ -101,7 +114,7 @@
 /* Sticky Subnav direkt unterhalb der AppBar (AppBar-Hoehe + Safe-Area-Inset) */
 .sticky-below-appbar {
   position: sticky;
-  top: calc(3.5rem + env(safe-area-inset-top));
+  top: calc(var(--app-bar-height) + env(safe-area-inset-top));
   z-index: 30;
 }
 

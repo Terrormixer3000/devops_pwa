@@ -30,7 +30,15 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
   favorites: [],
   showAllRepos: false,
 
-  setRepositories: (repos) => set({ repositories: repos }),
+  setRepositories: (repos) => {
+    const selected = get().selectedRepositories.filter((selectedRepo) =>
+      repos.some((repo) => repo.id === selectedRepo.id)
+    );
+    set({ repositories: repos, selectedRepositories: selected });
+    if (typeof window !== "undefined") {
+      localStorage.setItem(SELECTED_KEY, JSON.stringify(selected));
+    }
+  },
 
   selectRepository: (repo) => {
     set({ selectedRepositories: [repo] });

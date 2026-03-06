@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { AppBar } from "@/components/layout/AppBar";
@@ -37,7 +36,7 @@ export default function DashboardPage() {
 
   // Aktive Pull Requests laden – aggregiert aus allen Ziel-Repositories
   const { data: prs, isLoading: prsLoading } = useQuery({
-    queryKey: ["dashboard-prs", selectedRepoIds],
+    queryKey: ["dashboard-prs", selectedRepoIds, settings?.project, settings?.demoMode],
     queryFn: async () => {
       if (!client || !settings || targetRepos.length === 0) return [];
       const results = await Promise.allSettled(
@@ -55,7 +54,7 @@ export default function DashboardPage() {
 
   // Letzte Builds laden (global, kein Repo-Filter noetig)
   const { data: builds, isLoading: buildsLoading } = useQuery({
-    queryKey: ["dashboard-builds"],
+    queryKey: ["dashboard-builds", settings?.project, settings?.demoMode],
     queryFn: () =>
       client && settings
         ? pipelinesService.listBuilds(client, settings.project, undefined, 5)

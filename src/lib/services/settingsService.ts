@@ -2,6 +2,12 @@ import { AppSettings } from "@/types";
 
 // Schluessel fuer den localStorage-Eintrag
 const STORAGE_KEY = "azdevops_settings";
+const DEFAULT_SETTINGS: AppSettings = {
+  organization: "",
+  project: "",
+  pat: "",
+  demoMode: false,
+};
 
 export const settingsService = {
   // Einstellungen aus dem lokalen Speicher laden
@@ -10,7 +16,7 @@ export const settingsService = {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
-      return JSON.parse(raw) as AppSettings;
+      return { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<AppSettings>) };
     } catch {
       return null;
     }
@@ -28,6 +34,7 @@ export const settingsService = {
 
   // Prueft ob alle Pflichtfelder ausgefuellt sind
   isConfigured(settings: AppSettings | null): boolean {
+    if (settings?.demoMode) return true;
     return !!(settings?.organization && settings?.project && settings?.pat);
   },
 };

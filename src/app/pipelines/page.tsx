@@ -9,7 +9,6 @@ import { AppBar } from "@/components/layout/AppBar";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
@@ -17,7 +16,7 @@ import { useAzureClient } from "@/lib/hooks/useAzureClient";
 import { pipelinesService } from "@/lib/services/pipelinesService";
 import { usePipelineDefStore } from "@/lib/stores/selectionStore";
 import { PipelineSelector } from "@/components/layout/selectors/PipelineSelector";
-import { Build, Pipeline } from "@/types";
+import { Pipeline } from "@/types";
 import { PlayCircle, ChevronRight, Play, StopCircle } from "lucide-react";
 
 export default function PipelinesPage() {
@@ -36,7 +35,7 @@ export default function PipelinesPage() {
 
   // Pipeline-Definitionen laden (fuer Selektor + Definitionen-Tab)
   const { data: pipelines, isLoading: pipelinesLoading } = useQuery({
-    queryKey: ["pipelines"],
+    queryKey: ["pipelines", settings?.project, settings?.demoMode],
     queryFn: () => client && settings ? pipelinesService.listPipelines(client, settings.project) : Promise.resolve([]),
     enabled: !!client && !!settings,
   });
@@ -44,7 +43,7 @@ export default function PipelinesPage() {
   // Builds laden – gefiltert nach ausgewaehlten Pipeline-Definitionen
   const { data: builds, isLoading: buildsLoading, error: buildsError, refetch } = useQuery({
     // Query-Key enthaelt Definition-IDs damit React Query bei Aenderung neu laedt
-    queryKey: ["builds", selectedDefNumbers],
+    queryKey: ["builds", selectedDefNumbers, settings?.project, settings?.demoMode],
     queryFn: async () => {
       if (!client || !settings) return [];
       // Bei Auswahl: direkt mit definitionIds-Filter, sonst alle laden

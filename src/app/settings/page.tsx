@@ -7,6 +7,7 @@ import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { AppSettings } from "@/types";
 import { Eye, EyeOff, CheckCircle, Trash2, ExternalLink } from "lucide-react";
 import { createAzureClient } from "@/lib/api/client";
+import { demoSettings } from "@/lib/mocks/demoData";
 
 export default function SettingsPage() {
   const { settings, setSettings, clearSettings } = useSettingsStore();
@@ -16,6 +17,7 @@ export default function SettingsPage() {
     organization: "",
     project: "",
     pat: "",
+    demoMode: false,
   });
   const [showPat, setShowPat] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -37,12 +39,28 @@ export default function SettingsPage() {
     setSaved(false);
   };
 
+  // Der Demo-Modus fuellt sinnvolle Defaults vor und deaktiviert die echten Zugangsdaten.
+  const handleDemoToggle = () => {
+    setForm((prev) => ({
+      ...prev,
+      demoMode: !prev.demoMode,
+      organization: prev.demoMode ? prev.organization : prev.organization || demoSettings.organization,
+      project: prev.demoMode ? prev.project : prev.project || demoSettings.project,
+    }));
+    setTestResult(null);
+    setSaved(false);
+  };
+
   // Verbindungstest mit der Azure DevOps API
   const handleTest = async () => {
     setTesting(true);
     setTestResult(null);
     setTestError("");
     try {
+      if (form.demoMode) {
+        setTestResult("success");
+        return;
+      }
       const client = createAzureClient(form);
       await client.get(`/${form.project}/_apis/git/repositories?api-version=7.1&$top=1`);
       setTestResult("success");
@@ -56,7 +74,16 @@ export default function SettingsPage() {
 
   // Einstellungen speichern
   const handleSave = () => {
-    setSettings(form);
+    // Im Demo-Modus werden Organisation und Projekt immer auf die Demo-Werte normalisiert.
+    const normalized: AppSettings = form.demoMode
+      ? {
+          ...form,
+          organization: form.organization || demoSettings.organization,
+          project: form.project || demoSettings.project,
+        }
+      : form;
+    setSettings(normalized);
+    setForm(normalized);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -65,11 +92,11 @@ export default function SettingsPage() {
   const handleClear = () => {
     if (confirm("Alle Einstellungen loeschen?")) {
       clearSettings();
-      setForm({ organization: "", project: "", pat: "" });
+      setForm({ organization: "", project: "", pat: "", demoMode: false });
     }
   };
 
-  const isFormValid = form.organization && form.project && form.pat;
+  const isFormValid = form.demoMode || (form.organization && form.project && form.pat);
 
   return (
     <div className="min-h-screen">
@@ -82,6 +109,23 @@ export default function SettingsPage() {
             Azure DevOps Konfiguration
           </h2>
 
+          <div className="flex items-start justify-between gap-4 p-4 bg-slate-800/50 border border-slate-700 rounded-xl">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-slate-200">Demo Modus</p>
+              <p className="text-xs text-slate-500">
+                Aktiviert ein Mock-Projekt mit 30 Repositories, Pipelines, Releases, Branches, Commits und PR-Konversationen.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleDemoToggle}
+              className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${form.demoMode ? "bg-blue-600" : "bg-slate-700"}`}
+              aria-pressed={form.demoMode}
+            >
+              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${form.demoMode ? "translate-x-7" : "translate-x-1"}`} />
+            </button>
+          </div>
+
           {/* Organisation */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-slate-300">Organisation</label>
@@ -90,6 +134,7 @@ export default function SettingsPage() {
               value={form.organization}
               onChange={(e) => handleChange("organization", e.target.value)}
               placeholder="z.B. meine-firma"
+              disabled={form.demoMode}
               className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
             />
             <p className="text-xs text-slate-500">
@@ -105,6 +150,7 @@ export default function SettingsPage() {
               value={form.project}
               onChange={(e) => handleChange("project", e.target.value)}
               placeholder="z.B. mein-projekt"
+              disabled={form.demoMode}
               className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
             />
           </div>
@@ -118,6 +164,7 @@ export default function SettingsPage() {
                 value={form.pat}
                 onChange={(e) => handleChange("pat", e.target.value)}
                 placeholder="Token eingeben..."
+                disabled={form.demoMode}
                 className="w-full px-4 py-3 pr-12 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-mono"
               />
               {/* Token anzeigen/verbergen */}
@@ -130,27 +177,33 @@ export default function SettingsPage() {
               </button>
             </div>
             <p className="text-xs text-slate-500">
-              Benoetigt: Code (read), Pull Requests (read & write), Build (read & execute)
+              {form.demoMode
+                ? "Im Demo Modus werden keine echten Zugangsdaten benoetigt."
+                : "Benoetigt: Code (read), Pull Requests (read & write), Build (read & execute)"}
             </p>
           </div>
         </section>
 
         {/* PAT erstellen Link */}
-        <a
-          href="https://dev.azure.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300"
-        >
-          <ExternalLink size={14} />
-          PAT in Azure DevOps erstellen
-        </a>
+        {!form.demoMode && (
+          <a
+            href="https://dev.azure.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300"
+          >
+            <ExternalLink size={14} />
+            PAT in Azure DevOps erstellen
+          </a>
+        )}
 
         {/* Testergebnis anzeigen */}
         {testResult === "success" && (
           <div className="flex items-center gap-2 p-3 bg-green-900/30 border border-green-700/50 rounded-xl">
             <CheckCircle size={18} className="text-green-400" />
-            <p className="text-sm text-green-300">Verbindung erfolgreich!</p>
+            <p className="text-sm text-green-300">
+              {form.demoMode ? "Demo-Daten erfolgreich aktiviert!" : "Verbindung erfolgreich!"}
+            </p>
           </div>
         )}
         {testResult === "error" && (

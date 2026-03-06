@@ -17,7 +17,7 @@ import { useAzureClient } from "@/lib/hooks/useAzureClient";
 import { releasesService } from "@/lib/services/releasesService";
 import { useReleaseDefStore } from "@/lib/stores/selectionStore";
 import { ReleaseSelector } from "@/components/layout/selectors/ReleaseSelector";
-import { Release, ReleaseDefinition, ReleaseApproval, ReleaseEnvironment } from "@/types";
+import { ReleaseDefinition, ReleaseApproval, ReleaseEnvironment } from "@/types";
 import { Rocket, ChevronRight, Play, ThumbsUp, ThumbsDown, AlertCircle } from "lucide-react";
 
 type Tab = "releases" | "definitionen" | "approvals";
@@ -29,7 +29,7 @@ export default function ReleasesPage() {
   const [approvalComment, setApprovalComment] = useState("");
 
   const { settings } = useSettingsStore();
-  const { client: _client, vsrmClient } = useAzureClient();
+  const { vsrmClient } = useAzureClient();
   const qc = useQueryClient();
 
   // Ausgewaehlte Release-Definitionen aus dem Tab-spezifischen Store
@@ -37,7 +37,7 @@ export default function ReleasesPage() {
 
   // Release-Definitionen laden
   const { data: definitions, isLoading: defsLoading } = useQuery({
-    queryKey: ["release-definitions"],
+    queryKey: ["release-definitions", settings?.project, settings?.demoMode],
     queryFn: () => vsrmClient && settings
       ? releasesService.listDefinitions(vsrmClient, settings.project)
       : Promise.resolve([]),
@@ -46,7 +46,7 @@ export default function ReleasesPage() {
 
   // Releases laden
   const { data: releases, isLoading: releasesLoading, error: releasesError, refetch } = useQuery({
-    queryKey: ["releases"],
+    queryKey: ["releases", settings?.project, settings?.demoMode],
     queryFn: () => vsrmClient && settings
       ? releasesService.listReleases(vsrmClient, settings.project, undefined, 30)
       : Promise.resolve([]),
@@ -56,7 +56,7 @@ export default function ReleasesPage() {
 
   // Ausstehende Approvals laden
   const { data: approvals, isLoading: approvalsLoading } = useQuery({
-    queryKey: ["release-approvals"],
+    queryKey: ["release-approvals", settings?.project, settings?.demoMode],
     queryFn: () => vsrmClient && settings
       ? releasesService.getPendingApprovals(vsrmClient, settings.project)
       : Promise.resolve([]),

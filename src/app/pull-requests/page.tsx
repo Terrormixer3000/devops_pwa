@@ -42,7 +42,7 @@ export default function PullRequestsPage() {
 
   // PRs aus allen Ziel-Repositories laden und zusammenfuehren
   const { data: prsByRepo, isLoading, error, refetch } = useQuery({
-    queryKey: ["pull-requests", selectedRepoIds, status],
+    queryKey: ["pull-requests", selectedRepoIds, status, settings?.project, settings?.demoMode],
     queryFn: async () => {
       if (!client || !settings || targetRepos.length === 0) return [];
       const results = await Promise.allSettled(

@@ -44,7 +44,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
 
   // PR-Details laden
   const { data: pr, isLoading, error } = useQuery({
-    queryKey: ["pr", repoId, prIdNum],
+    queryKey: ["pr", repoId, prIdNum, settings?.project, settings?.demoMode],
     queryFn: () => client && settings
       ? pullRequestsService.getPullRequest(client, settings.project, repoId, prIdNum)
       : Promise.reject(new Error("Kein Client")),
@@ -53,7 +53,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
 
   // Kommentare / Threads laden
   const { data: threads } = useQuery({
-    queryKey: ["pr-threads", repoId, prIdNum],
+    queryKey: ["pr-threads", repoId, prIdNum, settings?.project, settings?.demoMode],
     queryFn: () => client && settings
       ? pullRequestsService.getThreads(client, settings.project, repoId, prIdNum)
       : Promise.resolve([]),
@@ -62,7 +62,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
 
   // Iterations laden (fuer Dateiliste)
   const { data: iterations } = useQuery({
-    queryKey: ["pr-iterations", repoId, prIdNum],
+    queryKey: ["pr-iterations", repoId, prIdNum, settings?.project, settings?.demoMode],
     queryFn: () => client && settings
       ? pullRequestsService.getIterations(client, settings.project, repoId, prIdNum)
       : Promise.resolve([]),
@@ -72,7 +72,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
   // Letzte Iteration: geaenderte Dateien
   const lastIterationId = iterations?.[iterations.length - 1]?.id;
   const { data: changes } = useQuery({
-    queryKey: ["pr-changes", repoId, prIdNum, lastIterationId],
+    queryKey: ["pr-changes", repoId, prIdNum, lastIterationId, settings?.project, settings?.demoMode],
     queryFn: () => client && settings && lastIterationId
       ? pullRequestsService.getIterationChanges(client, settings.project, repoId, prIdNum, lastIterationId)
       : Promise.resolve({ changeEntries: [] }),
@@ -109,7 +109,6 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
   const completeMutation = useMutation({
     mutationFn: () => {
       if (!client || !settings || !pr) throw new Error("Kein Client");
-      const commitId = pr.reviewers[0]?.id || "";
       return pullRequestsService.complete(
         client,
         settings.project,

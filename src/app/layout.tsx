@@ -38,8 +38,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={`${inter.variable} font-sans bg-slate-900 text-slate-100 antialiased`}>
         <Providers>
-          {/* Hauptinhalt: Abstand oben = AppBar (56px) + Safe-Area-Inset (Notch), unten = BottomNav + Safe-Area */}
-          <main className="min-h-screen" style={{ paddingTop: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.75rem + env(safe-area-inset-bottom))" }}>
+          {/* Hauptinhalt: oben AppBar + Notch, unten die tatsaechliche Bottom-Nav-Hoehe */}
+          <main className="min-h-screen" style={{ paddingTop: "calc(var(--app-bar-height) + env(safe-area-inset-top))", paddingBottom: "var(--bottom-nav-height)" }}>
             {children}
           </main>
           <BottomNav />
