@@ -3,6 +3,7 @@ export interface AppSettings {
   organization: string;
   project: string;
   pat: string;
+  demoMode: boolean;
 }
 
 // Repository

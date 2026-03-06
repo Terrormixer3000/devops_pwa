@@ -6,6 +6,8 @@ import {
   PRStatus,
   AzureListResponse,
 } from "@/types";
+import { isDemoClient } from "@/lib/api/client";
+import { demoApi } from "@/lib/mocks/demoData";
 
 export const pullRequestsService = {
   async listPullRequests(
@@ -15,6 +17,10 @@ export const pullRequestsService = {
     status: PRStatus = "active",
     top = 50
   ): Promise<PullRequest[]> {
+    if (isDemoClient(client)) {
+      return demoApi.pullRequests.listPullRequests(repoId, status, top);
+    }
+
     const res = await client.get<AzureListResponse<PullRequest>>(
       `/${project}/_apis/git/repositories/${repoId}/pullrequests?searchCriteria.status=${status}&$top=${top}&api-version=7.1`
     );
@@ -27,6 +33,10 @@ export const pullRequestsService = {
     repoId: string,
     prId: number
   ): Promise<PullRequest> {
+    if (isDemoClient(client)) {
+      return demoApi.pullRequests.getPullRequest(repoId, prId);
+    }
+
     const res = await client.get<PullRequest>(
       `/${project}/_apis/git/repositories/${repoId}/pullrequests/${prId}?api-version=7.1`
     );
@@ -39,6 +49,10 @@ export const pullRequestsService = {
     repoId: string,
     prId: number
   ): Promise<PRThread[]> {
+    if (isDemoClient(client)) {
+      return demoApi.pullRequests.getThreads(repoId, prId);
+    }
+
     const res = await client.get<AzureListResponse<PRThread>>(
       `/${project}/_apis/git/repositories/${repoId}/pullrequests/${prId}/threads?api-version=7.1`
     );
@@ -52,6 +66,10 @@ export const pullRequestsService = {
     prId: number,
     content: string
   ): Promise<PRThread> {
+    if (isDemoClient(client)) {
+      return demoApi.pullRequests.addComment(repoId, prId, content);
+    }
+
     const res = await client.post<PRThread>(
       `/${project}/_apis/git/repositories/${repoId}/pullrequests/${prId}/threads?api-version=7.1`,
       { comments: [{ content, commentType: 1 }], status: 1 }
@@ -67,6 +85,10 @@ export const pullRequestsService = {
     reviewerId: string,
     vote: number
   ): Promise<void> {
+    if (isDemoClient(client)) {
+      return demoApi.pullRequests.vote(repoId, prId, reviewerId, vote);
+    }
+
     await client.put(
       `/${project}/_apis/git/repositories/${repoId}/pullrequests/${prId}/reviewers/${reviewerId}?api-version=7.1`,
       { vote }
@@ -81,6 +103,10 @@ export const pullRequestsService = {
     lastMergeSourceCommitId: string,
     deleteSourceBranch = false
   ): Promise<PullRequest> {
+    if (isDemoClient(client)) {
+      return demoApi.pullRequests.complete(repoId, prId, lastMergeSourceCommitId, deleteSourceBranch);
+    }
+
     const res = await client.patch<PullRequest>(
       `/${project}/_apis/git/repositories/${repoId}/pullrequests/${prId}?api-version=7.1`,
       {
@@ -104,6 +130,10 @@ export const pullRequestsService = {
       isDraft?: boolean;
     }
   ): Promise<PullRequest> {
+    if (isDemoClient(client)) {
+      return demoApi.pullRequests.create(repoId, payload);
+    }
+
     const res = await client.post<PullRequest>(
       `/${project}/_apis/git/repositories/${repoId}/pullrequests?api-version=7.1`,
       payload
@@ -117,6 +147,10 @@ export const pullRequestsService = {
     repoId: string,
     prId: number
   ): Promise<PRIteration[]> {
+    if (isDemoClient(client)) {
+      return demoApi.pullRequests.getIterations(repoId, prId);
+    }
+
     const res = await client.get<AzureListResponse<PRIteration>>(
       `/${project}/_apis/git/repositories/${repoId}/pullrequests/${prId}/iterations?api-version=7.1`
     );
@@ -130,6 +164,10 @@ export const pullRequestsService = {
     prId: number,
     iterationId: number
   ): Promise<{ changeEntries: Array<{ item: { path: string }; changeType: string }> }> {
+    if (isDemoClient(client)) {
+      return demoApi.pullRequests.getIterationChanges(repoId, prId, iterationId);
+    }
+
     const res = await client.get(
       `/${project}/_apis/git/repositories/${repoId}/pullrequests/${prId}/iterations/${iterationId}/changes?api-version=7.1`
     );

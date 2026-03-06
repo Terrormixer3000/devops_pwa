@@ -1,8 +1,14 @@
 import { AxiosInstance } from "axios";
 import { Pipeline, Build, BuildTimeline, BuildArtifact, AzureListResponse } from "@/types";
+import { isDemoClient } from "@/lib/api/client";
+import { demoApi } from "@/lib/mocks/demoData";
 
 export const pipelinesService = {
   async listPipelines(client: AxiosInstance, project: string): Promise<Pipeline[]> {
+    if (isDemoClient(client)) {
+      return demoApi.pipelines.listPipelines();
+    }
+
     const res = await client.get<AzureListResponse<Pipeline>>(
       `/${project}/_apis/pipelines?api-version=7.1`
     );
@@ -16,6 +22,10 @@ export const pipelinesService = {
     top = 20,
     repositoryId?: string
   ): Promise<Build[]> {
+    if (isDemoClient(client)) {
+      return demoApi.pipelines.listBuilds(definitionIds, top, repositoryId);
+    }
+
     const params = new URLSearchParams({ "$top": String(top), "api-version": "7.1" });
     if (definitionIds?.length) params.set("definitions", definitionIds.join(","));
     // Builds nach Repository filtern (Azure DevOps unterstuetzt TfsGit als Typ)
@@ -30,6 +40,10 @@ export const pipelinesService = {
   },
 
   async getBuild(client: AxiosInstance, project: string, buildId: number): Promise<Build> {
+    if (isDemoClient(client)) {
+      return demoApi.pipelines.getBuild(buildId);
+    }
+
     const res = await client.get<Build>(
       `/${project}/_apis/build/builds/${buildId}?api-version=7.1`
     );
@@ -41,6 +55,10 @@ export const pipelinesService = {
     project: string,
     buildId: number
   ): Promise<BuildTimeline> {
+    if (isDemoClient(client)) {
+      return demoApi.pipelines.getBuildTimeline(buildId);
+    }
+
     const res = await client.get<BuildTimeline>(
       `/${project}/_apis/build/builds/${buildId}/timeline?api-version=7.1`
     );
@@ -53,6 +71,10 @@ export const pipelinesService = {
     buildId: number,
     logId: number
   ): Promise<string> {
+    if (isDemoClient(client)) {
+      return demoApi.pipelines.getBuildLog(buildId, logId);
+    }
+
     const res = await client.get(
       `/${project}/_apis/build/builds/${buildId}/logs/${logId}?api-version=7.1`,
       { responseType: "text", headers: { Accept: "text/plain" } }
@@ -65,6 +87,10 @@ export const pipelinesService = {
     project: string,
     buildId: number
   ): Promise<BuildArtifact[]> {
+    if (isDemoClient(client)) {
+      return demoApi.pipelines.getArtifacts(buildId);
+    }
+
     const res = await client.get<AzureListResponse<BuildArtifact>>(
       `/${project}/_apis/build/builds/${buildId}/artifacts?api-version=7.1`
     );
@@ -78,6 +104,10 @@ export const pipelinesService = {
     sourceBranch?: string,
     parameters?: Record<string, string>
   ): Promise<Build> {
+    if (isDemoClient(client)) {
+      return demoApi.pipelines.queueBuild(definitionId, sourceBranch);
+    }
+
     const body: Record<string, unknown> = {
       definition: { id: definitionId },
     };
@@ -91,6 +121,10 @@ export const pipelinesService = {
   },
 
   async cancelBuild(client: AxiosInstance, project: string, buildId: number): Promise<void> {
+    if (isDemoClient(client)) {
+      return demoApi.pipelines.cancelBuild(buildId);
+    }
+
     await client.patch(
       `/${project}/_apis/build/builds/${buildId}?api-version=7.1`,
       { status: "cancelling" }
