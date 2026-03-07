@@ -20,6 +20,8 @@ import {
   AlertCircle,
   ChevronRight,
   Rocket,
+  CheckSquare,
+  FolderGit2,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -112,7 +114,8 @@ export default function DashboardPage() {
             <QuickLink href="/pull-requests" icon={<GitPullRequest size={22} className="text-blue-400" />} label="Pull Requests" count={prs?.length} />
             <QuickLink href="/pipelines" icon={<PlayCircle size={22} className="text-green-400" />} label="Pipelines" />
             <QuickLink href="/releases" icon={<Rocket size={22} className="text-purple-400" />} label="Releases" />
-            <QuickLink href="/explorer" icon={<GitPullRequest size={22} className="text-orange-400" />} label="Code Explorer" />
+            <QuickLink href="/explorer" icon={<FolderGit2 size={22} className="text-orange-400" />} label="Code Explorer" />
+            <QuickLink href="/work-items" icon={<CheckSquare size={22} className="text-teal-400" />} label="Work Items" />
           </div>
         </section>
 

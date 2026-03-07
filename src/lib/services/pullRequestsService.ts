@@ -175,4 +175,68 @@ export const pullRequestsService = {
     );
     return res.data;
   },
+
+  async enableAutoComplete(
+    client: AxiosInstance,
+    project: string,
+    repoId: string,
+    prId: number,
+    userId: string,
+    completionOptions: {
+      mergeStrategy?: "noFastForward" | "squash" | "rebase" | "rebaseMerge";
+      deleteSourceBranch?: boolean;
+    } = {}
+  ): Promise<void> {
+    if (isDemoClient(client)) {
+      return; // Demo: kein Fehler, keine Aktion noetig
+    }
+
+    await client.patch(
+      `/${project}/_apis/git/repositories/${repoId}/pullrequests/${prId}?api-version=7.1`,
+      {
+        autoCompleteSetBy: { id: userId },
+        completionOptions: {
+          mergeStrategy: completionOptions.mergeStrategy || "noFastForward",
+          deleteSourceBranch: completionOptions.deleteSourceBranch || false,
+        },
+      }
+    );
+  },
+
+  async disableAutoComplete(
+    client: AxiosInstance,
+    project: string,
+    repoId: string,
+    prId: number
+  ): Promise<void> {
+    if (isDemoClient(client)) return;
+
+    await client.patch(
+      `/${project}/_apis/git/repositories/${repoId}/pullrequests/${prId}?api-version=7.1`,
+      { autoCompleteSetBy: null }
+    );
+  },
+
+  async getPolicies(
+    client: AxiosInstance,
+    project: string,
+    prId: number
+  ): Promise<Array<{ id: string; status: string; displayName: string; isRequired: boolean }>> {
+    if (isDemoClient(client)) {
+      return demoApi.pullRequests.getPolicies(prId);
+    }
+
+    const artifactId = `vstfs:///CodeReview/CodeReviewId/${project}/${prId}`;
+    const params = new URLSearchParams({ artifactId, "api-version": "7.1" });
+    const res = await client.get<{ value: Array<{ evaluationId: string; status: string; configuration: { settings?: { displayName?: string }; isEnabledAndBlocking: boolean } }> }>(
+      `/${project}/_apis/policy/evaluations?${params.toString()}`
+    );
+    return (res.data.value || []).map((e) => ({
+      id: e.evaluationId,
+      status: e.status,
+      displayName: e.configuration?.settings?.displayName || "Policy",
+      isRequired: e.configuration?.isEnabledAndBlocking || false,
+    }));
+  },
 };
+

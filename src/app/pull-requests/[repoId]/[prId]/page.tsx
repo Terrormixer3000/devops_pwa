@@ -30,6 +30,8 @@ import {
   Clock,
   User,
   ChevronRight,
+  ShieldCheck,
+  Zap,
 } from "lucide-react";
 
 type Tab = "uebersicht" | "dateien" | "kommentare" | "commits";
@@ -47,6 +49,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
   const [completeModal, setCompleteModal] = useState(false);
   const [mergeStrategy, setMergeStrategy] = useState<"noFastForward" | "squash" | "rebase" | "rebaseMerge">("noFastForward");
   const [deleteSourceBranch, setDeleteSourceBranch] = useState(false);
+  const [autoCompleteOnApprove, setAutoCompleteOnApprove] = useState(false);
   const [selectedChangeKey, setSelectedChangeKey] = useState<string | null>(null);
 
   const { settings } = useSettingsStore();
@@ -68,6 +71,15 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
     queryFn: () => client ? identityService.getCurrentUser(client) : Promise.reject(new Error("Kein Client")),
     enabled: !!client,
     staleTime: Infinity,
+  });
+
+  // PR-Policies laden
+  const { data: policies } = useQuery({
+    queryKey: ["pr-policies", prIdNum, settings?.project, settings?.demoMode],
+    queryFn: () => client && settings
+      ? pullRequestsService.getPolicies(client, settings.project, prIdNum)
+      : Promise.resolve([]),
+    enabled: !!client && !!settings,
   });
 
   // Kommentare / Threads laden
@@ -121,7 +133,24 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pr", repoId, prIdNum] });
       setApproveModal(false);
+      setAutoCompleteOnApprove(false);
     },
+  });
+
+  // Auto-Complete aktivieren
+  const autoCompleteMutation = useMutation({
+    mutationFn: () => {
+      if (!client || !settings || !currentUser) throw new Error("Kein Client");
+      return pullRequestsService.enableAutoComplete(
+        client,
+        settings.project,
+        repoId,
+        prIdNum,
+        currentUser.id,
+        { mergeStrategy, deleteSourceBranch }
+      );
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pr", repoId, prIdNum] }),
   });
 
   // PR abschliessen
@@ -368,6 +397,36 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
                 </div>
               </div>
             )}
+
+            {/* Policy Checks */}
+            {policies && policies.length > 0 && (
+              <div>
+                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                  <ShieldCheck size={12} /> Policy-Checks
+                </h3>
+                <div className="space-y-1.5">
+                  {policies.map((policy) => {
+                    const statusMap: Record<string, { label: string; cls: string }> = {
+                      approved: { label: "Bestanden", cls: "text-green-400" },
+                      rejected: { label: "Fehlgeschlagen", cls: "text-red-400" },
+                      queued: { label: "Wartend", cls: "text-yellow-400" },
+                      running: { label: "Laufend", cls: "text-blue-400" },
+                      notApplicable: { label: "N/A", cls: "text-slate-500" },
+                    };
+                    const s = statusMap[policy.status] || { label: policy.status, cls: "text-slate-400" };
+                    return (
+                      <div key={policy.id} className="flex items-center justify-between px-3 py-2 bg-slate-800/50 rounded-lg">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {policy.isRequired && <span className="text-red-400 text-xs">*</span>}
+                          <span className="text-xs text-slate-300 truncate">{policy.displayName}</span>
+                        </div>
+                        <span className={`text-xs font-medium flex-shrink-0 ml-2 ${s.cls}`}>{s.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -465,9 +524,9 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
       </div>
 
       {/* Approve Modal */}
-      <Modal open={approveModal} onClose={() => setApproveModal(false)} title="Pull Request bewerten">
+      <Modal open={approveModal} onClose={() => { setApproveModal(false); setAutoCompleteOnApprove(false); }} title="Pull Request bewerten">
         <div className="space-y-3">
-          <Button fullWidth onClick={() => voteMutation.mutate(10)} loading={voteMutation.isPending}>
+          <Button fullWidth onClick={async () => { await voteMutation.mutateAsync(10); if (autoCompleteOnApprove) autoCompleteMutation.mutate(); }} loading={voteMutation.isPending}>
             <ThumbsUp size={16} /> Approven
           </Button>
           <Button fullWidth variant="secondary" onClick={() => voteMutation.mutate(5)} loading={voteMutation.isPending}>
@@ -476,6 +535,28 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
           <Button fullWidth variant="ghost" onClick={() => voteMutation.mutate(-5)} loading={voteMutation.isPending}>
             Warten auf Autor
           </Button>
+
+          {/* Auto-Complete Toggle */}
+          <div className="flex items-center justify-between py-2.5 px-3 bg-slate-800/50 rounded-xl border border-slate-700/60">
+            <div className="flex items-center gap-2">
+              <Zap size={14} className="text-yellow-400" />
+              <div>
+                <p className="text-sm text-slate-200">Auto-Complete</p>
+                <p className="text-xs text-slate-500">Automatisch mergen wenn alle Policies bestanden</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setAutoCompleteOnApprove((v) => !v)}
+              className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ml-3 ${
+                autoCompleteOnApprove ? "bg-blue-600" : "bg-slate-700"
+              }`}
+            >
+              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                autoCompleteOnApprove ? "translate-x-7" : "translate-x-1"
+              }`} />
+            </button>
+          </div>
+
           <Button fullWidth variant="danger" onClick={() => voteMutation.mutate(-10)} loading={voteMutation.isPending}>
             <ThumbsDown size={16} /> Ablehnen
           </Button>

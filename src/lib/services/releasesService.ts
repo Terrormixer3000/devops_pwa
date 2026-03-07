@@ -138,4 +138,22 @@ export const releasesService = {
     );
     return res.data;
   },
+
+  async getEnvironmentLogs(
+    vsrmClient: AxiosInstance,
+    project: string,
+    releaseId: number,
+    environmentId: number
+  ): Promise<string> {
+    if (isDemoClient(vsrmClient)) {
+      return demoApi.releases.getEnvironmentLogs(releaseId, environmentId);
+    }
+
+    // Gibt kombinierten Log-Text aller Deploy-Phasen zurueck
+    const res = await vsrmClient.get<string>(
+      `/${project}/_apis/release/releases/${releaseId}/environments/${environmentId}/logs?api-version=7.1`,
+      { responseType: "text", headers: { Accept: "text/plain" } }
+    );
+    return typeof res.data === "string" ? res.data : JSON.stringify(res.data, null, 2);
+  },
 };

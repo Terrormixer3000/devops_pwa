@@ -15,13 +15,15 @@ import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { useAzureClient } from "@/lib/hooks/useAzureClient";
 import { releasesService } from "@/lib/services/releasesService";
 import { ReleaseEnvironment, ReleaseApproval } from "@/types";
-import { CheckCircle, XCircle, Clock, Loader, ThumbsUp, ThumbsDown } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Loader, ThumbsUp, ThumbsDown, ScrollText } from "lucide-react";
 
 export default function ReleaseDetailPage({ params }: { params: Promise<{ releaseId: string }> }) {
   const { releaseId } = use(params);
   const releaseIdNum = parseInt(releaseId);
   const [approvalModal, setApprovalModal] = useState<ReleaseApproval | null>(null);
   const [approvalComment, setApprovalComment] = useState("");
+  const [activeTab, setActiveTab] = useState<"umgebungen" | "logs">("umgebungen");
+  const [selectedEnvId, setSelectedEnvId] = useState<number | null>(null);
 
   const { settings } = useSettingsStore();
   const { vsrmClient } = useAzureClient();
@@ -53,6 +55,15 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
     },
   });
 
+  // Deployment-Logs laden
+  const { data: deployLogs, isLoading: logsLoading } = useQuery({
+    queryKey: ["release-logs", releaseIdNum, selectedEnvId, settings?.project, settings?.demoMode],
+    queryFn: () => vsrmClient && settings && selectedEnvId
+      ? releasesService.getEnvironmentLogs(vsrmClient, settings.project, releaseIdNum, selectedEnvId)
+      : Promise.resolve(""),
+    enabled: !!vsrmClient && !!settings && !!selectedEnvId && activeTab === "logs",
+  });
+
   if (isLoading) return <div className="min-h-screen"><AppBar title="Release" /><PageLoader /></div>;
   if (error || !release) return <div className="min-h-screen"><AppBar title="Release" /><ErrorMessage message="Release konnte nicht geladen werden" /></div>;
 
@@ -77,15 +88,67 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
         )}
       </div>
 
-      {/* Umgebungs-Uebersicht */}
-      <div className="px-4 py-4 space-y-3">
-        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Umgebungen</h2>
-        {(release.environments ?? [])
-          .sort((a, b) => a.rank - b.rank)
-          .map((env) => (
-            <EnvironmentCard key={env.id} env={env} onApprove={(a) => setApprovalModal(a)} />
+      {/* Tab-Leiste */}
+      <div className="sticky-below-appbar bg-slate-900/95 backdrop-blur-md border-b border-slate-800">
+        <div className="flex px-4">
+          {(["umgebungen", "logs"] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === tab ? "border-blue-500 text-blue-400" : "border-transparent text-slate-500 hover:text-slate-300"
+              }`}
+            >
+              {tab === "umgebungen" ? <CheckCircle size={14} /> : <ScrollText size={14} />}
+              {tab === "umgebungen" ? "Umgebungen" : "Logs"}
+            </button>
           ))}
+        </div>
       </div>
+
+      {/* Tab-Inhalt: Umgebungen */}
+      {activeTab === "umgebungen" && (
+        <div className="px-4 py-4 space-y-3">
+          {(release.environments ?? [])
+            .sort((a, b) => a.rank - b.rank)
+            .map((env) => (
+              <EnvironmentCard key={env.id} env={env} onApprove={(a) => setApprovalModal(a)} />
+            ))}
+        </div>
+      )}
+
+      {/* Tab-Inhalt: Logs */}
+      {activeTab === "logs" && (
+        <div className="px-4 py-4 space-y-3">
+          <div className="flex gap-2 flex-wrap">
+            {(release.environments ?? []).sort((a, b) => a.rank - b.rank).map((env) => (
+              <button
+                key={env.id}
+                onClick={() => setSelectedEnvId(env.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+                  selectedEnvId === env.id
+                    ? "bg-blue-600 border-blue-500 text-white"
+                    : "bg-slate-800/60 border-slate-700 text-slate-300 hover:border-slate-500"
+                }`}
+              >
+                {env.name}
+              </button>
+            ))}
+          </div>
+
+          {!selectedEnvId && (
+            <p className="text-sm text-slate-500 text-center py-8">Umgebung auswaehlen um Logs zu sehen</p>
+          )}
+          {selectedEnvId && logsLoading && <PageLoader />}
+          {selectedEnvId && !logsLoading && deployLogs && (
+            <div className="bg-slate-900 rounded-xl border border-slate-700/60 overflow-auto">
+              <pre className="p-3 text-xs font-mono text-slate-300 leading-relaxed whitespace-pre-wrap">
+                {deployLogs || "Keine Logs verfuegbar"}
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Approval Modal */}
       <Modal open={!!approvalModal} onClose={() => setApprovalModal(null)} title="Approval erteilen">
