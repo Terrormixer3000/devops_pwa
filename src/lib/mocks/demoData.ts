@@ -17,6 +17,7 @@ import {
   Reviewer,
   TimelineRecord,
   TreeEntry,
+  WorkItem,
 } from "@/types";
 
 const STORAGE_KEY = "azdevops_demo_state";
@@ -1282,8 +1283,40 @@ export const demoApi = {
       return clone(loadDemoState().branches[repoId] || []);
     },
 
-    getCommits(repoId: string, branch: string, top = 30): Commit[] {
-      return clone((loadDemoState().commits[repoKey(repoId, branch)] || []).slice(0, top));
+    getTags(repoId: string): Branch[] {
+      const state = loadDemoState();
+      const branches = state.branches[repoId] || [];
+      // Generiere Demo-Tags aus den ersten Commits einer Branch
+      return branches.slice(0, 3).map((b, i) => ({
+        name: `v1.${i}.0`,
+        objectId: b.objectId,
+        creator: b.creator,
+        url: b.url,
+      }));
+    },
+
+    getCommits(repoId: string, branch: string, top = 30, filePath?: string): Commit[] {
+      const all = loadDemoState().commits[repoKey(repoId, branch)] || [];
+      // Bei Dateihistorie nur jeden 3. Commit zurueckgeben (simuliert gezielte Aenderungen)
+      const filtered = filePath ? all.filter((_, i) => i % 3 === 0) : all;
+      return clone(filtered.slice(0, top));
+    },
+
+    getBranchDiff(repoId: string, baseBranch: string, targetBranch: string): {
+      commits: Commit[];
+      changes: Array<{ changeType: string; item: { path: string; gitObjectType: "blob" }; originalPath?: string }>;
+      commonCommit: string;
+    } {
+      const state = loadDemoState();
+      const targetCommits = (state.commits[repoKey(repoId, targetBranch)] || []).slice(0, 5);
+      const baseCommit = (state.commits[repoKey(repoId, baseBranch)] || [])[0];
+      return {
+        commits: clone(targetCommits),
+        changes: targetCommits.length > 0
+          ? clone(buildDemoCommitChanges(state, repoId, targetCommits[0]?.commitId || ""))
+          : [],
+        commonCommit: baseCommit?.commitId || "",
+      };
     },
 
     getTree(repoId: string, branch: string, path = "/"): TreeEntry[] {
@@ -1475,6 +1508,15 @@ export const demoApi = {
       return clone(
         loadDemoState().changes[changeKey(repoId, prId, iterationId)] || { changeEntries: [] }
       );
+    },
+
+    getPolicies(prId: number): Array<{ id: string; status: string; displayName: string; isRequired: boolean }> {
+      return [
+        { id: `policy-${prId}-1`, status: "approved", displayName: "Mindestanzahl Reviewer", isRequired: true },
+        { id: `policy-${prId}-2`, status: "approved", displayName: "Build-Validierung erfolgreich", isRequired: true },
+        { id: `policy-${prId}-3`, status: "queued", displayName: "Code Coverage >= 80%", isRequired: false },
+        { id: `policy-${prId}-4`, status: "rejected", displayName: "Kein aktiver Merge-Konflikt", isRequired: true },
+      ];
     },
   },
 
@@ -1669,6 +1711,113 @@ export const demoApi = {
 
     rejectApproval(approvalId: number, comments?: string): ReleaseApproval {
       return withDemoState((state) => updateApprovalState(state, approvalId, "rejected", comments));
+    },
+
+    getEnvironmentLogs(releaseId: number, environmentId: number): string {
+      return [
+        `[2025-03-06T10:00:00Z] Deploy-Agent: Initialisierung gestartet`,
+        `[2025-03-06T10:00:01Z] Artifact heruntergeladen: api-gateway-${releaseId}.zip`,
+        `[2025-03-06T10:00:05Z] Environment ${environmentId}: Vorbedingungen geprueft`,
+        `[2025-03-06T10:00:10Z] Task: Build-Artefakt entpacken – Erfolg`,
+        `[2025-03-06T10:00:15Z] Task: Docker-Image taggen – Erfolg`,
+        `[2025-03-06T10:00:22Z] Task: Registry-Push – Erfolg`,
+        `[2025-03-06T10:00:35Z] Task: Kubernetes-Deployment anwenden – Erfolg`,
+        `[2025-03-06T10:00:40Z] Health-Check: 3/3 Pods laufen`,
+        `[2025-03-06T10:00:42Z] Task: Smoke-Test (HTTP 200) – Erfolg`,
+        `[2025-03-06T10:00:43Z] Deployment abgeschlossen – Status: Succeeded`,
+      ].join("\n");
+    },
+  },
+
+  workItems: {
+    listMyWorkItems(): WorkItem[] {
+      const ago = (days: number) => new Date(Date.now() - days * 86400000).toISOString();
+      return [
+        {
+          id: 1001,
+          rev: 3,
+          fields: {
+            "System.Title": "Login-Seite: Token-Refresh-Fehler bei langem Inaktivitaets-Timeout",
+            "System.State": "Active",
+            "System.WorkItemType": "Bug",
+            "System.AssignedTo": identityPool[0],
+            "System.CreatedDate": ago(10),
+            "System.ChangedDate": ago(1),
+            "Microsoft.VSTS.Common.Priority": 1,
+          },
+          url: "https://demo.local/workitems/1001",
+        },
+        {
+          id: 1002,
+          rev: 2,
+          fields: {
+            "System.Title": "Dashboard: Schnellzugriff-Kacheln auch fuer Releases konfigurierbar machen",
+            "System.State": "Active",
+            "System.WorkItemType": "User Story",
+            "System.AssignedTo": identityPool[0],
+            "System.CreatedDate": ago(7),
+            "System.ChangedDate": ago(2),
+            "Microsoft.VSTS.Common.Priority": 2,
+          },
+          url: "https://demo.local/workitems/1002",
+        },
+        {
+          id: 1003,
+          rev: 1,
+          fields: {
+            "System.Title": "Pull Request Detail: Reviewer-Liste auch in der Mobil-Ansicht sortierbar",
+            "System.State": "New",
+            "System.WorkItemType": "Task",
+            "System.AssignedTo": identityPool[0],
+            "System.CreatedDate": ago(3),
+            "System.ChangedDate": ago(3),
+            "Microsoft.VSTS.Common.Priority": 3,
+          },
+          url: "https://demo.local/workitems/1003",
+        },
+        {
+          id: 1004,
+          rev: 5,
+          fields: {
+            "System.Title": "CI/CD: Pipeline-Laufzeiten in Analytics-Bericht exportieren",
+            "System.State": "Resolved",
+            "System.WorkItemType": "Feature",
+            "System.AssignedTo": identityPool[1],
+            "System.CreatedDate": ago(20),
+            "System.ChangedDate": ago(0),
+            "Microsoft.VSTS.Common.Priority": 2,
+          },
+          url: "https://demo.local/workitems/1004",
+        },
+        {
+          id: 1005,
+          rev: 2,
+          fields: {
+            "System.Title": "API-Gateway: Rate-Limit konfigurierbar per Service machen",
+            "System.State": "Active",
+            "System.WorkItemType": "User Story",
+            "System.AssignedTo": identityPool[2],
+            "System.CreatedDate": ago(5),
+            "System.ChangedDate": ago(1),
+            "Microsoft.VSTS.Common.Priority": 2,
+          },
+          url: "https://demo.local/workitems/1005",
+        },
+        {
+          id: 1006,
+          rev: 1,
+          fields: {
+            "System.Title": "Billing-Service: Rechnungs-PDF als ZIP-Archiv zum Download anbieten",
+            "System.State": "New",
+            "System.WorkItemType": "User Story",
+            "System.AssignedTo": identityPool[0],
+            "System.CreatedDate": ago(1),
+            "System.ChangedDate": ago(1),
+            "Microsoft.VSTS.Common.Priority": 3,
+          },
+          url: "https://demo.local/workitems/1006",
+        },
+      ] as WorkItem[];
     },
   },
 };
