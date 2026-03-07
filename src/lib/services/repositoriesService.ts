@@ -54,21 +54,68 @@ export const repositoriesService = {
     }));
   },
 
+  async getTags(client: AxiosInstance, project: string, repoId: string): Promise<Branch[]> {
+    if (isDemoClient(client)) {
+      return demoApi.repositories.getTags(repoId);
+    }
+
+    const res = await client.get<AzureListResponse<Branch>>(
+      `/${project}/_apis/git/repositories/${repoId}/refs?filter=tags/&api-version=7.1`
+    );
+    return res.data.value.map((t) => ({
+      ...t,
+      name: t.name.replace("refs/tags/", ""),
+    }));
+  },
+
   async getCommits(
     client: AxiosInstance,
     project: string,
     repoId: string,
     branch: string,
-    top = 30
+    top = 30,
+    filePath?: string
   ): Promise<Commit[]> {
     if (isDemoClient(client)) {
-      return demoApi.repositories.getCommits(repoId, branch, top);
+      return demoApi.repositories.getCommits(repoId, branch, top, filePath);
     }
 
+    const params = new URLSearchParams({
+      "searchCriteria.itemVersion.version": branch,
+      "$top": String(top),
+      "api-version": "7.1",
+    });
+    if (filePath) params.set("searchCriteria.itemPath", filePath);
+
     const res = await client.get<AzureListResponse<Commit>>(
-      `/${project}/_apis/git/repositories/${repoId}/commits?searchCriteria.itemVersion.version=${encodeURIComponent(branch)}&$top=${top}&api-version=7.1`
+      `/${project}/_apis/git/repositories/${repoId}/commits?${params.toString()}`
     );
     return res.data.value;
+  },
+
+  async getBranchDiff(
+    client: AxiosInstance,
+    project: string,
+    repoId: string,
+    baseBranch: string,
+    targetBranch: string
+  ): Promise<{ commits: Commit[]; changes: GitChangeEntry[]; commonCommit: string }> {
+    if (isDemoClient(client)) {
+      return demoApi.repositories.getBranchDiff(repoId, baseBranch, targetBranch);
+    }
+
+    const params = new URLSearchParams({
+      "baseVersion": baseBranch,
+      "baseVersionType": "branch",
+      "targetVersion": targetBranch,
+      "targetVersionType": "branch",
+      "$top": "30",
+      "api-version": "7.1",
+    });
+    const res = await client.get<{ commits: Commit[]; changes: GitChangeEntry[]; commonCommit: string }>(
+      `/${project}/_apis/git/repositories/${repoId}/diffs/commits?${params.toString()}`
+    );
+    return res.data;
   },
 
   async getTree(

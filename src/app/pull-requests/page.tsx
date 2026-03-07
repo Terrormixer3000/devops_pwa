@@ -17,7 +17,8 @@ import { pullRequestsService } from "@/lib/services/pullRequestsService";
 import { usePRRepoStore } from "@/lib/stores/selectionStore";
 import { PRRepoSelector } from "@/components/layout/selectors/RepoSelector";
 import { PRStatus, PullRequest } from "@/types";
-import { GitPullRequest, ThumbsUp, Clock, GitMerge, Plus } from "lucide-react";
+import { GitPullRequest, ThumbsUp, Clock, GitMerge, Plus, RotateCw } from "lucide-react";
+import { usePullToRefresh } from "@/lib/hooks/usePullToRefresh";
 
 // Status-Filter Optionen
 const STATUS_OPTIONS: { label: string; value: PRStatus }[] = [
@@ -61,6 +62,11 @@ export default function PullRequestsPage() {
 
   const prs = prsByRepo || [];
 
+  const { pullProgress, isPulling } = usePullToRefresh({
+    onRefresh: () => { void refetch(); },
+    isRefreshing: isLoading,
+  });
+
   return (
     <div className="min-h-screen">
       <AppBar title="Pull Requests" rightSlot={<PRRepoSelector />} />
@@ -83,6 +89,16 @@ export default function PullRequestsPage() {
           ))}
         </div>
       </div>
+
+      {/* Pull-to-Refresh Indikator */}
+      {isPulling && (
+        <div
+          className="fixed top-[7rem] left-1/2 -translate-x-1/2 z-40 flex items-center justify-center w-9 h-9 rounded-full bg-slate-800 border border-slate-700 shadow-lg transition-all"
+          style={{ opacity: pullProgress, transform: `translateX(-50%) scale(${0.6 + pullProgress * 0.4})` }}
+        >
+          <RotateCw size={16} className="text-blue-400" style={{ transform: `rotate(${pullProgress * 360}deg)` }} />
+        </div>
+      )}
 
       {/* Inhalt */}
       <div className="pt-[3.85rem]">
