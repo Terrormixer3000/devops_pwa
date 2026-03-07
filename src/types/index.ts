@@ -282,3 +282,74 @@ export interface SelectedRepositories {
   repositories: Repository[];
   mode: "single" | "multi";
 }
+
+// Web Push Notifications
+export interface PushSubscriptionRecord {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+  org: string;
+  project: string;
+  /** Stabile Azure DevOps User-GUID des PAT-Inhabers. Wird genutzt um Notifications
+   *  nur an den User zu senden, der das jeweilige Event betrifft. */
+  azureUserId: string;
+  /** Anzeigename — nur fuer Debugging/Admin, hat keinen Einfluss auf die Filterung. */
+  displayName: string;
+  createdAt: string;
+}
+
+// Payload der vom Service Worker als Notification angezeigt wird
+export interface WebhookNotificationPayload {
+  title: string;
+  body: string;
+  /** Verhindert doppelte Notifications fuer denselben Event (z.B. "build-123") */
+  tag: string;
+  /** Deep-Link in die App beim Tippen auf die Notification */
+  url: string;
+}
+
+/** Identitaets-Objekt wie es Azure DevOps in Service Hook Payloads sendet */
+export interface AzureIdentityRef {
+  id: string;
+  displayName: string;
+  uniqueName?: string;
+}
+
+// Azure DevOps Service Hook Payload (relevante Felder)
+export interface AzureServiceHookPayload {
+  eventType: string;
+  resource: {
+    id?: number;
+    buildNumber?: string;
+    result?: string;
+    status?: string;
+    definition?: { id: number; name: string };
+    repository?: { id?: string; name?: string; project?: { name?: string } };
+    project?: { name: string };
+    pullRequestId?: number;
+    title?: string;
+    /** User der den PR erstellt hat */
+    createdBy?: AzureIdentityRef;
+    comment?: { content: string; author?: AzureIdentityRef };
+    /** Alle aktuellen Reviewer des PRs — enthaelt den neu hinzugefuegten User */
+    reviewers?: AzureIdentityRef[];
+    /** Neu hinzugefuegter Reviewer (nur bei reviewersUpdated Event) */
+    reviewer?: AzureIdentityRef;
+    approval?: {
+      approver?: AzureIdentityRef;
+      release?: { id?: number; name: string };
+      releaseEnvironment?: { name: string };
+    };
+    release?: { id?: number; name: string };
+    releaseEnvironment?: { name: string };
+    /** User fuer den der Build angefordert wurde */
+    requestedFor?: AzureIdentityRef;
+    /** User der den Build angefordert hat */
+    requestedBy?: AzureIdentityRef;
+  };
+  resourceContainers?: {
+    project?: { baseUrl?: string; id?: string };
+    account?: { baseUrl?: string };
+    collection?: { baseUrl?: string };
+  };
+  message?: { text?: string };
+}

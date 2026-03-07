@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Service Worker Dateien laufen im SW-Scope (generiert/manuell), nicht im App-Code-Lint.
+    "public/sw-custom.js",
+    "public/sw.js",
+    "public/workbox-*.js",
   ]),
 ]);
 
