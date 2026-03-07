@@ -106,10 +106,9 @@ export function SelectionSheet({
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-50 bg-black/55 backdrop-blur-md" />
         <Drawer.Content
-          className="fixed left-0 right-0 z-50 flex flex-col rounded-t-[2rem] border border-slate-700/70 bg-slate-900 shadow-[0_-14px_40px_rgba(0,0,0,0.34)]"
+          className="fixed left-0 right-0 bottom-0 z-50 flex flex-col rounded-t-[2rem] border border-slate-700/70 bg-slate-900 shadow-[0_-14px_40px_rgba(0,0,0,0.34)]"
           style={{
-            bottom: "var(--bottom-nav-height)",
-            maxHeight: "var(--selection-sheet-max-height)",
+            maxHeight: "calc(var(--selection-sheet-max-height) + var(--bottom-nav-height))",
           }}
         >
           {/* Vaul uebernimmt die Swipe-Logik, wir gestalten nur den sichtbaren Handle-Bereich. */}
@@ -131,7 +130,7 @@ export function SelectionSheet({
 
           <div
             className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain"
-            style={{ paddingBottom: "var(--safe-area-bottom-effective)" }}
+            style={{ paddingBottom: "calc(var(--bottom-nav-height) + var(--safe-area-bottom-effective))" }}
           >
         {/* Favoriten / Alle Umschalter (nur bei Repos) */}
         {hasFavorites && (

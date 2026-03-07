@@ -13,7 +13,9 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       staleTime: 1000 * 60 * 2, // 2 Minuten Cache-Zeit
+      gcTime: 1000 * 60 * 60 * 24, // 24 Stunden – Daten bleiben fuer Offline-Nutzung im Speicher
       refetchOnWindowFocus: false,
+      refetchOnReconnect: true, // Nach Netzwerk-Wiederherstellung automatisch aktualisieren
     },
   },
 });
