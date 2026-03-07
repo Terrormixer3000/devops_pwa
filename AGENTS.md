@@ -23,6 +23,7 @@
 - Shared domain and API types live in `src/types/index.ts`.
 - Demo/mock state lives in `src/lib/mocks/demoData.ts`.
 - Static files and PWA assets live in `public/`.
+- Note: `src/components/pipelines`, `src/components/pr`, `src/components/releases`, `src/components/explorer`, `src/components/repos` and `src/app/repositories` do not exist; do not recreate them unless adding actual files.
 
 ## Tooling Snapshot
 - Package manager: `npm`.
@@ -69,6 +70,10 @@
 - UI data fetching is primarily handled with React Query.
 - Cross-page client state and persistence are handled with Zustand stores.
 - Push notifications use API routes under `src/app/api/push/*`, a local JSON subscription store in `data/subscriptions.json`, and `public/sw-custom.js`.
+- Each push subscription has a `webhookToken` (64 hex chars, 256-bit entropy) generated at registration time and stored in `data/subscriptions.json`.
+- The webhook endpoint `POST /api/push/webhook` requires `?t=<webhookToken>` — no `WEBHOOK_SECRET` env var.
+- The token is stored in the browser under `localStorage` key `azdevops_push_token` by `pushService`.
+- Push setup is gated behind a 5-step wizard at `/push-setup`. The `/settings` page and `/push-test` page only show toggle/status UI after the wizard has been completed (token present in localStorage).
 
 ## Imports
 - Use ES modules only.
@@ -123,6 +128,7 @@
 - Settings, selections, favorites, and demo state are persisted in browser storage.
 - Keep storage keys backwards compatible unless the task explicitly changes persistence behavior.
 - `settingsService.clear()` removes all `azdevops_*` keys; keep that behavior in mind before adding new keys.
+- `azdevops_push_token` stores the per-user webhook authentication token — cleared on push unsubscribe.
 - Preserve demo mode when changing initialization, settings, or service flows.
 
 ## Styling Rules
@@ -150,7 +156,9 @@
 - `npm run dev` uses `next dev --experimental-https` and keeps PWA/Service Worker enabled by default for push testing.
 - Set `PWA_IN_DEV=false` only when you intentionally want to disable PWA behavior in development.
 - `public/sw-custom.js` is intentionally ignored by ESLint.
+- Public icon files: `public/icons/icon-192.png` (192x192), `public/icons/icon-512.png` (512x512), `public/apple-touch-icon.png` (180x180, derived from icon-512). Do not add placeholder icons.
 - Push support depends on secure context, PWA install requirements on iOS, and service worker availability.
+- Webhook auth uses per-user token `?t=<webhookToken>` only. There is no global `WEBHOOK_SECRET`.
 - Changes to push, service worker, or API route code should always be validated with `npm run lint && npm run build`.
 
 ## When Making Changes
