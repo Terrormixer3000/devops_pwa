@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/layout/Providers";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { OfflineBanner } from "@/components/ui/OfflineBanner";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const APPLE_TOUCH_ICON = "/apple-touch-icon.png";
@@ -45,6 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={`${inter.variable} font-sans bg-slate-900 text-slate-100 antialiased`}>
         <Providers>
+          <OfflineBanner />
           {/* Hauptinhalt: oben feste AppBar, unten feste Bottom-Nav mit iPhone-Safe-Area */}
           <main className="min-h-screen" style={{ paddingTop: "var(--app-bar-height)", paddingBottom: "var(--bottom-nav-height)" }}>
             {children}
