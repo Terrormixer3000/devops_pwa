@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppBar } from "@/components/layout/AppBar";
 import { Button } from "@/components/ui/Button";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { AppSettings, ThemeMode } from "@/types";
-import { Eye, EyeOff, CheckCircle, Trash2, ExternalLink } from "lucide-react";
+import { Eye, EyeOff, CheckCircle, Trash2, ExternalLink, Bell, BellOff, AlertCircle, FlaskConical, ListChecks } from "lucide-react";
 import { createAzureClient } from "@/lib/api/client";
 import { demoSettings } from "@/lib/mocks/demoData";
+import { identityService, type AzureCurrentUser } from "@/lib/services/identityService";
+import { pushService, type PushPermissionState, type PushSupportStatus } from "@/lib/services/pushService";
 
 const EMPTY_SETTINGS: AppSettings = {
   organization: "",
@@ -30,10 +32,62 @@ export default function SettingsPage() {
   const [testError, setTestError] = useState("");
   const [saved, setSaved] = useState(false);
 
+  // Notification-State
+  const [pushSupportStatus, setPushSupportStatus] = useState<PushSupportStatus>("unsupported");
+  const [permissionState, setPermissionState] = useState<PushPermissionState>("default");
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [pushError, setPushError] = useState("");
+  const [currentUser, setCurrentUser] = useState<AzureCurrentUser | null>(null);
+
   // Gespeicherte Einstellungen in Formular laden
   useEffect(() => {
     setForm(settings || EMPTY_SETTINGS);
   }, [settings]);
+
+  // Push-Notification Status beim Laden ermitteln
+  const refreshPushState = useCallback(async () => {
+    const status = pushService.getSupportStatus();
+    setPushSupportStatus(status);
+    if (status === "supported") {
+      setPermissionState(pushService.getPermissionState());
+      try {
+        const existing = await pushService.getExistingSubscription();
+        setIsSubscribed(!!existing);
+      } catch {
+        setIsSubscribed(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshPushState();
+  }, [refreshPushState]);
+
+  useEffect(() => {
+    const org = form.organization || settings?.organization;
+    const project = form.project || settings?.project;
+    const pat = form.pat || settings?.pat;
+    const demoMode = form.demoMode ?? settings?.demoMode ?? false;
+
+    if (!org || !project || (!pat && !demoMode)) {
+      setCurrentUser(null);
+      return;
+    }
+
+    const client = createAzureClient({
+      organization: org,
+      project,
+      pat: pat || "",
+      demoMode,
+      theme: form.theme,
+    });
+
+    identityService
+      .getCurrentUser(client)
+      .then(setCurrentUser)
+      .catch(() => setCurrentUser(null));
+  }, [form.demoMode, form.organization, form.pat, form.project, form.theme, settings]);
 
   useEffect(() => {
     // Theme-Wechsel in den Einstellungen sofort als Vorschau anwenden.
@@ -113,6 +167,44 @@ export default function SettingsPage() {
       setTestError("");
       setSaved(false);
       queryClient.clear();
+    }
+  };
+
+  // Push-Notifications aktivieren
+  const handlePushSubscribe = async () => {
+    setPushLoading(true);
+    setPushError("");
+    try {
+      const subscription = await pushService.subscribe();
+      if (!currentUser) {
+        throw new Error("Azure DevOps Benutzer konnte nicht ermittelt werden. Bitte zuerst Verbindung testen.");
+      }
+      await pushService.registerSubscription(
+        subscription,
+        form.organization || settings?.organization || "",
+        form.project || settings?.project || "",
+        currentUser.id,
+        currentUser.displayName
+      );
+      await refreshPushState();
+    } catch (err) {
+      setPushError(err instanceof Error ? err.message : "Aktivierung fehlgeschlagen");
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  // Push-Notifications deaktivieren
+  const handlePushUnsubscribe = async () => {
+    setPushLoading(true);
+    setPushError("");
+    try {
+      await pushService.unsubscribe();
+      await refreshPushState();
+    } catch (err) {
+      setPushError(err instanceof Error ? err.message : "Deaktivierung fehlgeschlagen");
+    } finally {
+      setPushLoading(false);
     }
   };
 
@@ -246,6 +338,14 @@ export default function SettingsPage() {
           </a>
         )}
 
+        {/* Datenschutz-Hinweis direkt bei den Zugangsdaten */}
+        <div className="p-4 bg-slate-800/50 rounded-xl space-y-1.5">
+          <p className="text-xs font-medium text-slate-400">Datenschutz</p>
+          <p className="text-xs text-slate-500">
+            Dein PAT wird ausschliesslich lokal im Browser gespeichert und niemals an externe Server uebertragen.
+          </p>
+        </div>
+
         {/* Testergebnis anzeigen */}
         {testResult === "success" && (
           <div className="flex items-center gap-2 p-3 bg-green-900/30 border border-green-700/50 rounded-xl">
@@ -296,13 +396,179 @@ export default function SettingsPage() {
           )}
         </div>
 
-        {/* Info-Box */}
-        <div className="p-4 bg-slate-800/50 rounded-xl space-y-1.5">
-          <p className="text-xs font-medium text-slate-400">Datenschutz</p>
-          <p className="text-xs text-slate-500">
-            Dein PAT wird ausschliesslich lokal im Browser gespeichert und niemals an externe Server uebertragen.
-          </p>
-        </div>
+        {/* Benachrichtigungen */}
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
+            Benachrichtigungen
+          </h2>
+
+          {/* Praeziser Status-Hinweis je nach Support-Level */}
+          {pushSupportStatus === "unsupported" && (
+            <div className="flex items-start gap-3 p-4 bg-slate-800/50 border border-slate-700 rounded-xl">
+              <BellOff size={18} className="text-slate-500 flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-slate-400">Nicht unterstuetzt</p>
+                <p className="text-xs text-slate-500">
+                  Dieser Browser unterstuetzt keine Push-Benachrichtigungen.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {pushSupportStatus === "needs-https" && (
+            <div className="flex items-start gap-3 p-4 bg-amber-900/20 border border-amber-700/40 rounded-xl">
+              <AlertCircle size={18} className="text-amber-400 flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-amber-300">HTTPS erforderlich</p>
+                <p className="text-xs text-amber-400/80">
+                  Web Push erfordert HTTPS. Dev-Server mit{" "}
+                  <span className="font-mono">npm run dev</span> starten, dann das Zertifikat auf dem iPhone unter
+                  Einstellungen → Allgemein → VPN &amp; Geraeteverwaltung vertrauen.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {pushSupportStatus === "needs-pwa-install" && (
+            <div className="flex items-start gap-3 p-4 bg-amber-900/20 border border-amber-700/40 rounded-xl">
+              <AlertCircle size={18} className="text-amber-400 flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-amber-300">PWA-Installation erforderlich</p>
+                <p className="text-xs text-amber-400/80">
+                  Push-Benachrichtigungen funktionieren nur wenn die App ueber &quot;Zum Home-Bildschirm
+                  hinzufuegen&quot; installiert wurde (ab iOS 16.4).
+                </p>
+              </div>
+            </div>
+          )}
+
+          {pushSupportStatus === "needs-service-worker" && (
+            <div className="flex items-start gap-3 p-4 bg-amber-900/20 border border-amber-700/40 rounded-xl">
+              <AlertCircle size={18} className="text-amber-400 flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-amber-300">Service Worker nicht aktiv</p>
+                <p className="text-xs text-amber-400/80">
+                  In der aktuellen Umgebung ist kein Push-faehiger Service Worker aktiv.
+                  Bitte <span className="font-mono">/sw.js</span> pruefen, Hard-Reload ausfuehren
+                  und falls noetig den Browser-Cache bzw. alte Service Worker entfernen.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Erlaubnis verweigert */}
+          {pushSupportStatus === "supported" && permissionState === "denied" && (
+            <div className="flex items-start gap-3 p-4 bg-red-900/20 border border-red-700/40 rounded-xl">
+              <AlertCircle size={18} className="text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-red-300">Erlaubnis verweigert</p>
+                <p className="text-xs text-red-400/80">
+                  Notifications wurden blockiert. Bitte in den Browser-Einstellungen wieder erlauben.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Haupt-Toggle */}
+          {pushSupportStatus === "supported" && permissionState !== "denied" && (
+            <div className="flex items-start justify-between gap-4 p-4 bg-slate-800/50 border border-slate-700 rounded-xl">
+              <div className="flex items-start gap-3">
+                {isSubscribed
+                  ? <Bell size={18} className="text-blue-400 flex-shrink-0 mt-0.5" />
+                  : <BellOff size={18} className="text-slate-500 flex-shrink-0 mt-0.5" />
+                }
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-slate-200">Push-Benachrichtigungen</p>
+                  <p className="text-xs text-slate-500">
+                    {isSubscribed ? "Aktiv — du wirst bei relevanten Events benachrichtigt" : "Deaktiviert"}
+                  </p>
+                  {currentUser && (
+                    <p className="text-[11px] text-slate-500">
+                      Zuordnung: {currentUser.displayName} · {currentUser.id}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={isSubscribed ? handlePushUnsubscribe : handlePushSubscribe}
+                disabled={pushLoading || (!form.organization && !settings?.organization)}
+                className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 disabled:opacity-40 ${
+                  isSubscribed ? "bg-blue-600" : "bg-slate-700"
+                }`}
+                aria-pressed={isSubscribed}
+              >
+                <div
+                  className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                    isSubscribed ? "translate-x-7" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+          )}
+
+          {/* Fehlermeldung */}
+          {pushError && (
+            <div className="p-3 bg-red-900/30 border border-red-700/50 rounded-xl">
+              <p className="text-sm text-red-300">{pushError}</p>
+            </div>
+          )}
+
+          {/* Event-Liste (informativ) */}
+          {pushSupportStatus === "supported" && isSubscribed && (
+            <div className="p-4 bg-slate-800/30 border border-slate-700/50 rounded-xl space-y-2">
+              <p className="text-xs font-medium text-slate-400">Benachrichtigungen bei:</p>
+              {[
+                "PR-Review-Anfrage",
+                "Build fehlgeschlagen",
+                "Build erfolgreich",
+                "Release-Approval ausstehend",
+                "PR-Kommentar",
+              ].map((label) => (
+                <div key={label} className="flex items-center gap-2">
+                  <CheckCircle size={14} className="text-blue-400 flex-shrink-0" />
+                  <span className="text-xs text-slate-400">{label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Wizard */}
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
+            Einrichtung
+          </h2>
+          <a
+            href="/push-setup"
+            className="flex items-center gap-3 p-4 bg-slate-800/50 border border-slate-700/60 rounded-xl transition-colors hover:bg-slate-700/60 active:scale-[0.99]"
+          >
+            <ListChecks size={18} className="text-blue-400 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-slate-200">Push-Wizard starten</p>
+              <p className="text-xs text-slate-500">Schritt-fuer-Schritt Setup fuer Push Notifications</p>
+            </div>
+            <ExternalLink size={14} className="flex-shrink-0 text-slate-600" />
+          </a>
+        </section>
+
+        {/* Admin-Bereich */}
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
+            Entwickler
+          </h2>
+          <a
+            href="/push-test"
+            className="flex items-center gap-3 p-4 bg-slate-800/50 border border-slate-700/60 rounded-xl transition-colors hover:bg-slate-700/60 active:scale-[0.99]"
+          >
+            <FlaskConical size={18} className="text-purple-400 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-slate-200">Push-Notifications testen</p>
+              <p className="text-xs text-slate-500">Notifications aktivieren und Events simulieren</p>
+            </div>
+            <ExternalLink size={14} className="flex-shrink-0 text-slate-600" />
+          </a>
+        </section>
       </div>
     </div>
   );
