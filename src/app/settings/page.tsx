@@ -6,7 +6,7 @@ import { AppBar } from "@/components/layout/AppBar";
 import { Button } from "@/components/ui/Button";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { AppSettings, ThemeMode } from "@/types";
-import { Eye, EyeOff, CheckCircle, Trash2, ExternalLink, Bell, BellOff, AlertCircle, FlaskConical, ListChecks } from "lucide-react";
+import { Eye, EyeOff, CheckCircle, Trash2, ExternalLink, Bell, BellOff, AlertCircle, FlaskConical, ListChecks, ChevronRight } from "lucide-react";
 import { createAzureClient } from "@/lib/api/client";
 import { demoSettings } from "@/lib/mocks/demoData";
 import { identityService, type AzureCurrentUser } from "@/lib/services/identityService";
@@ -39,6 +39,7 @@ export default function SettingsPage() {
   const [pushLoading, setPushLoading] = useState(false);
   const [pushError, setPushError] = useState("");
   const [currentUser, setCurrentUser] = useState<AzureCurrentUser | null>(null);
+  const [webhookToken, setWebhookToken] = useState<string | null>(null);
 
   // Gespeicherte Einstellungen in Formular laden
   useEffect(() => {
@@ -63,6 +64,10 @@ export default function SettingsPage() {
   useEffect(() => {
     refreshPushState();
   }, [refreshPushState]);
+
+  useEffect(() => {
+    setWebhookToken(pushService.getStoredToken());
+  }, []);
 
   useEffect(() => {
     const org = form.organization || settings?.organization;
@@ -402,6 +407,21 @@ export default function SettingsPage() {
             Benachrichtigungen
           </h2>
 
+          {!webhookToken ? (
+            // Noch nicht per Wizard eingerichtet
+            <a
+              href="/push-setup"
+              className="flex items-center gap-3 p-4 bg-slate-800/50 border border-blue-700/30 rounded-xl transition-colors hover:bg-slate-700/60 active:scale-[0.99]"
+            >
+              <Bell size={18} className="text-blue-400 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-200">Push-Notifications einrichten</p>
+                <p className="text-xs text-slate-500">Bitte den Einrichtungs-Wizard durchlaufen</p>
+              </div>
+              <ChevronRight size={16} className="flex-shrink-0 text-slate-500" />
+            </a>
+          ) : (<>
+
           {/* Praeziser Status-Hinweis je nach Support-Level */}
           {pushSupportStatus === "unsupported" && (
             <div className="flex items-start gap-3 p-4 bg-slate-800/50 border border-slate-700 rounded-xl">
@@ -532,6 +552,7 @@ export default function SettingsPage() {
               ))}
             </div>
           )}
+          </>)}
         </section>
 
         {/* Wizard */}
