@@ -16,6 +16,7 @@ import { useAzureClient } from "@/lib/hooks/useAzureClient";
 import { pipelinesService } from "@/lib/services/pipelinesService";
 import { usePipelineDefStore } from "@/lib/stores/selectionStore";
 import { PipelineSelector } from "@/components/layout/selectors/PipelineSelector";
+import { DeliveryTitleSelector } from "@/components/layout/DeliveryTitleSelector";
 import { Pipeline } from "@/types";
 import { PlayCircle, ChevronRight, Play, StopCircle } from "lucide-react";
 
@@ -81,10 +82,10 @@ export default function PipelinesPage() {
 
   return (
     <div className="min-h-screen">
-      <AppBar title="Pipelines" rightSlot={<PipelineSelector pipelines={pipelines || []} loading={pipelinesLoading} />} />
+      <AppBar title={<DeliveryTitleSelector current="pipelines" />} rightSlot={<PipelineSelector pipelines={pipelines || []} loading={pipelinesLoading} />} />
 
       {/* View-Tabs */}
-      <div className="sticky-below-appbar bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-2">
+      <div className="fixed-below-appbar bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-2">
         <div className="flex gap-2">
           {[
             { key: "builds", label: "Runs" },
@@ -104,83 +105,85 @@ export default function PipelinesPage() {
       </div>
 
       {/* Pipeline-Definitionen */}
-      {view === "pipelines" && (
-        <div>
-          {pipelinesLoading ? (
-            <PageLoader />
-          ) : !pipelines?.length ? (
-            <EmptyState icon={PlayCircle} title="Keine Pipelines gefunden" />
-          ) : (
-            <div className="divide-y divide-slate-800/50">
-              {pipelines.map((pipeline) => (
-                <div key={pipeline.id} className="flex items-center gap-3 px-4 py-3.5">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{pipeline.name}</p>
-                    {pipeline.folder && pipeline.folder !== "\\" && (
-                      <p className="text-xs text-slate-500">{pipeline.folder}</p>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => { setStartModal(pipeline); setStartBranch("main"); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-green-700/30 hover:bg-green-700/50 text-green-400 rounded-lg text-xs font-medium transition-colors"
-                  >
-                    <Play size={12} />
-                    Starten
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Build-Runs */}
-      {view === "builds" && (
-        <div>
-          {buildsLoading ? (
-            <PageLoader />
-          ) : buildsError ? (
-            <ErrorMessage message="Builds konnten nicht geladen werden" onRetry={refetch} />
-          ) : !builds?.length ? (
-            <EmptyState icon={PlayCircle} title="Keine Builds gefunden" />
-          ) : (
-            <div className="divide-y divide-slate-800/50">
-              {builds.map((build) => (
-                <Link
-                  key={build.id}
-                  href={`/pipelines/${build.id}`}
-                  className="flex items-center gap-3 px-4 py-3.5 hover:bg-slate-800/30 transition-colors"
-                >
-                  <BuildStatusIcon status={build.result || build.status} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{build.definition.name}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-slate-500">#{build.buildNumber}</span>
-                      <span className="text-xs text-slate-600">·</span>
-                      <span className="text-xs text-slate-500 truncate">{build.sourceBranch.replace("refs/heads/", "")}</span>
+      <div className="pt-[3.85rem]">
+        {view === "pipelines" && (
+          <div>
+            {pipelinesLoading ? (
+              <PageLoader />
+            ) : !pipelines?.length ? (
+              <EmptyState icon={PlayCircle} title="Keine Pipelines gefunden" />
+            ) : (
+              <div className="divide-y divide-slate-800/50">
+                {pipelines.map((pipeline) => (
+                  <div key={pipeline.id} className="flex items-center gap-3 px-4 py-3.5">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-100 truncate">{pipeline.name}</p>
+                      {pipeline.folder && pipeline.folder !== "\\" && (
+                        <p className="text-xs text-slate-500">{pipeline.folder}</p>
+                      )}
                     </div>
-                    <p className="text-xs text-slate-600 mt-0.5">
-                      {formatDistanceToNow(new Date(build.queueTime), { addSuffix: true, locale: de })}
-                    </p>
+                    <button
+                      onClick={() => { setStartModal(pipeline); setStartBranch("main"); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-green-700/30 hover:bg-green-700/50 text-green-400 rounded-lg text-xs font-medium transition-colors"
+                    >
+                      <Play size={12} />
+                      Starten
+                    </button>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {/* Laufenden Build abbrechen */}
-                    {build.status === "inProgress" && (
-                      <button
-                        onClick={(e) => { e.preventDefault(); cancelMutation.mutate(build.id); }}
-                        className="p-1.5 hover:bg-slate-700 rounded-lg"
-                      >
-                        <StopCircle size={16} className="text-red-400" />
-                      </button>
-                    )}
-                    <ChevronRight size={16} className="text-slate-600" />
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Build-Runs */}
+        {view === "builds" && (
+          <div>
+            {buildsLoading ? (
+              <PageLoader />
+            ) : buildsError ? (
+              <ErrorMessage message="Builds konnten nicht geladen werden" onRetry={refetch} />
+            ) : !builds?.length ? (
+              <EmptyState icon={PlayCircle} title="Keine Builds gefunden" />
+            ) : (
+              <div className="divide-y divide-slate-800/50">
+                {builds.map((build) => (
+                  <Link
+                    key={build.id}
+                    href={`/pipelines/${build.id}`}
+                    className="flex items-center gap-3 px-4 py-3.5 hover:bg-slate-800/30 transition-colors"
+                  >
+                    <BuildStatusIcon status={build.result || build.status} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-100 truncate">{build.definition.name}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs text-slate-500">#{build.buildNumber}</span>
+                        <span className="text-xs text-slate-600">·</span>
+                        <span className="text-xs text-slate-500 truncate">{build.sourceBranch.replace("refs/heads/", "")}</span>
+                      </div>
+                      <p className="text-xs text-slate-600 mt-0.5">
+                        {formatDistanceToNow(new Date(build.queueTime), { addSuffix: true, locale: de })}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {/* Laufenden Build abbrechen */}
+                      {build.status === "inProgress" && (
+                        <button
+                          onClick={(e) => { e.preventDefault(); cancelMutation.mutate(build.id); }}
+                          className="p-1.5 hover:bg-slate-700 rounded-lg"
+                        >
+                          <StopCircle size={16} className="text-red-400" />
+                        </button>
+                      )}
+                      <ChevronRight size={16} className="text-slate-600" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Pipeline starten Modal */}
       <Modal open={!!startModal} onClose={() => setStartModal(null)} title="Pipeline starten">
@@ -192,7 +195,7 @@ export default function PipelinesPage() {
               type="text"
               value={startBranch}
               onChange={(e) => setStartBranch(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500"
+              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-blue-500"
               placeholder="main"
             />
           </div>

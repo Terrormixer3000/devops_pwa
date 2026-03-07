@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { AppBar } from "@/components/layout/AppBar";
 import { Button } from "@/components/ui/Button";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
-import { AppSettings } from "@/types";
+import { AppSettings, ThemeMode } from "@/types";
 import { Eye, EyeOff, CheckCircle, Trash2, ExternalLink } from "lucide-react";
 import { createAzureClient } from "@/lib/api/client";
 import { demoSettings } from "@/lib/mocks/demoData";
@@ -18,6 +18,7 @@ export default function SettingsPage() {
     project: "",
     pat: "",
     demoMode: false,
+    theme: "dark",
   });
   const [showPat, setShowPat] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -32,10 +33,22 @@ export default function SettingsPage() {
     }
   }, [settings]);
 
+  useEffect(() => {
+    // Theme-Wechsel in den Einstellungen sofort als Vorschau anwenden.
+    document.documentElement.dataset.theme = form.theme;
+    document.documentElement.style.colorScheme = form.theme;
+  }, [form.theme]);
+
   const handleChange = (field: keyof AppSettings, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     // Testergebnis zuruecksetzen bei Aenderung
     setTestResult(null);
+    setSaved(false);
+  };
+
+  // Das Theme wird direkt in den App-Einstellungen persistiert und global angewendet.
+  const handleThemeChange = (theme: ThemeMode) => {
+    setForm((prev) => ({ ...prev, theme }));
     setSaved(false);
   };
 
@@ -92,11 +105,11 @@ export default function SettingsPage() {
   const handleClear = () => {
     if (confirm("Alle Einstellungen loeschen?")) {
       clearSettings();
-      setForm({ organization: "", project: "", pat: "", demoMode: false });
+      setForm({ organization: "", project: "", pat: "", demoMode: false, theme: "dark" });
     }
   };
 
-  const isFormValid = form.demoMode || (form.organization && form.project && form.pat);
+  const canTestConnection = form.demoMode || !!(form.organization && form.project && form.pat);
 
   return (
     <div className="min-h-screen">
@@ -104,6 +117,35 @@ export default function SettingsPage() {
 
       <div className="px-4 py-4 space-y-6 max-w-lg mx-auto">
         {/* Azure DevOps Konfiguration */}
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
+            Darstellung
+          </h2>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-slate-300">Farbschema</p>
+            <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-800/70 p-1.5">
+              {[
+                { value: "dark", label: "Dark Mode" },
+                { value: "light", label: "Light Mode" },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => handleThemeChange(option.value as ThemeMode)}
+                  className={`rounded-[0.95rem] px-4 py-3 text-sm font-medium transition-colors ${
+                    form.theme === option.value
+                      ? "bg-blue-600 text-white"
+                      : "text-slate-400 hover:bg-slate-700/80"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section className="space-y-4">
           <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
             Azure DevOps Konfiguration
@@ -135,7 +177,7 @@ export default function SettingsPage() {
               onChange={(e) => handleChange("organization", e.target.value)}
               placeholder="z.B. meine-firma"
               disabled={form.demoMode}
-              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
+              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
             />
             <p className="text-xs text-slate-500">
               dev.azure.com/<strong className="text-slate-400">{form.organization || "organisation"}</strong>
@@ -151,7 +193,7 @@ export default function SettingsPage() {
               onChange={(e) => handleChange("project", e.target.value)}
               placeholder="z.B. mein-projekt"
               disabled={form.demoMode}
-              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
+              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
             />
           </div>
 
@@ -165,7 +207,7 @@ export default function SettingsPage() {
                 onChange={(e) => handleChange("pat", e.target.value)}
                 placeholder="Token eingeben..."
                 disabled={form.demoMode}
-                className="w-full px-4 py-3 pr-12 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-mono"
+                className="w-full px-4 py-3 pr-12 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-mono"
               />
               {/* Token anzeigen/verbergen */}
               <button
@@ -224,14 +266,13 @@ export default function SettingsPage() {
             fullWidth
             variant="secondary"
             loading={testing}
-            disabled={!isFormValid}
+            disabled={!canTestConnection}
             onClick={handleTest}
           >
             Verbindung testen
           </Button>
           <Button
             fullWidth
-            disabled={!isFormValid}
             onClick={handleSave}
           >
             Einstellungen speichern

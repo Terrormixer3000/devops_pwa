@@ -119,7 +119,7 @@ function RepoExplorer({ repo, settings }: { repo: Repository; settings: AppSetti
   return (
     <>
       {selectedBranch && (
-        <div className="sticky-below-appbar bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-2">
+        <div className="fixed-below-appbar bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-2">
           <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar">
             {(view === "commits" || view === "file-content" || pathHistory.length > 0) && (
               <button onClick={handleBack} className="p-1.5 hover:bg-slate-800 rounded-lg flex-shrink-0">
@@ -145,15 +145,17 @@ function RepoExplorer({ repo, settings }: { repo: Repository; settings: AppSetti
         </div>
       )}
 
-      {view === "branches" ? (
-        <BranchList branches={branches || []} loading={branchesLoading} error={branchError} onSelect={handleSelectBranch} onRefetch={refetchBranches} />
-      ) : view === "commits" ? (
-        <CommitList commits={commits || []} loading={commitsLoading} />
-      ) : view === "files" ? (
-        <FileTree items={treeItems || []} loading={treeLoading} currentPath={currentPath} onFolder={handleNavigateFolder} onFile={handleOpenFile} />
-      ) : (
-        <FileViewer content={fileContent || ""} path={selectedFile || ""} loading={fileLoading} />
-      )}
+      <div className={selectedBranch ? "pt-[3.85rem]" : ""}>
+        {view === "branches" ? (
+          <BranchList branches={branches || []} loading={branchesLoading} error={branchError} onSelect={handleSelectBranch} onRefetch={refetchBranches} />
+        ) : view === "commits" ? (
+          <CommitList commits={commits || []} loading={commitsLoading} />
+        ) : view === "files" ? (
+          <FileTree items={treeItems || []} loading={treeLoading} currentPath={currentPath} onFolder={handleNavigateFolder} onFile={handleOpenFile} />
+        ) : (
+          <FileViewer content={fileContent || ""} path={selectedFile || ""} loading={fileLoading} />
+        )}
+      </div>
     </>
   );
 }
@@ -180,7 +182,7 @@ function BranchList({ branches, loading, error, onSelect, onRefetch }: {
         >
           <GitBranch size={16} className="text-blue-400 flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white truncate">{branch.name}</p>
+            <p className="text-sm font-medium text-slate-100 truncate">{branch.name}</p>
             <p className="text-xs text-slate-500 truncate">{branch.objectId.substring(0, 8)}</p>
           </div>
           <ChevronRight size={16} className="text-slate-600 flex-shrink-0" />
@@ -199,7 +201,7 @@ function CommitList({ commits, loading }: { commits: ReturnType<typeof repositor
     <div className="divide-y divide-slate-800/50">
       {commits.map((commit) => (
         <div key={commit.commitId} className="px-4 py-3">
-          <p className="text-sm text-white line-clamp-2">{commit.comment}</p>
+          <p className="text-sm text-slate-100 line-clamp-2">{commit.comment}</p>
           <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500">
             <span className="font-mono text-blue-400">{commit.commitId.substring(0, 8)}</span>
             <span>{commit.author.name}</span>
@@ -254,7 +256,7 @@ function FileTree({ items, loading, currentPath, onFolder, onFile }: {
                 ) : (
                   <FileText size={16} className="text-slate-500 flex-shrink-0" />
                 )}
-                <span className="text-sm text-white flex-1 truncate">{name}</span>
+                <span className="text-sm text-slate-100 flex-1 truncate">{name}</span>
                 {isFolder && <ChevronRight size={16} className="text-slate-600 flex-shrink-0" />}
               </button>
             );

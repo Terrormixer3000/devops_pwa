@@ -95,7 +95,7 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
       {/* Build-Kopfbereich */}
       <div className="px-4 pb-4 border-b border-slate-800">
         <div className="flex items-center gap-2 mb-2">
-          <h1 className="text-base font-semibold text-white flex-1">{build.definition.name}</h1>
+          <h1 className="text-base font-semibold text-slate-100 flex-1">{build.definition.name}</h1>
           <Badge variant={statusVariant}>{getStatusLabel(build.result || build.status)}</Badge>
         </div>
         <p className="text-xs text-slate-400 font-mono mb-1">#{build.buildNumber}</p>
@@ -161,7 +161,7 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
                       className="w-full flex items-center gap-3 px-4 py-3 bg-slate-800/60 rounded-xl text-left hover:bg-slate-800 transition-colors"
                     >
                       <FileText size={14} className="text-slate-400 flex-shrink-0" />
-                      <span className="text-sm text-white">{r.name}</span>
+                      <span className="text-sm text-slate-100">{r.name}</span>
                     </button>
                   ))}
               </div>
@@ -200,7 +200,7 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
                 >
                   <Download size={16} className="text-blue-400 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white">{artifact.name}</p>
+                    <p className="text-sm font-medium text-slate-100">{artifact.name}</p>
                     <p className="text-xs text-slate-500">{artifact.resource.type}</p>
                   </div>
                 </a>
@@ -228,7 +228,7 @@ function TimelineItem({ record, childRecords }: { record: TimelineRecord; childR
       >
         {icon}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-white">{record.name}</p>
+          <p className="text-sm font-medium text-slate-100">{record.name}</p>
           {record.startTime && record.finishTime && (
             <p className="text-xs text-slate-500">
               {Math.round((new Date(record.finishTime).getTime() - new Date(record.startTime).getTime()) / 1000)}s

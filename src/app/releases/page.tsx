@@ -17,6 +17,7 @@ import { useAzureClient } from "@/lib/hooks/useAzureClient";
 import { releasesService } from "@/lib/services/releasesService";
 import { useReleaseDefStore } from "@/lib/stores/selectionStore";
 import { ReleaseSelector } from "@/components/layout/selectors/ReleaseSelector";
+import { DeliveryTitleSelector } from "@/components/layout/DeliveryTitleSelector";
 import { ReleaseDefinition, ReleaseApproval, ReleaseEnvironment } from "@/types";
 import { Rocket, ChevronRight, Play, ThumbsUp, ThumbsDown, AlertCircle } from "lucide-react";
 
@@ -100,10 +101,10 @@ export default function ReleasesPage() {
 
   return (
     <div className="min-h-screen">
-      <AppBar title="Releases" rightSlot={<ReleaseSelector definitions={definitions || []} loading={defsLoading} />} />
+      <AppBar title={<DeliveryTitleSelector current="releases" />} rightSlot={<ReleaseSelector definitions={definitions || []} loading={defsLoading} />} />
 
       {/* Tabs */}
-      <div className="sticky-below-appbar bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-2">
+      <div className="fixed-below-appbar bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-2">
         <div className="flex gap-1 overflow-x-auto hide-scrollbar">
           {[
             { key: "releases", label: "Releases" },
@@ -123,105 +124,107 @@ export default function ReleasesPage() {
         </div>
       </div>
 
-      {/* Definitionen */}
-      {activeTab === "definitionen" && (
-        <div>
-          {defsLoading ? <PageLoader /> : !definitions?.length ? (
-            <EmptyState icon={Rocket} title="Keine Release-Pipelines" />
-          ) : (
-            <div className="divide-y divide-slate-800/50">
-              {definitions.map((def) => (
-                <div key={def.id} className="flex items-center gap-3 px-4 py-3.5">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{def.name}</p>
-                    {def.description && <p className="text-xs text-slate-500 truncate">{def.description}</p>}
+      <div className="pt-[3.85rem]">
+        {/* Definitionen */}
+        {activeTab === "definitionen" && (
+          <div>
+            {defsLoading ? <PageLoader /> : !definitions?.length ? (
+              <EmptyState icon={Rocket} title="Keine Release-Pipelines" />
+            ) : (
+              <div className="divide-y divide-slate-800/50">
+                {definitions.map((def) => (
+                  <div key={def.id} className="flex items-center gap-3 px-4 py-3.5">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-100 truncate">{def.name}</p>
+                      {def.description && <p className="text-xs text-slate-500 truncate">{def.description}</p>}
+                    </div>
+                    <button
+                      onClick={() => setStartModal(def)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-700/30 hover:bg-purple-700/50 text-purple-400 rounded-lg text-xs font-medium transition-colors"
+                    >
+                      <Play size={12} />
+                      Starten
+                    </button>
                   </div>
-                  <button
-                    onClick={() => setStartModal(def)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-700/30 hover:bg-purple-700/50 text-purple-400 rounded-lg text-xs font-medium transition-colors"
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Releases */}
+        {activeTab === "releases" && (
+          <div>
+            {releasesLoading ? <PageLoader /> : releasesError ? (
+              <ErrorMessage message="Releases konnten nicht geladen werden" onRetry={refetch} />
+            ) : !filteredReleases.length ? (
+              <EmptyState icon={Rocket} title="Keine Releases gefunden" />
+            ) : (
+              <div className="divide-y divide-slate-800/50">
+                {filteredReleases.map((release) => (
+                  <Link
+                    key={release.id}
+                    href={`/releases/${release.id}`}
+                    className="flex items-center gap-3 px-4 py-3.5 hover:bg-slate-800/30 transition-colors"
                   >
-                    <Play size={12} />
-                    Starten
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-100 truncate">{release.name}</p>
+                      <p className="text-xs text-slate-500 truncate">{release.releaseDefinition?.name}</p>
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {(release.environments ?? []).slice(0, 4).map((env) => (
+                          <EnvironmentBadge key={env.id} env={env} />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-xs text-slate-600">
+                        {release.createdOn ? formatDistanceToNow(new Date(release.createdOn), { addSuffix: true, locale: de }) : ""}
+                      </span>
+                      <ChevronRight size={16} className="text-slate-600" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
-      {/* Releases */}
-      {activeTab === "releases" && (
-        <div>
-          {releasesLoading ? <PageLoader /> : releasesError ? (
-            <ErrorMessage message="Releases konnten nicht geladen werden" onRetry={refetch} />
-          ) : !filteredReleases.length ? (
-            <EmptyState icon={Rocket} title="Keine Releases gefunden" />
-          ) : (
-            <div className="divide-y divide-slate-800/50">
-              {filteredReleases.map((release) => (
-                <Link
-                  key={release.id}
-                  href={`/releases/${release.id}`}
-                  className="flex items-center gap-3 px-4 py-3.5 hover:bg-slate-800/30 transition-colors"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{release.name}</p>
-                    <p className="text-xs text-slate-500 truncate">{release.releaseDefinition?.name}</p>
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {(release.environments ?? []).slice(0, 4).map((env) => (
-                        <EnvironmentBadge key={env.id} env={env} />
-                      ))}
+        {/* Ausstehende Approvals */}
+        {activeTab === "approvals" && (
+          <div>
+            {approvalsLoading ? <PageLoader /> : !approvals?.length ? (
+              <EmptyState icon={ThumbsUp} title="Keine ausstehenden Approvals" />
+            ) : (
+              <div className="divide-y divide-slate-800/50">
+                {approvals.map((approval) => (
+                  <div key={approval.id} className="px-4 py-4">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div>
+                        <p className="text-sm font-medium text-slate-100">{approval.releaseReference?.name}</p>
+                        <p className="text-xs text-slate-500">{approval.releaseEnvironmentReference?.name}</p>
+                      </div>
+                      <AlertCircle size={16} className="text-yellow-400 flex-shrink-0 mt-0.5" />
+                    </div>
+                    <p className="text-xs text-slate-500 mb-3">
+                      {formatDistanceToNow(new Date(approval.createdOn), { addSuffix: true, locale: de })}
+                    </p>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="primary" onClick={() => setApprovalModal(approval)}>
+                        <ThumbsUp size={14} /> Approven
+                      </Button>
+                      <Button size="sm" variant="danger" onClick={() => {
+                        setApprovalModal(approval);
+                      }}>
+                        <ThumbsDown size={14} /> Ablehnen
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <span className="text-xs text-slate-600">
-                      {release.createdOn ? formatDistanceToNow(new Date(release.createdOn), { addSuffix: true, locale: de }) : ""}
-                    </span>
-                    <ChevronRight size={16} className="text-slate-600" />
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Ausstehende Approvals */}
-      {activeTab === "approvals" && (
-        <div>
-          {approvalsLoading ? <PageLoader /> : !approvals?.length ? (
-            <EmptyState icon={ThumbsUp} title="Keine ausstehenden Approvals" />
-          ) : (
-            <div className="divide-y divide-slate-800/50">
-              {approvals.map((approval) => (
-                <div key={approval.id} className="px-4 py-4">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div>
-                      <p className="text-sm font-medium text-white">{approval.releaseReference?.name}</p>
-                      <p className="text-xs text-slate-500">{approval.releaseEnvironmentReference?.name}</p>
-                    </div>
-                    <AlertCircle size={16} className="text-yellow-400 flex-shrink-0 mt-0.5" />
-                  </div>
-                  <p className="text-xs text-slate-500 mb-3">
-                    {formatDistanceToNow(new Date(approval.createdOn), { addSuffix: true, locale: de })}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="primary" onClick={() => setApprovalModal(approval)}>
-                      <ThumbsUp size={14} /> Approven
-                    </Button>
-                    <Button size="sm" variant="danger" onClick={() => {
-                      setApprovalModal(approval);
-                    }}>
-                      <ThumbsDown size={14} /> Ablehnen
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Release starten Modal */}
       <Modal open={!!startModal} onClose={() => setStartModal(null)} title="Release starten">
@@ -251,7 +254,7 @@ export default function ReleasesPage() {
               value={approvalComment}
               onChange={(e) => setApprovalComment(e.target.value)}
               rows={2}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-blue-500 resize-none"
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-blue-500 resize-none"
             />
           </div>
           <Button

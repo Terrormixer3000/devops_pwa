@@ -48,7 +48,7 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
 
       {/* Release-Kopfbereich */}
       <div className="px-4 pb-4 border-b border-slate-800">
-        <h1 className="text-base font-semibold text-white mb-1">{release.name}</h1>
+        <h1 className="text-base font-semibold text-slate-100 mb-1">{release.name}</h1>
         <p className="text-xs text-slate-500">{release.releaseDefinition.name}</p>
         <p className="text-xs text-slate-600 mt-1">
           {release.createdBy.displayName} · {formatDistanceToNow(new Date(release.createdOn), { addSuffix: true, locale: de })}
@@ -98,7 +98,7 @@ function EnvironmentCard({ env }: { env: ReleaseEnvironment }) {
     <div className="bg-slate-800/60 rounded-xl overflow-hidden border border-slate-700/50">
       {/* Umgebungs-Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700/50">
-        <p className="text-sm font-medium text-white">{env.name}</p>
+        <p className="text-sm font-medium text-slate-100">{env.name}</p>
         <Badge variant={variants[env.status] || "muted"} size="sm">
           {statusLabels[env.status] || env.status}
         </Badge>

@@ -84,7 +84,7 @@ export default function NewPRPage() {
             value={form.title}
             onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
             placeholder="PR-Titel eingeben"
-            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm"
+            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm"
           />
         </div>
 
@@ -94,7 +94,7 @@ export default function NewPRPage() {
           <select
             value={form.sourceRefName}
             onChange={(e) => setForm((f) => ({ ...f, sourceRefName: e.target.value }))}
-            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-blue-500 text-sm"
+            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-blue-500 text-sm"
           >
             <option value="">Branch auswaehlen...</option>
             {branches?.map((b) => (
@@ -109,7 +109,7 @@ export default function NewPRPage() {
           <select
             value={form.targetRefName || defaultTargetBranch}
             onChange={(e) => setForm((f) => ({ ...f, targetRefName: e.target.value }))}
-            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-blue-500 text-sm"
+            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-blue-500 text-sm"
           >
             <option value="">Branch auswaehlen...</option>
             {branches?.map((b) => (
@@ -126,7 +126,7 @@ export default function NewPRPage() {
             onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
             placeholder="Optional: Was aendert dieser PR?"
             rows={4}
-            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm resize-none"
+            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm resize-none"
           />
         </div>
 

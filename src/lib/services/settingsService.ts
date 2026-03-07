@@ -7,6 +7,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   project: "",
   pat: "",
   demoMode: false,
+  theme: "dark",
 };
 
 export const settingsService = {

@@ -66,7 +66,7 @@ export default function PullRequestsPage() {
       <AppBar title="Pull Requests" rightSlot={<PRRepoSelector />} />
 
       {/* Status-Filter Tabs */}
-      <div className="sticky-below-appbar bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-2">
+      <div className="fixed-below-appbar bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-2">
         <div className="flex gap-1 overflow-x-auto hide-scrollbar">
           {STATUS_OPTIONS.map(({ label, value }) => (
             <button
@@ -85,29 +85,31 @@ export default function PullRequestsPage() {
       </div>
 
       {/* Inhalt */}
-      {repositories.length === 0 ? (
-        <EmptyState
-          icon={GitPullRequest}
-          title="Keine Repositories konfiguriert"
-          description="Konfiguriere erst ein Azure DevOps Projekt in den Einstellungen"
-        />
-      ) : isLoading ? (
-        <PageLoader />
-      ) : error ? (
-        <ErrorMessage message="Fehler beim Laden der Pull Requests" onRetry={refetch} />
-      ) : prs.length === 0 ? (
-        <EmptyState
-          icon={GitPullRequest}
-          title="Keine Pull Requests"
-          description={`Keine ${status === "active" ? "aktiven" : ""} Pull Requests gefunden`}
-        />
-      ) : (
-        <div className="divide-y divide-slate-800/50">
-          {prs.map((pr) => (
-            <PRListItem key={`${pr.repository.id}-${pr.pullRequestId}`} pr={pr} multiRepo={targetRepos.length > 1} />
-          ))}
-        </div>
-      )}
+      <div className="pt-[3.85rem]">
+        {repositories.length === 0 ? (
+          <EmptyState
+            icon={GitPullRequest}
+            title="Keine Repositories konfiguriert"
+            description="Konfiguriere erst ein Azure DevOps Projekt in den Einstellungen"
+          />
+        ) : isLoading ? (
+          <PageLoader />
+        ) : error ? (
+          <ErrorMessage message="Fehler beim Laden der Pull Requests" onRetry={refetch} />
+        ) : prs.length === 0 ? (
+          <EmptyState
+            icon={GitPullRequest}
+            title="Keine Pull Requests"
+            description={`Keine ${status === "active" ? "aktiven" : ""} Pull Requests gefunden`}
+          />
+        ) : (
+          <div className="divide-y divide-slate-800/50">
+            {prs.map((pr) => (
+              <PRListItem key={`${pr.repository.id}-${pr.pullRequestId}`} pr={pr} multiRepo={targetRepos.length > 1} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -138,7 +140,7 @@ function PRListItem({ pr, multiRepo }: { pr: PullRequest & { _repoName?: string 
       )}
 
       {/* PR-Titel */}
-      <p className="text-sm font-semibold text-white leading-snug line-clamp-2">{pr.title}</p>
+      <p className="text-sm font-semibold text-slate-100 leading-snug line-clamp-2">{pr.title}</p>
 
       {/* Branch-Info */}
       <div className="flex items-center gap-1.5 mt-1.5 text-xs text-slate-500">

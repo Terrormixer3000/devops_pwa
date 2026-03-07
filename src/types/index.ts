@@ -1,9 +1,12 @@
 // Settings
+export type ThemeMode = "dark" | "light";
+
 export interface AppSettings {
   organization: string;
   project: string;
   pat: string;
   demoMode: boolean;
+  theme: ThemeMode;
 }
 
 // Repository
