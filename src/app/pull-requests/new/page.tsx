@@ -10,8 +10,7 @@ import { useRepositoryStore } from "@/lib/stores/repositoryStore";
 import { useAzureClient } from "@/lib/hooks/useAzureClient";
 import { pullRequestsService } from "@/lib/services/pullRequestsService";
 import { repositoriesService } from "@/lib/services/repositoriesService";
-import { ChevronLeft } from "lucide-react";
-import Link from "next/link";
+import { BackLink } from "@/components/ui/BackButton";
 
 export default function NewPRPage() {
   const router = useRouter();
@@ -65,9 +64,7 @@ export default function NewPRPage() {
 
       <div className="px-4 py-4 space-y-5 max-w-lg mx-auto">
         {/* Zurueck-Link */}
-        <Link href="/pull-requests" className="flex items-center gap-1 text-sm text-blue-400">
-          <ChevronLeft size={16} /> Zurueck
-        </Link>
+        <BackLink href="/pull-requests" size="default" />
 
         {/* Repository-Hinweis */}
         {!repo ? (

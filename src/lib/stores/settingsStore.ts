@@ -1,6 +1,15 @@
 import { create } from "zustand";
 import { AppSettings } from "@/types";
 import { settingsService } from "@/lib/services/settingsService";
+import { useRepositoryStore } from "@/lib/stores/repositoryStore";
+import {
+  useDashboardRepoStore,
+  usePipelineDefStore,
+  usePipelineFavStore,
+  usePRRepoStore,
+  useReleaseDefStore,
+  useReleaseFavStore,
+} from "@/lib/stores/selectionStore";
 
 interface SettingsState {
   settings: AppSettings | null;
@@ -30,6 +39,16 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   // Alle Einstellungen zuruecksetzen
   clearSettings: () => {
     settingsService.clear();
+    useRepositoryStore.getState().setRepositories([]);
+    useRepositoryStore.getState().clearSelection();
+    useRepositoryStore.getState().clearFavorites();
+    useRepositoryStore.getState().setShowAll(false);
+    usePRRepoStore.getState().clear();
+    usePipelineDefStore.getState().clear();
+    useReleaseDefStore.getState().clear();
+    useDashboardRepoStore.getState().clear();
+    usePipelineFavStore.getState().clear();
+    useReleaseFavStore.getState().clear();
     set({ settings: null, isConfigured: false });
   },
 }));

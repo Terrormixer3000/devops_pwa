@@ -18,6 +18,10 @@ export const favoritesService = {
     localStorage.setItem(FAVORITES_KEY, JSON.stringify(ids));
   },
 
+  clear(): void {
+    localStorage.removeItem(FAVORITES_KEY);
+  },
+
   // Ein Repository zu den Favoriten hinzufuegen
   add(id: string): void {
     const current = this.load();

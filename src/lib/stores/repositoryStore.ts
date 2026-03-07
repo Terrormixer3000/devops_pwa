@@ -18,6 +18,7 @@ interface RepositoryState {
 
   toggleFavorite: (id: string) => void;
   loadFavorites: () => void;
+  clearFavorites: () => void;
   setShowAll: (show: boolean) => void;
 
   loadPersistedSelection: () => void;
@@ -77,6 +78,11 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
   loadFavorites: () => {
     const favorites = favoritesService.load();
     set({ favorites });
+  },
+
+  clearFavorites: () => {
+    favoritesService.clear();
+    set({ favorites: [] });
   },
 
   setShowAll: (show) => set({ showAllRepos: show }),

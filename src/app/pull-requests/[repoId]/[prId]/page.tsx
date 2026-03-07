@@ -13,22 +13,29 @@ import { Modal } from "@/components/ui/Modal";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { useAzureClient } from "@/lib/hooks/useAzureClient";
 import { pullRequestsService } from "@/lib/services/pullRequestsService";
+import { repositoriesService, GitChangeEntry } from "@/lib/services/repositoriesService";
 import { PRThread, PRComment } from "@/types";
+import { RichDiffViewer } from "@/components/ui/RichDiffViewer";
+import { isImagePath } from "@/lib/utils/fileTypes";
+import { BackLink } from "@/components/ui/BackButton";
 import {
   ThumbsUp,
   ThumbsDown,
   MessageCircle,
   GitMerge,
-  ChevronLeft,
   Send,
   FileText,
   GitCommit,
   Clock,
   User,
+  ChevronRight,
 } from "lucide-react";
-import Link from "next/link";
 
 type Tab = "uebersicht" | "dateien" | "kommentare" | "commits";
+
+function getChangeKey(entry: GitChangeEntry): string {
+  return `${entry.changeType}::${entry.originalPath || ""}::${entry.item.path}`;
+}
 
 export default function PRDetailPage({ params }: { params: Promise<{ repoId: string; prId: string }> }) {
   const { repoId, prId } = use(params);
@@ -37,6 +44,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
   const [commentText, setCommentText] = useState("");
   const [approveModal, setApproveModal] = useState(false);
   const [completeModal, setCompleteModal] = useState(false);
+  const [selectedChangeKey, setSelectedChangeKey] = useState<string | null>(null);
 
   const { settings } = useSettingsStore();
   const { client } = useAzureClient();
@@ -124,12 +132,122 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
     },
   });
 
+  const sourceBranch = pr?.sourceRefName.replace("refs/heads/", "") || "";
+  const targetBranch = pr?.targetRefName.replace("refs/heads/", "") || "";
+  const commentThreads = threads?.filter((t) => t.comments.some((c) => c.commentType === "text")) || [];
+  const changeEntries = changes?.changeEntries || [];
+  const selectedChange = changeEntries.find((entry) => getChangeKey(entry) === selectedChangeKey) || changeEntries[0] || null;
+  const selectedChangeType = selectedChange?.changeType?.toLowerCase();
+  const oldPath = selectedChange?.originalPath || selectedChange?.item.path || "";
+  const newPath = selectedChange?.item.path || "";
+  const selectedPath = selectedChange?.item.path || selectedChange?.originalPath || "";
+  const selectedChangeIsImage = isImagePath(selectedPath);
+
+  const { data: selectedFileDiff, isLoading: selectedFileDiffLoading } = useQuery({
+    queryKey: [
+      "pr-file-diff",
+      repoId,
+      prIdNum,
+      sourceBranch,
+      targetBranch,
+      selectedChange?.changeType,
+      selectedChange?.originalPath,
+      selectedChange?.item.path,
+      settings?.project,
+      settings?.demoMode,
+    ],
+    queryFn: async () => {
+      if (!client || !settings || !selectedChange) {
+        return {
+          oldContent: "",
+          newContent: "",
+          oldImageDataUrl: null as string | null,
+          newImageDataUrl: null as string | null,
+          error: null as string | null,
+        };
+      }
+
+      const lowerType = selectedChange.changeType.toLowerCase();
+      const loadOld = lowerType !== "add";
+      const loadNew = lowerType !== "delete";
+      let oldContent = "";
+      let newContent = "";
+      let oldImageDataUrl: string | null = null;
+      let newImageDataUrl: string | null = null;
+
+      try {
+        if (loadOld && oldPath) {
+          if (selectedChangeIsImage) {
+            oldImageDataUrl = await repositoriesService.getFileBinaryDataUrlAtVersion(
+              client,
+              settings.project,
+              repoId,
+              oldPath,
+              targetBranch,
+              "branch"
+            );
+          } else {
+            oldContent = await repositoriesService.getFileContent(
+              client,
+              settings.project,
+              repoId,
+              oldPath,
+              targetBranch
+            );
+          }
+        }
+      } catch {
+        if (loadOld) {
+          return {
+            oldContent: "",
+            newContent: "",
+            oldImageDataUrl: null as string | null,
+            newImageDataUrl: null as string | null,
+            error: "Basisversion konnte nicht geladen werden.",
+          };
+        }
+      }
+
+      try {
+        if (loadNew && newPath) {
+          if (selectedChangeIsImage) {
+            newImageDataUrl = await repositoriesService.getFileBinaryDataUrlAtVersion(
+              client,
+              settings.project,
+              repoId,
+              newPath,
+              sourceBranch,
+              "branch"
+            );
+          } else {
+            newContent = await repositoriesService.getFileContent(
+              client,
+              settings.project,
+              repoId,
+              newPath,
+              sourceBranch
+            );
+          }
+        }
+      } catch {
+        if (loadNew) {
+          return {
+            oldContent,
+            newContent: "",
+            oldImageDataUrl,
+            newImageDataUrl: null as string | null,
+            error: "Neue Version konnte nicht geladen werden.",
+          };
+        }
+      }
+
+      return { oldContent, newContent, oldImageDataUrl, newImageDataUrl, error: null as string | null };
+    },
+    enabled: !!client && !!settings && !!selectedChange && activeTab === "dateien",
+  });
+
   if (isLoading) return <div className="min-h-screen"><AppBar title="Pull Request" /><PageLoader /></div>;
   if (error || !pr) return <div className="min-h-screen"><AppBar title="Pull Request" /><ErrorMessage message="PR konnte nicht geladen werden" /></div>;
-
-  const sourceBranch = pr.sourceRefName.replace("refs/heads/", "");
-  const targetBranch = pr.targetRefName.replace("refs/heads/", "");
-  const commentThreads = threads?.filter((t) => t.comments.some((c) => c.commentType === "text")) || [];
 
   return (
     <div className="min-h-screen">
@@ -137,10 +255,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
 
       {/* Zurueck-Link */}
       <div className="px-4 pt-4">
-        <Link href="/pull-requests" className="flex items-center gap-1 text-sm text-blue-400 mb-3">
-          <ChevronLeft size={16} />
-          Zurueck
-        </Link>
+        <BackLink href="/pull-requests" className="mb-3" />
       </div>
 
       {/* PR-Kopfbereich */}
@@ -245,16 +360,48 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
         )}
 
         {activeTab === "dateien" && (
-          <div className="space-y-1">
+          <div className="space-y-3">
             {changes?.changeEntries.length === 0 ? (
               <p className="text-sm text-slate-500 text-center py-4">Keine geaenderten Dateien</p>
             ) : (
-              changes?.changeEntries.map((entry, i) => (
-                <div key={i} className="flex items-center gap-2 py-2 border-b border-slate-800/50">
-                  <ChangeTypeDot type={entry.changeType} />
-                  <span className="text-xs font-mono text-slate-300 truncate">{entry.item.path}</span>
+              <>
+                <div className="overflow-hidden rounded-xl border border-slate-700/60">
+                  {changes?.changeEntries.map((entry, i) => {
+                    const entryKey = getChangeKey(entry);
+                    const isSelected = selectedChange ? getChangeKey(selectedChange) === entryKey : false;
+                    return (
+                      <button
+                        key={`${entry.item.path}-${entry.changeType}-${i}`}
+                        onClick={() => setSelectedChangeKey(entryKey)}
+                        className={`w-full flex items-center gap-2 px-3 py-2.5 border-b border-slate-800/50 text-left transition-colors ${
+                          isSelected ? "bg-slate-800/70" : "hover:bg-slate-800/40"
+                        }`}
+                      >
+                        <ChangeTypeDot type={entry.changeType} />
+                        <span className="text-xs font-mono text-slate-300 truncate flex-1">{entry.item.path}</span>
+                        <ChevronRight size={14} className={`flex-shrink-0 ${isSelected ? "text-blue-400" : "text-slate-600"}`} />
+                      </button>
+                    );
+                  })}
                 </div>
-              ))
+
+                {selectedChange && (
+                  <RichDiffViewer
+                    key={`${selectedChange.item.path}:${selectedChange.changeType}:${selectedChange.originalPath || ""}`}
+                    path={selectedChange.item.path}
+                    title={selectedChange.item.path}
+                    oldContent={selectedFileDiff?.oldContent || ""}
+                    newContent={selectedFileDiff?.newContent || ""}
+                    oldLabel={`${targetBranch}:${oldPath}`}
+                    newLabel={`${sourceBranch}:${newPath}`}
+                    oldImageSrc={selectedFileDiff?.oldImageDataUrl || null}
+                    newImageSrc={selectedFileDiff?.newImageDataUrl || null}
+                    loading={selectedFileDiffLoading}
+                    error={selectedFileDiff?.error}
+                    emptyMessage={selectedChangeType === "rename" ? "Nur Umbenennung ohne Inhaltsaenderung" : "Keine zeilenbasierten Unterschiede"}
+                  />
+                )}
+              </>
             )}
           </div>
         )}

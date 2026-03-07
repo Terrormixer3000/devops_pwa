@@ -30,6 +30,18 @@ export const settingsService = {
 
   // Einstellungen loeschen
   clear(): void {
+    if (typeof window === "undefined") return;
+
+    // Beim Zuruecksetzen sollen alle app-spezifischen Persistenzen entfernt werden.
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      if (key?.startsWith("azdevops_")) {
+        keysToRemove.push(key);
+      }
+    }
+
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
     localStorage.removeItem(STORAGE_KEY);
   },
 

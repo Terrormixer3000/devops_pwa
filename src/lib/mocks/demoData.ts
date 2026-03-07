@@ -108,6 +108,21 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+function encodeToBase64(input: string): string {
+  const bytes = new TextEncoder().encode(input);
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+
+  if (typeof btoa === "function") {
+    return btoa(binary);
+  }
+  return Buffer.from(bytes).toString("base64");
+}
+
 function projectRef() {
   return { id: PROJECT_ID, name: PROJECT_NAME };
 }
@@ -164,6 +179,9 @@ function sanitizeBranchName(name: string) {
 function buildTreeForRepo(repoId: string, branch: string, fullName: string, index: number) {
   const repoSlug = fullName.replace(/\//g, "-");
   const configPath = `/${fullName.split("/")[0]}`;
+  const serviceName = fullName.split("/")[1];
+  const namespace = fullName.split("/")[0];
+  const serviceNamePascal = pascalCase(serviceName);
   // Der Dateibaum ist bewusst klein gehalten, deckt aber Explorer, Dateiinhalt und PR-Dateilisten ab.
   const root: TreeEntry[] = [
     {
@@ -190,6 +208,18 @@ function buildTreeForRepo(repoId: string, branch: string, fullName: string, inde
       path: "/README.md",
       size: 3200,
       url: `https://demo.local/repos/${repoId}/README.md`,
+    },
+    {
+      objectId: `${repoSlug}-root-docs`,
+      gitObjectType: "tree",
+      path: "/docs",
+      url: `https://demo.local/repos/${repoId}/docs`,
+    },
+    {
+      objectId: `${repoSlug}-root-assets`,
+      gitObjectType: "tree",
+      path: "/assets",
+      url: `https://demo.local/repos/${repoId}/assets`,
     },
     {
       objectId: `${repoSlug}-root-package`,
@@ -290,8 +320,49 @@ function buildTreeForRepo(repoId: string, branch: string, fullName: string, inde
     },
   ];
 
+  const docs: TreeEntry[] = [
+    {
+      objectId: `${repoSlug}-docs-architecture`,
+      gitObjectType: "blob",
+      path: "/docs/architecture.md",
+      size: 1820,
+      url: `https://demo.local/repos/${repoId}/docs/architecture.md`,
+    },
+    {
+      objectId: `${repoSlug}-docs-decisions`,
+      gitObjectType: "blob",
+      path: "/docs/decision-log.md",
+      size: 1260,
+      url: `https://demo.local/repos/${repoId}/docs/decision-log.md`,
+    },
+    {
+      objectId: `${repoSlug}-docs-release`,
+      gitObjectType: "blob",
+      path: "/docs/release-notes.md",
+      size: 980,
+      url: `https://demo.local/repos/${repoId}/docs/release-notes.md`,
+    },
+  ];
+
+  const assets: TreeEntry[] = [
+    {
+      objectId: `${repoSlug}-assets-overview`,
+      gitObjectType: "blob",
+      path: "/assets/system-overview.svg",
+      size: 2490,
+      url: `https://demo.local/repos/${repoId}/assets/system-overview.svg`,
+    },
+    {
+      objectId: `${repoSlug}-assets-mobile`,
+      gitObjectType: "blob",
+      path: "/assets/mobile-preview.png",
+      size: 1480,
+      url: `https://demo.local/repos/${repoId}/assets/mobile-preview.png`,
+    },
+  ];
+
   const files: Record<string, string> = {
-    [fileKey(repoId, branch, "/README.md")]: `# ${fullName}\n\nDies ist das Demo-Repository ${fullName} im Projekt ${PROJECT_NAME}.\n\n- Namespace: ${fullName.split("/")[0]}\n- Aktivitaetsstufe: ${repoCatalog[index].activity}\n- Branch: ${branch}\n`,
+    [fileKey(repoId, branch, "/README.md")]: `# ${fullName}\n\nDies ist das Demo-Repository ${fullName} im Projekt ${PROJECT_NAME}.\n\n- Namespace: ${namespace}\n- Aktivitaetsstufe: ${repoCatalog[index].activity}\n- Branch: ${branch}\n`,
     [fileKey(repoId, branch, "/package.json")]: JSON.stringify(
       {
         name: repoSlug,
@@ -308,13 +379,18 @@ function buildTreeForRepo(repoId: string, branch: string, fullName: string, inde
     ),
     [fileKey(repoId, branch, "/src/main.ts")]: `import { bootstrap } from "./app/index";\n\nbootstrap({ service: "${fullName}", branch: "${branch}" });\n`,
     [fileKey(repoId, branch, "/src/app/index.ts")]: `export function bootstrap(config: { service: string; branch: string }) {\n  console.log("boot", config.service, config.branch);\n}\n`,
-    [fileKey(repoId, branch, "/src/app/routes.ts")]: `export const routes = [\n  "/health",\n  "/metrics",\n  "/${fullName.split("/")[1]}",\n];\n`,
-    [fileKey(repoId, branch, "/src/domain/service.ts")]: `export async function run${pascalCase(fullName.split("/")[1])}Workflow() {\n  return { ok: true, repo: "${fullName}" };\n}\n`,
-    [fileKey(repoId, branch, "/src/domain/model.ts")]: `export interface ${pascalCase(fullName.split("/")[1])}Model {\n  id: string;\n  namespace: "${fullName.split("/")[0]}";\n  active: boolean;\n}\n`,
+    [fileKey(repoId, branch, "/src/app/routes.ts")]: `export const routes = [\n  "/health",\n  "/metrics",\n  "/${serviceName}",\n];\n`,
+    [fileKey(repoId, branch, "/src/domain/service.ts")]: `export async function run${serviceNamePascal}Workflow() {\n  return { ok: true, repo: "${fullName}" };\n}\n`,
+    [fileKey(repoId, branch, "/src/domain/model.ts")]: `export interface ${serviceNamePascal}Model {\n  id: string;\n  namespace: "${namespace}";\n  active: boolean;\n}\n`,
     [fileKey(repoId, branch, "/infra/values.yaml")]: `replicaCount: ${index % 3 === 0 ? 3 : 2}\nnamespace: ${configPath.slice(1)}\nfeatureFlags:\n  demoMode: true\n`,
     [fileKey(repoId, branch, "/infra/chart.yaml")]: `apiVersion: v2\nname: ${repoSlug}\nversion: 0.${index + 1}.0\n`,
     [fileKey(repoId, branch, "/.azuredevops/ci.yml")]: `trigger:\n  branches:\n    include:\n      - main\n      - develop\npool:\n  vmImage: ubuntu-latest\nsteps:\n  - script: npm ci\n  - script: npm test\n  - script: npm run build\n`,
     [fileKey(repoId, branch, "/.azuredevops/release.yml")]: `stages:\n  - stage: Deploy_Dev\n  - stage: Deploy_Test\n  - stage: Deploy_Prod\n`,
+    [fileKey(repoId, branch, "/docs/architecture.md")]: `# Architekturuebersicht ${serviceNamePascal}\n\nDieses Dokument beschreibt die Kernkomponenten von \`${fullName}\`.\n\n## Kontext\n\n- Service: ${serviceName}\n- Namespace: ${namespace}\n- Default Branch: ${sanitizeBranchName(branch)}\n\n## Komponenten\n\n1. API Layer unter \`/src/app\`\n2. Domain-Workflow in \`/src/domain/service.ts\`\n3. Deployment-Pipelines in \`/.azuredevops\`\n\n## Hinweise fuer Reviews\n\n- Aendere bei API-Aenderungen auch \`docs/release-notes.md\`\n- Aktualisiere \`assets/system-overview.svg\`, wenn sich die Topologie aendert\n`,
+    [fileKey(repoId, branch, "/docs/decision-log.md")]: `# Decision Log\n\n## ${NOW.getUTCFullYear()}-01-15\n- Wir setzen weiterhin auf branch-basierte Deployments fuer ${serviceName}.\n\n## ${NOW.getUTCFullYear()}-02-03\n- Bildassets fuer Ops-Dashboards liegen in \`/assets\`.\n\n## ${NOW.getUTCFullYear()}-02-24\n- PR-Reviews pruefen jetzt explizit Markdown-Dokumentation und Architekturdiagramme.\n`,
+    [fileKey(repoId, branch, "/docs/release-notes.md")]: `# Release Notes\n\n## ${sanitizeBranchName(branch)}\n\n### Added\n- Verbesserte Logging-Hooks im Workflow.\n- Aktualisierte Dokumentation fuer ${serviceNamePascal}.\n\n### Changed\n- Pipeline-Validierung in CI stricter gemacht.\n- Neue Vorschau fuer Diagramm-Assets im Code Explorer.\n`,
+    [fileKey(repoId, branch, "/assets/system-overview.svg")]: `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680">\n  <defs>\n    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">\n      <stop offset="0%" stop-color="#0f172a" />\n      <stop offset="100%" stop-color="#1e293b" />\n    </linearGradient>\n  </defs>\n  <rect width="1200" height="680" fill="url(#bg)" rx="24" />\n  <rect x="120" y="120" width="280" height="120" rx="16" fill="#1d4ed8" opacity="0.9" />\n  <text x="260" y="188" text-anchor="middle" fill="#e2e8f0" font-size="28" font-family="Arial">Client App</text>\n  <rect x="460" y="100" width="300" height="160" rx="16" fill="#0ea5e9" opacity="0.9" />\n  <text x="610" y="188" text-anchor="middle" fill="#082f49" font-size="30" font-family="Arial">${serviceNamePascal}</text>\n  <rect x="830" y="120" width="250" height="120" rx="16" fill="#16a34a" opacity="0.9" />\n  <text x="955" y="188" text-anchor="middle" fill="#052e16" font-size="24" font-family="Arial">Downstream API</text>\n  <rect x="410" y="360" width="380" height="190" rx="16" fill="#334155" opacity="0.95" />\n  <text x="600" y="430" text-anchor="middle" fill="#f8fafc" font-size="24" font-family="Arial">Azure DevOps Pipeline</text>\n  <text x="600" y="470" text-anchor="middle" fill="#cbd5e1" font-size="18" font-family="Arial">Build • Test • Release</text>\n  <line x1="400" y1="180" x2="460" y2="180" stroke="#93c5fd" stroke-width="6" />\n  <line x1="760" y1="180" x2="830" y2="180" stroke="#86efac" stroke-width="6" />\n  <line x1="610" y1="260" x2="610" y2="360" stroke="#94a3b8" stroke-width="6" />\n</svg>\n`,
+    [fileKey(repoId, branch, "/assets/mobile-preview.png")]: `PNG_PLACEHOLDER_${repoSlug}_${sanitizeBranchName(branch)}`,
   };
 
   return {
@@ -325,6 +401,8 @@ function buildTreeForRepo(repoId: string, branch: string, fullName: string, inde
       [treeKey(repoId, branch, "/src/domain")]: srcDomain,
       [treeKey(repoId, branch, "/infra")]: infra,
       [treeKey(repoId, branch, "/.azuredevops")]: pipelines,
+      [treeKey(repoId, branch, "/docs")]: docs,
+      [treeKey(repoId, branch, "/assets")]: assets,
     },
     files,
   };
@@ -599,6 +677,8 @@ function seedDemoState(): DemoState {
         { item: { path: "/src/domain/service.ts" }, changeType: "edit" },
         { item: { path: "/infra/values.yaml" }, changeType: "edit" },
         { item: { path: "/.azuredevops/ci.yml" }, changeType: "edit" },
+        { item: { path: "/docs/architecture.md" }, changeType: "edit" },
+        { item: { path: "/assets/system-overview.svg" }, changeType: "edit" },
       ],
     };
 
@@ -666,6 +746,8 @@ function seedDemoState(): DemoState {
         changeEntries: [
           { item: { path: "/README.md" }, changeType: "edit" },
           { item: { path: "/src/app/routes.ts" }, changeType: "edit" },
+          { item: { path: "/docs/release-notes.md" }, changeType: "edit" },
+          { item: { path: "/assets/mobile-preview.png" }, changeType: "add" },
         ],
       };
     }
@@ -724,7 +806,10 @@ function seedDemoState(): DemoState {
         },
       ];
       changes[changeKey(repoId, abandonedPrId, iterations[abandonedPrKey][0].id)] = {
-        changeEntries: [{ item: { path: "/src/domain/model.ts" }, changeType: "edit" }],
+        changeEntries: [
+          { item: { path: "/src/domain/model.ts" }, changeType: "edit" },
+          { item: { path: "/docs/decision-log.md" }, changeType: "edit" },
+        ],
       };
     }
 
@@ -959,6 +1044,31 @@ function seedDemoState(): DemoState {
   };
 }
 
+function hasRichExampleFiles(state: DemoState): boolean {
+  const repo = state.repositories[0];
+  if (!repo) return false;
+
+  const candidateBranches = state.branches[repo.id] || [];
+  const branch = candidateBranches.find((entry) => entry.name === "main")?.name || candidateBranches[0]?.name;
+  if (!branch) return false;
+
+  const requiredFilePaths = [
+    "/docs/architecture.md",
+    "/docs/release-notes.md",
+    "/assets/system-overview.svg",
+    "/assets/mobile-preview.png",
+  ];
+
+  const hasRequiredFiles = requiredFilePaths.every((path) =>
+    Boolean(state.files[fileKey(repo.id, branch, path)])
+  );
+  const rootTree = state.trees[treeKey(repo.id, branch, "/")] || [];
+  const hasRequiredFolders = rootTree.some((entry) => entry.path === "/docs") &&
+    rootTree.some((entry) => entry.path === "/assets");
+
+  return hasRequiredFiles && hasRequiredFolders;
+}
+
 function loadDemoState(): DemoState {
   if (typeof window === "undefined") {
     if (!memoryState) memoryState = seedDemoState();
@@ -968,7 +1078,17 @@ function loadDemoState(): DemoState {
   try {
     // Demo-Mutationen bleiben im Browser erhalten, bis der lokale Zustand geloescht wird.
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as DemoState;
+    if (raw) {
+      const parsed = JSON.parse(raw) as DemoState;
+      if (hasRichExampleFiles(parsed)) {
+        return parsed;
+      }
+
+      // Upgrade bestehender Demo-Daten auf den aktuellen Beispielsatz (Markdown + Bilder).
+      const migrated = seedDemoState();
+      saveDemoState(migrated);
+      return migrated;
+    }
   } catch {
     // Lokaler Zustand wird in diesem Fall neu aufgebaut.
   }
@@ -998,6 +1118,95 @@ function listPrsForRepo(state: DemoState, repoId: string) {
 
 function findPullRequest(state: DemoState, repoId: string, prId: number) {
   return listPrsForRepo(state, repoId).find((pr) => pr.pullRequestId === prId);
+}
+
+function findBranchForCommit(state: DemoState, repoId: string, commitId: string): string | null {
+  for (const [key, commits] of Object.entries(state.commits)) {
+    const [candidateRepoId, branch] = key.split("::");
+    if (candidateRepoId !== repoId) continue;
+    if (commits.some((commit) => commit.commitId === commitId)) {
+      return branch;
+    }
+  }
+  return null;
+}
+
+function hashText(value: string): number {
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash * 31 + value.charCodeAt(i)) % 2147483647;
+  }
+  return Math.abs(hash);
+}
+
+function listKnownPathsForRepoBranch(state: DemoState, repoId: string, branch: string): string[] {
+  const prefix = `${repoId}::${branch}::`;
+  return Object.keys(state.files)
+    .filter((key) => key.startsWith(prefix))
+    .map((key) => key.slice(prefix.length))
+    .sort();
+}
+
+function buildDemoCommitChanges(
+  state: DemoState,
+  repoId: string,
+  commitId: string
+): Array<{ changeType: string; item: { path: string; gitObjectType: "blob" }; originalPath?: string }> {
+  const branch = findBranchForCommit(state, repoId, commitId) || "main";
+  const knownPaths = listKnownPathsForRepoBranch(state, repoId, branch);
+  if (knownPaths.length === 0) return [];
+
+  const seed = hashText(commitId);
+  const count = 1 + (seed % 3);
+  const result: Array<{ changeType: string; item: { path: string; gitObjectType: "blob" }; originalPath?: string }> = [];
+
+  for (let i = 0; i < count; i++) {
+    const path = knownPaths[(seed + i * 7) % knownPaths.length];
+    const variant = (seed + i * 11) % 8;
+
+    if (variant === 0) {
+      const newPath = `/src/demo/new-${commitId.slice(0, 6)}-${i}.ts`;
+      result.push({ changeType: "add", item: { path: newPath, gitObjectType: "blob" } });
+      continue;
+    }
+
+    if (variant === 1) {
+      result.push({ changeType: "delete", item: { path, gitObjectType: "blob" } });
+      continue;
+    }
+
+    if (variant === 2) {
+      const renamedPath = path.replace(/([^/]+)$/, `${commitId.slice(0, 4)}-$1`);
+      result.push({
+        changeType: "rename",
+        originalPath: path,
+        item: { path: renamedPath, gitObjectType: "blob" },
+      });
+      continue;
+    }
+
+    result.push({ changeType: "edit", item: { path, gitObjectType: "blob" } });
+  }
+
+  return result;
+}
+
+function buildDemoCommitFileContent(baseContent: string, commitId: string, path: string, previous: boolean): string {
+  const normalizedBase = baseContent || `// Demo-Datei ${path}\n`;
+  if (previous) return normalizedBase;
+
+  const short = commitId.slice(0, 8);
+  if (path.endsWith(".md")) {
+    return `${normalizedBase}\n\n- Geaendert in Commit ${short}\n`;
+  }
+
+  const lines = normalizedBase.replace(/\r/g, "").split("\n");
+  const insertionIndex = Math.min(2, Math.max(lines.length, 1));
+  lines.splice(insertionIndex, 0, `// commit ${short}: Demo-Aenderung`);
+  if (lines.length > 18) {
+    lines.splice(18, lines.length - 18);
+  }
+  return lines.join("\n");
 }
 
 function updateApprovalState(
@@ -1083,6 +1292,54 @@ export const demoApi = {
 
     getFileContent(repoId: string, branch: string, path: string): string {
       return loadDemoState().files[fileKey(repoId, branch, path)] || "// Keine Datei gefunden\n";
+    },
+
+    getFileContentAtVersion(
+      repoId: string,
+      path: string,
+      version: string,
+      versionType: "branch" | "commit",
+      versionOptions?: "previous"
+    ): string {
+      const state = loadDemoState();
+      if (versionType === "branch") {
+        return state.files[fileKey(repoId, version, path)] || "// Keine Datei gefunden\n";
+      }
+
+      const branch = findBranchForCommit(state, repoId, version) || "main";
+      const baseContent = state.files[fileKey(repoId, branch, path)] || "";
+      return buildDemoCommitFileContent(baseContent, version, path, versionOptions === "previous");
+    },
+
+    getFileBinaryDataUrlAtVersion(
+      repoId: string,
+      path: string,
+      version: string,
+      versionType: "branch" | "commit",
+      versionOptions?: "previous"
+    ): string {
+      const extension = path.split(".").pop()?.toLowerCase() || "";
+      if (extension === "svg") {
+        const svgText = demoApi.repositories.getFileContentAtVersion(
+          repoId,
+          path,
+          version,
+          versionType,
+          versionOptions
+        );
+        return `data:image/svg+xml;base64,${encodeToBase64(svgText)}`;
+      }
+
+      const short = path.split("/").pop() || path;
+      const placeholder = `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720"><rect width="100%" height="100%" fill="#0f172a"/><text x="50%" y="50%" fill="#cbd5e1" font-size="32" text-anchor="middle" dominant-baseline="middle">${short}</text></svg>`;
+      return `data:image/svg+xml;base64,${encodeToBase64(placeholder)}`;
+    },
+
+    getCommitChanges(
+      repoId: string,
+      commitId: string
+    ): Array<{ changeType: string; item: { path: string; gitObjectType: "blob" }; originalPath?: string }> {
+      return clone(buildDemoCommitChanges(loadDemoState(), repoId, commitId));
     },
   },
 
@@ -1201,6 +1458,8 @@ export const demoApi = {
           changeEntries: [
             { item: { path: "/src/domain/service.ts" }, changeType: "edit" },
             { item: { path: "/README.md" }, changeType: "edit" },
+            { item: { path: "/docs/architecture.md" }, changeType: "edit" },
+            { item: { path: "/assets/system-overview.svg" }, changeType: "edit" },
           ],
         };
         state.threads[key] = [];

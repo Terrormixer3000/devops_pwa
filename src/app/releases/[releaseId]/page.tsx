@@ -8,12 +8,12 @@ import { AppBar } from "@/components/layout/AppBar";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Badge } from "@/components/ui/Badge";
+import { BackLink } from "@/components/ui/BackButton";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { useAzureClient } from "@/lib/hooks/useAzureClient";
 import { releasesService } from "@/lib/services/releasesService";
 import { ReleaseEnvironment } from "@/types";
-import { ChevronLeft, CheckCircle, XCircle, Clock, Loader } from "lucide-react";
-import Link from "next/link";
+import { CheckCircle, XCircle, Clock, Loader } from "lucide-react";
 
 export default function ReleaseDetailPage({ params }: { params: Promise<{ releaseId: string }> }) {
   const { releaseId } = use(params);
@@ -41,9 +41,7 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
 
       {/* Zurueck */}
       <div className="px-4 pt-4">
-        <Link href="/releases" className="flex items-center gap-1 text-sm text-blue-400 mb-3">
-          <ChevronLeft size={16} /> Releases
-        </Link>
+        <BackLink href="/releases" label="Releases" className="mb-3" />
       </div>
 
       {/* Release-Kopfbereich */}

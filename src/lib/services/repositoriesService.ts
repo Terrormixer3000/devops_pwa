@@ -2,6 +2,31 @@ import { AxiosInstance } from "axios";
 import { Repository, Branch, Commit, TreeEntry, AzureListResponse } from "@/types";
 import { isDemoClient } from "@/lib/api/client";
 import { demoApi } from "@/lib/mocks/demoData";
+import { getImageMimeType } from "@/lib/utils/fileTypes";
+
+export interface GitChangeEntry {
+  changeType: string;
+  item: {
+    path: string;
+    gitObjectType?: "blob" | "tree";
+  };
+  originalPath?: string;
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  if (typeof Buffer !== "undefined") {
+    return Buffer.from(buffer).toString("base64");
+  }
+
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
+}
 
 export const repositoriesService = {
   async listRepositories(client: AxiosInstance, project: string): Promise<Repository[]> {
@@ -72,14 +97,97 @@ export const repositoriesService = {
     path: string,
     branch: string
   ): Promise<string> {
+    return repositoriesService.getFileContentAtVersion(client, project, repoId, path, branch, "branch");
+  },
+
+  async getFileContentAtVersion(
+    client: AxiosInstance,
+    project: string,
+    repoId: string,
+    path: string,
+    version: string,
+    versionType: "branch" | "commit",
+    versionOptions?: "previous"
+  ): Promise<string> {
     if (isDemoClient(client)) {
-      return demoApi.repositories.getFileContent(repoId, branch, path);
+      return demoApi.repositories.getFileContentAtVersion(
+        repoId,
+        path,
+        version,
+        versionType,
+        versionOptions
+      );
+    }
+
+    const params = new URLSearchParams({
+      path,
+      "versionDescriptor.version": version,
+      "versionDescriptor.versionType": versionType,
+      "api-version": "7.1",
+    });
+    if (versionOptions === "previous") {
+      params.set("versionDescriptor.versionOptions", "Previous");
     }
 
     const res = await client.get(
-      `/${project}/_apis/git/repositories/${repoId}/items?path=${encodeURIComponent(path)}&versionDescriptor.version=${encodeURIComponent(branch)}&api-version=7.1`,
+      `/${project}/_apis/git/repositories/${repoId}/items?${params.toString()}`,
       { responseType: "text", headers: { Accept: "text/plain" } }
     );
     return res.data;
+  },
+
+  async getFileBinaryDataUrlAtVersion(
+    client: AxiosInstance,
+    project: string,
+    repoId: string,
+    path: string,
+    version: string,
+    versionType: "branch" | "commit",
+    versionOptions?: "previous"
+  ): Promise<string> {
+    if (isDemoClient(client)) {
+      return demoApi.repositories.getFileBinaryDataUrlAtVersion(
+        repoId,
+        path,
+        version,
+        versionType,
+        versionOptions
+      );
+    }
+
+    const params = new URLSearchParams({
+      path,
+      "versionDescriptor.version": version,
+      "versionDescriptor.versionType": versionType,
+      "api-version": "7.1",
+    });
+    if (versionOptions === "previous") {
+      params.set("versionDescriptor.versionOptions", "Previous");
+    }
+
+    const response = await client.get<ArrayBuffer>(
+      `/${project}/_apis/git/repositories/${repoId}/items?${params.toString()}`,
+      { responseType: "arraybuffer", headers: { Accept: "*/*" } }
+    );
+
+    const mimeType = getImageMimeType(path) || "application/octet-stream";
+    const base64 = arrayBufferToBase64(response.data);
+    return `data:${mimeType};base64,${base64}`;
+  },
+
+  async getCommitChanges(
+    client: AxiosInstance,
+    project: string,
+    repoId: string,
+    commitId: string
+  ): Promise<GitChangeEntry[]> {
+    if (isDemoClient(client)) {
+      return demoApi.repositories.getCommitChanges(repoId, commitId);
+    }
+
+    const res = await client.get<{ changes: GitChangeEntry[] }>(
+      `/${project}/_apis/git/repositories/${repoId}/commits/${commitId}/changes?api-version=7.1`
+    );
+    return res.data.changes || [];
   },
 };
