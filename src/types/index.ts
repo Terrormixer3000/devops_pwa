@@ -295,6 +295,9 @@ export interface PushSubscriptionRecord {
   /** Anzeigename — nur fuer Debugging/Admin, hat keinen Einfluss auf die Filterung. */
   displayName: string;
   createdAt: string;
+  /** Zufaelliger 64-stelliger Hex-Token (256 Bit Entropie) — wird als ?t=<token> in der
+   *  Webhook-URL verwendet. Authentifiziert eingehende Azure DevOps Service Hooks. */
+  webhookToken: string;
 }
 
 // Payload der vom Service Worker als Notification angezeigt wird

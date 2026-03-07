@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { upsertSubscription, removeSubscription } from "@/lib/server/subscriptionDb";
-import { isSecureSubscriptionEndpoint, normalizeText } from "@/lib/server/pushRouteUtils";
+import { generateWebhookToken, isSecureSubscriptionEndpoint, normalizeText } from "@/lib/server/pushRouteUtils";
 import type { PushSubscriptionRecord } from "@/types";
 
 export const runtime = "nodejs";
@@ -62,6 +62,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
+  const webhookToken = generateWebhookToken();
+
   const record: PushSubscriptionRecord = {
     endpoint: subscription.endpoint,
     keys: {
@@ -73,6 +75,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     azureUserId,
     displayName: displayName || "Unbekannter Benutzer",
     createdAt: new Date().toISOString(),
+    webhookToken,
   };
 
   try {
@@ -82,7 +85,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Speicherfehler" }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true }, { status: 201 });
+  return NextResponse.json({ ok: true, webhookToken }, { status: 201 });
 }
 
 /**
