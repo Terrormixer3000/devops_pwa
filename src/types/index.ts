@@ -317,6 +317,28 @@ export interface AzureIdentityRef {
   uniqueName?: string;
 }
 
+// Work Items
+export type WorkItemType = "Bug" | "Task" | "User Story" | "Feature" | "Epic" | "Issue";
+export type WorkItemState = "Active" | "New" | "Resolved" | "Closed" | "Removed" | string;
+
+export interface WorkItem {
+  id: number;
+  rev: number;
+  fields: {
+    "System.Title": string;
+    "System.State": WorkItemState;
+    "System.WorkItemType": WorkItemType | string;
+    "System.AssignedTo"?: IdentityRef | null;
+    "System.CreatedDate": string;
+    "System.ChangedDate": string;
+    "System.AreaPath"?: string;
+    "System.IterationPath"?: string;
+    "Microsoft.VSTS.Common.Priority"?: number;
+    "System.Description"?: string;
+  };
+  url: string;
+}
+
 // Azure DevOps Service Hook Payload (relevante Felder)
 export interface AzureServiceHookPayload {
   eventType: string;
