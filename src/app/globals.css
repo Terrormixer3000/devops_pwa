@@ -120,18 +120,19 @@ html[data-theme="dark"] {
 
 html[data-theme="light"] {
   color-scheme: light;
-  /* Im Light Mode werden die Slate-Tokens invertiert, damit bestehende Utility-Klassen weiter funktionieren. */
-  --color-slate-950: #f4f0e8;
-  --color-slate-900: #fbf8f2;
-  --color-slate-800: #f1ece2;
-  --color-slate-700: #e4ddd1;
-  --color-slate-600: #cdc5b8;
-  --color-slate-500: #9d9488;
-  --color-slate-400: #746b60;
-  --color-slate-300: #564f46;
-  --color-slate-200: #38332d;
-  --color-slate-100: #1e1a16;
-  --color-slate-50: #0f0d0a;
+  /* Im Light Mode werden die Slate-Tokens auf neutrale Hellgrau-Toene gemappt,
+     damit bestehende Utility-Klassen weiter funktionieren. */
+  --color-slate-950: #f0f2f5;
+  --color-slate-900: #f8f9fb;
+  --color-slate-800: #eef0f4;
+  --color-slate-700: #dde1e7;
+  --color-slate-600: #c4c9d4;
+  --color-slate-500: #8f96a3;
+  --color-slate-400: #636b7a;
+  --color-slate-300: #444c5a;
+  --color-slate-200: #2a303b;
+  --color-slate-100: #141820;
+  --color-slate-50: #080b10;
 }
 
 /* Sichere Bereiche fuer iPhone Notch/Home-Indicator */
@@ -221,82 +222,99 @@ body {
 
 html[data-theme="light"] body {
   background:
-    radial-gradient(circle at top, rgba(43, 136, 216, 0.1), transparent 28%),
-    linear-gradient(180deg, #fcfaf5 0%, #f7f4ee 38%, #f0ebdf 100%);
+    radial-gradient(circle at top, rgba(0, 120, 212, 0.06), transparent 32%),
+    linear-gradient(180deg, #f8f9fb 0%, #f2f4f8 40%, #eaecf2 100%);
   color: var(--color-slate-100);
 }
 
 /* Der Light Mode wird zusaetzlich auf die im Projekt haeufigsten Slate-Utilities gemappt.
    So bleibt der Theme-Wechsel robust, auch wenn einzelne Komponenten noch feste Utility-Klassen tragen. */
 html[data-theme="light"] .bg-slate-900 {
-  background-color: #fbf8f2 !important;
+  background-color: #f8f9fb !important;
 }
 
 html[data-theme="light"] .bg-slate-800 {
-  background-color: #f1ece2 !important;
+  background-color: #eef0f4 !important;
 }
 
 html[data-theme="light"] .bg-slate-700 {
-  background-color: #e4ddd1 !important;
+  background-color: #dde1e7 !important;
 }
 
 html[data-theme="light"] .bg-slate-600 {
-  background-color: #cdc5b8 !important;
+  background-color: #c4c9d4 !important;
 }
 
 html[data-theme="light"] .bg-slate-500 {
-  background-color: #b6ad9f !important;
+  background-color: #a8aeba !important;
 }
 
 html[data-theme="light"] [class*="bg-slate-900/"] {
-  background-color: rgba(251, 248, 242, 0.88) !important;
+  background-color: rgba(248, 249, 251, 0.9) !important;
 }
 
 html[data-theme="light"] [class*="bg-slate-800/"] {
-  background-color: rgba(241, 236, 226, 0.84) !important;
+  background-color: rgba(238, 240, 244, 0.88) !important;
 }
 
 html[data-theme="light"] [class*="bg-slate-700/"] {
-  background-color: rgba(228, 221, 209, 0.86) !important;
+  background-color: rgba(221, 225, 231, 0.88) !important;
 }
 
 html[data-theme="light"] [class*="bg-slate-600/"] {
-  background-color: rgba(205, 197, 184, 0.85) !important;
+  background-color: rgba(196, 201, 212, 0.86) !important;
 }
 
 html[data-theme="light"] .text-white,
 html[data-theme="light"] .text-slate-100 {
-  color: #1e1a16 !important;
+  color: #141820 !important;
 }
 
 html[data-theme="light"] .text-slate-200 {
-  color: #2a251f !important;
+  color: #1e2330 !important;
 }
 
 html[data-theme="light"] .text-slate-300 {
-  color: #403932 !important;
+  color: #2e3545 !important;
 }
 
 html[data-theme="light"] .text-slate-400 {
-  color: #5c5449 !important;
+  color: #444c5a !important;
 }
 
 html[data-theme="light"] .text-slate-500 {
-  color: #746b60 !important;
+  color: #636b7a !important;
 }
 
 html[data-theme="light"] .text-slate-600 {
-  color: #92887b !important;
+  color: #8590a0 !important;
 }
 
 html[data-theme="light"] .border-slate-800 {
-  border-color: rgba(201, 192, 178, 0.9) !important;
+  border-color: rgba(180, 186, 198, 0.9) !important;
 }
 
 html[data-theme="light"] .border-slate-700 {
-  border-color: rgba(189, 179, 164, 0.92) !important;
+  border-color: rgba(165, 172, 185, 0.92) !important;
 }
 
 html[data-theme="light"] .border-slate-600 {
-  border-color: rgba(161, 150, 135, 0.9) !important;
+  border-color: rgba(140, 148, 163, 0.9) !important;
+}
+
+/* AppBar im Light Mode: heller Hintergrund mit leichtem Blur-Effekt */
+html[data-theme="light"] header.fixed.z-40 {
+  background-color: rgba(248, 249, 251, 0.9) !important;
+  border-bottom-color: rgba(180, 186, 198, 0.8) !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* BottomNav im Light Mode: helles Frosted-Glass-Styling */
+html[data-theme="light"] {
+  --bottom-nav-bg: rgba(242, 244, 248, 0.88);
+}
+
+html[data-theme="light"] nav.fixed .pointer-events-auto {
+  border-color: rgba(180, 186, 198, 0.5) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.07), 0 1px 0 rgba(255, 255, 255, 0.9) inset !important;
 }

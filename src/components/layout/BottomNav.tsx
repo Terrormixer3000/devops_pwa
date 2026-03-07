@@ -27,7 +27,7 @@ export function BottomNav() {
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3"
       style={{ paddingBottom: "calc(var(--bottom-nav-safe-area) + var(--bottom-nav-offset))" }}
     >
-      <div className="pointer-events-auto mx-auto max-w-[34rem] overflow-hidden rounded-[1.65rem] border border-white/12 bg-[rgba(28,28,30,0.78)] shadow-[0_14px_34px_rgba(0,0,0,0.38),0_1px_0_rgba(255,255,255,0.08)_inset] backdrop-blur-[28px]">
+      <div className="pointer-events-auto mx-auto max-w-[34rem] overflow-hidden rounded-[1.65rem] border border-slate-700/40 bg-[var(--bottom-nav-bg,rgba(28,28,30,0.78))] shadow-[0_14px_34px_rgba(0,0,0,0.38),0_1px_0_rgba(255,255,255,0.08)_inset] backdrop-blur-[28px]">
         <div className="grid min-h-[var(--bottom-nav-content-height)] grid-cols-5 items-stretch px-1.5 py-1.5">
           {navItems.map(({ href, label, icon: Icon }) => {
             // Aktiven Zustand ermitteln
