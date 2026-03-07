@@ -24,14 +24,22 @@ npm install
 npm run dev
 ```
 
-App öffnen unter: `http://localhost:3000`
+App öffnen unter: `https://localhost:3000`
+
+Hinweis: `npm run dev` nutzt feste Zertifikate aus `certificates/localhost.pem` und `certificates/localhost-key.pem`.
 
 ### Produktions-Build
 
 ```bash
 npm run build
-npm start
+npm run start
 ```
+
+## API-Dokumentation (OpenAPI)
+
+Die Push- und Webhook-Endpunkte sind dokumentiert unter:
+
+- `docs/openapi/push-webhooks.openapi.yaml`
 
 ## Einrichtung
 

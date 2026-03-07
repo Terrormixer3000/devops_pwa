@@ -1,162 +1,165 @@
 # AGENTS.md
 
 ## Purpose
-- This repository is a mobile-first Azure DevOps PWA built with Next.js App Router, React 19, TypeScript, Tailwind CSS v4, React Query, Axios, and Zustand.
-- Use this file as the working agreement for agentic coding tools operating inside this repo.
-- Prefer repository-specific conventions over generic framework defaults.
+- This repository is a mobile-first Azure DevOps PWA built with Next.js App Router, React 19, TypeScript, Tailwind CSS v4, React Query, Axios, Zustand, and `next-pwa`.
+- Follow repository conventions over generic framework defaults.
+- Keep changes narrow, readable, and compatible with demo mode and the current app shell.
 
-## Project Shape
-- App routes live in `src/app`.
-- Shared UI primitives live in `src/components/ui`.
-- Layout and app-shell components live in `src/components/layout`.
-- API clients and service wrappers live in `src/lib/api` and `src/lib/services`.
-- Zustand stores live in `src/lib/stores`.
-- Shared types live in `src/types/index.ts`.
-- Demo/mock data lives in `src/lib/mocks/demoData.ts`.
-
-## Tooling Snapshot
-- Package manager: `npm` (`package-lock.json` is committed).
-- Framework: Next.js 16 App Router.
-- Language: TypeScript (`.ts` / `.tsx`) with `strict: true`.
-- Styling: Tailwind CSS v4 plus custom tokens in `src/app/globals.css`.
-- Linting: ESLint 9 with `eslint-config-next/core-web-vitals` and `eslint-config-next/typescript`.
-- Testing: no automated test framework is currently configured.
-
-## Commands
-- Install dependencies: `npm install`
-- Start dev server: `npm run dev`
-- Create production build: `npm run build`
-- Start production server: `npm run start`
-- Run lint: `npm run lint`
-
-## Verified Commands
-- `npm run lint` passes in the current repository state.
-- `npm run build` passes in the current repository state.
-
-## Test Status
-- There is no `test` script in `package.json`.
-- No Jest, Vitest, Playwright, or Cypress config was found.
-- No `*.test.*` or `*.spec.*` files were found.
-- If you are asked to run tests, state clearly that this repo currently has no test harness.
-
-## Single-Test Guidance
-- There is currently no supported command for running a single test because no test framework is installed.
-- Do not invent `npm test`, `vitest`, or `jest` commands unless you add that tooling first.
-- If a future test runner is added, document the exact single-test command here immediately.
-
-## Build And Validation Expectations
-- For code changes, run `npm run lint` at minimum.
-- Run `npm run build` when changes could affect routing, typing, configuration, or bundling.
-- Because there is no test suite, lint/build are the main verification steps.
-
-## Missing Instruction Files
-- No `AGENTS.md` existed before this file.
+## Instruction Files
+- `AGENTS.md` already exists in the repo and should be kept current.
 - No `.cursorrules` file was found.
 - No files were found under `.cursor/rules/`.
 - No `.github/copilot-instructions.md` file was found.
-- If any of those files are added later, merge their guidance into this file rather than duplicating contradictory rules.
+- If any of those files are added later, merge their repo-specific guidance into this file.
+
+## Repository Layout
+- Routes live in `src/app`.
+- Shared UI primitives live in `src/components/ui`.
+- App shell and navigation live in `src/components/layout`.
+- API clients live in `src/lib/api`.
+- Domain/service wrappers live in `src/lib/services`.
+- Server-only helpers for API routes live in `src/lib/server`.
+- Zustand stores live in `src/lib/stores`.
+- Shared domain and API types live in `src/types/index.ts`.
+- Demo/mock state lives in `src/lib/mocks/demoData.ts`.
+- Static files and PWA assets live in `public/`.
+
+## Tooling Snapshot
+- Package manager: `npm`.
+- Framework: Next.js 16 App Router.
+- TypeScript is `strict`.
+- Path alias: `@/* -> src/*`.
+- Linting: ESLint 9 with `eslint-config-next/core-web-vitals` and `eslint-config-next/typescript`.
+- Styling: Tailwind CSS v4 plus global theme tokens in `src/app/globals.css`.
+- PWA: `next-pwa` with a custom service worker at `public/sw-custom.js`.
+- There is currently no automated test runner configured.
+
+## Commands
+- Install dependencies: `npm install`
+- Dev server with HTTPS: `npm run dev` (webpack mode, uses certs from `certificates/localhost.pem` and `certificates/localhost-key.pem`)
+- Production build: `npm run build` (webpack mode)
+- Production server: `npm run start`
+- Lint: `npm run lint`
+
+## Test Commands
+- There is no `test` script in `package.json`.
+- No Jest, Vitest, Playwright, or Cypress config is present.
+- No `*.test.*` or `*.spec.*` files are currently part of the repo workflow.
+- If asked to run tests, say clearly that no test harness exists yet.
+
+## Single-Test Guidance
+- There is currently no supported single-test command because no test framework is installed.
+- Do not invent `npm test`, `jest`, or `vitest` commands.
+- If a test runner is added later, document the exact single-test command here immediately.
+
+## Validation Expectations
+- Minimum validation for most code changes: `npm run lint`.
+- Run `npm run lint && npm run build` for route, config, typing, service worker, or API route changes.
+- Because no automated tests exist, lint and build are the primary verification steps.
+
+## Current Verified State
+- `npm run lint` is expected to pass.
+- `npm run build` is expected to pass.
 
 ## Architecture Notes
-- Fetching is centralized in service objects such as `pipelinesService`, `pullRequestsService`, and `repositoriesService`.
-- `createAzureClient` and `createVsrmClient` wrap Axios setup and API error mapping.
-- Demo mode is a first-class path; many services branch on `isDemoClient(client)`.
-- Global app initialization happens in `src/components/layout/Providers.tsx`.
-- Persistent client-side state is managed with Zustand stores.
-- Data fetching in UI uses React Query.
+- Keep Azure DevOps REST details inside service modules, not inside page components.
+- Use `createAzureClient` and `createVsrmClient` for authenticated API access.
+- Demo mode is first-class; new service methods should preserve `isDemoClient(client)` behavior where relevant.
+- Global bootstrapping happens in `src/components/layout/Providers.tsx`.
+- UI data fetching is primarily handled with React Query.
+- Cross-page client state and persistence are handled with Zustand stores.
+- Push notifications use API routes under `src/app/api/push/*`, a local JSON subscription store in `data/subscriptions.json`, and `public/sw-custom.js`.
 
 ## Imports
-- Use ES module syntax only.
-- Keep imports grouped in this order: framework/external packages, `@/` aliases, then relative imports.
-- Within a group, keep imports stable and readable; existing files generally sort by dependency importance rather than strict alphabetization.
-- Prefer the `@/*` path alias for code under `src`.
-- Use relative imports only for nearby siblings when it materially improves clarity.
-- Import types with `import type` when the imported symbol is type-only and the file already follows that pattern.
+- Use ES modules only.
+- Group imports in this order: external packages, `@/` imports, then relative imports.
+- Prefer `@/*` imports for code under `src`.
+- Use relative imports only for nearby siblings when they improve clarity.
+- Use `import type` for type-only imports when practical.
+- Keep imports stable and easy to scan; strict alphabetization is less important than consistency.
 
 ## Formatting
-- Match the existing style: semicolons, double quotes, trailing commas where valid, and multi-line JSX when readability improves.
+- Match the existing style: semicolons, double quotes, trailing commas where valid.
 - Use 2-space indentation.
-- Keep line length reasonable, but favor readability over forced wrapping.
-- Preserve the existing compact object and array formatting style when a structure fits comfortably on one line.
-- Use parentheses around multi-line conditional expressions and JSX branches when it improves scanning.
+- Prefer multi-line JSX when a one-line version is hard to scan.
+- Keep objects and arrays compact when they remain readable.
+- Favor readability over aggressive line wrapping.
 
 ## TypeScript Rules
-- Keep `strict` TypeScript compatibility.
-- Prefer explicit interfaces and named types for shared shapes.
-- Centralize reusable API/domain types in `src/types/index.ts`.
-- Use inline prop types only for very small local components.
-- Avoid `any`; use `unknown`, generics, discriminated unions, or precise interfaces instead.
-- Add optional properties only when the API or UI truly permits absence.
-- Preserve literal unions like `"active" | "completed"` instead of widening to `string`.
-- Type service return values explicitly, especially for async functions.
+- Preserve `strict` compatibility.
+- Prefer explicit interfaces for shared shapes and API payloads.
+- Keep shared types centralized in `src/types/index.ts`.
+- Avoid `any`; prefer `unknown`, unions, generics, or exact interfaces.
+- Keep literal unions narrow; do not widen to `string` unless necessary.
+- Type async return values explicitly in services and route handlers.
+- Mark properties optional only when they are truly absent in API or UI flows.
 
 ## React And Next.js Conventions
-- Use `"use client"` only in files that need client-only hooks, browser APIs, or interactivity.
-- Route files under `src/app/**/page.tsx` and `src/app/layout.tsx` use default exports, which is standard for Next App Router.
-- Outside of route modules, prefer named exports.
-- Keep components focused; extract helpers when a page becomes hard to scan.
-- Prefer small local helper components for repeated JSX blocks inside a page.
-- Use React Query for server/stateful async reads in components.
-- Use Zustand for cross-page client state and persisted selections/settings.
+- Add `"use client"` only when hooks, browser APIs, or client interactivity are required.
+- `page.tsx` and `layout.tsx` files use default exports.
+- Prefer named exports outside route modules.
+- Keep components focused; extract helpers when a page grows difficult to scan.
+- Prefer local helper components for repeated JSX inside a page.
+- Guard browser-only APIs when code can run during SSR or build.
 
 ## Naming Conventions
 - Components: PascalCase (`AppBar`, `SelectionSheet`).
-- Hooks: `useX` (`useAzureClient`, `useSettingsStore`).
-- Stores: `useXStore` for hooks, `XState` for store interfaces.
-- Services: lowerCamelCase object names ending in `Service` or pluralized service domain (`pipelinesService`).
-- Utility modules: lowerCamelCase or descriptive nouns (`unifiedDiff.ts`, `fileTypes.ts`).
-- Types/interfaces: PascalCase.
-- Boolean flags: `is*`, `has*`, `should*`, or clearly stateful names like `demoMode`.
-- IDs and route params should preserve Azure DevOps naming where relevant (`buildId`, `releaseId`, `repoId`, `prId`).
+- Hooks: `useX`.
+- Zustand hooks: `useXStore`.
+- Services: lowerCamelCase ending in `Service` or pluralized domain objects (`pipelinesService`).
+- Types and interfaces: PascalCase.
+- Booleans: `is*`, `has*`, `should*`, or clear state names like `demoMode`.
+- Preserve Azure DevOps naming for IDs and params: `repoId`, `prId`, `buildId`, `releaseId`.
 
 ## Error Handling
-- Reuse `ApiError` for API-layer failures when appropriate.
-- Convert transport errors into user-meaningful messages in the client/service layer.
-- Fail safely in UI bootstrapping code; this repo often falls back to empty arrays or null state.
-- Catch browser persistence failures where storage or parsing can fail.
-- Do not silently swallow errors unless the fallback state is intentional and harmless.
-- In non-UI infrastructure code, prefer returning typed results or throwing typed errors rather than logging only.
-- In UI effects, `console.error` is acceptable when paired with a safe fallback.
+- Reuse `ApiError` patterns in the API layer when possible.
+- Convert transport failures into user-meaningful messages near the service/UI boundary.
+- Safe fallbacks are common in this repo; empty arrays, `null`, and disabled UI states are acceptable when intentional.
+- Do not swallow errors silently unless the fallback is explicit and harmless.
+- `console.error` is acceptable in client bootstrap/effects when paired with a safe fallback.
+- In API routes and server utilities, prefer typed results or thrown errors over log-only failures.
 
 ## State And Persistence
-- Settings and selections are persisted via browser storage.
-- Guard all browser-only APIs with `typeof window !== "undefined"` when execution might happen during SSR/build.
-- When clearing settings, maintain the existing pattern of clearing related persisted store keys as well.
-- Keep demo mode compatible when changing state initialization or data loading flows.
+- Settings, selections, favorites, and demo state are persisted in browser storage.
+- Keep storage keys backwards compatible unless the task explicitly changes persistence behavior.
+- `settingsService.clear()` removes all `azdevops_*` keys; keep that behavior in mind before adding new keys.
+- Preserve demo mode when changing initialization, settings, or service flows.
 
 ## Styling Rules
-- Prefer Tailwind utility classes for component styling.
-- Reuse existing design tokens and theme variables from `src/app/globals.css`.
-- Respect both dark and light theme behavior; this repo supports both through `data-theme` and token remapping.
-- Preserve the mobile/PWA focus, safe-area handling, and fixed app-shell spacing variables.
-- Avoid introducing a second competing design system.
-- When adding colors, favor the established slate/blue Fluent-inspired palette.
+- Prefer Tailwind utilities over ad hoc CSS files.
+- Reuse existing tokens and theme variables from `src/app/globals.css`.
+- Respect both dark and light mode behavior.
+- Preserve the mobile/PWA layout, safe-area handling, and fixed top/bottom shell spacing.
+- Avoid introducing a second design system.
+- The visual language is slate/blue and Fluent-inspired; stay close to that palette unless extending an established pattern.
 
-## Content And Comments
-- Existing UI text and comments are primarily in German.
-- Keep new user-facing text consistent with the surrounding screen language.
-- Prefer ASCII when editing text; the codebase often uses transliterations like `ae`, `ue`, and `oe`.
-- Add comments only when the behavior is non-obvious, platform-specific, or easy to break.
+## Text, Language, And Comments
+- Existing user-facing copy is primarily German.
+- Keep new UI text consistent with the surrounding screen language.
+- Prefer ASCII in edited files; the repo often uses transliterations such as `ae`, `oe`, and `ue`.
+- Add comments only when behavior is non-obvious, platform-specific, or easy to break.
 
 ## Services And API Calls
-- Keep Azure DevOps REST details inside service modules, not scattered through UI components.
-- Reuse the existing Axios clients instead of creating ad hoc fetch wrappers.
-- Preserve demo-mode branches whenever adding service methods.
-- Use `URLSearchParams` for query construction when multiple optional params are involved.
-- Type API responses with `AzureListResponse<T>` and domain models from `src/types/index.ts`.
+- Keep Azure DevOps endpoint construction in services, not in components.
+- Reuse Axios clients instead of creating ad hoc fetch wrappers for Azure DevOps.
+- Use `URLSearchParams` when building multi-parameter query strings.
+- Type response payloads with domain models and `AzureListResponse<T>` where appropriate.
+- When changing push flows, keep user-to-subscription matching strict so notifications only go to subscribed, affected users.
+
+## PWA And Push Notes
+- `npm run dev` uses `next dev --experimental-https` and keeps PWA/Service Worker enabled by default for push testing.
+- Set `PWA_IN_DEV=false` only when you intentionally want to disable PWA behavior in development.
+- `public/sw-custom.js` is intentionally ignored by ESLint.
+- Push support depends on secure context, PWA install requirements on iOS, and service worker availability.
+- Changes to push, service worker, or API route code should always be validated with `npm run lint && npm run build`.
 
 ## When Making Changes
-- Check whether the target file is a client component before using hooks or browser APIs.
-- Follow the nearest existing pattern in the same folder before introducing a new abstraction.
-- Avoid broad refactors unless they are required for the task.
-- Do not remove German comments or copy unless you are intentionally rewriting the surrounding content.
-- Keep route behavior, storage keys, and demo mode backwards compatible unless the task explicitly changes them.
-
-## Preferred Verification For Agents
-- For UI or logic changes: run `npm run lint`.
-- For route/config/type changes: run `npm run lint && npm run build`.
-- If a future test suite is added, run the most targeted test command first, then broader validation as needed.
+- Check the nearest file in the same folder and follow its local pattern first.
+- Avoid broad refactors unless required by the task.
+- Do not remove or rewrite surrounding German copy unless the task calls for it.
+- Keep route behavior, storage behavior, and demo compatibility stable by default.
 
 ## Documentation Maintenance
-- Keep this file updated when scripts, tooling, or conventions change.
-- If testing is added later, update both the general test section and the single-test guidance.
-- If Cursor or Copilot instruction files are introduced later, fold their repository-specific rules into this file.
+- Update this file whenever scripts, tooling, architecture, or conventions change.
+- If tests are introduced later, update both the general test section and the single-test guidance.
+- If Cursor or Copilot instruction files appear later, fold their rules into this file instead of duplicating them elsewhere.

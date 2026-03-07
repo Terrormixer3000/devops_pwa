@@ -5,12 +5,19 @@ import { Providers } from "@/components/layout/Providers";
 import { BottomNav } from "@/components/layout/BottomNav";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const APPLE_TOUCH_ICON = "/apple-touch-icon.png";
+const APP_ICON = "/icons/icon-192.png";
 
 // App-Metadaten fuer PWA und Browser
 export const metadata: Metadata = {
   title: "Azure DevOps Mobile",
   description: "Mobiler Azure DevOps Client fuer iPhone",
   manifest: "/manifest.json",
+  icons: {
+    icon: [{ url: APP_ICON, sizes: "192x192", type: "image/png" }],
+    shortcut: [APP_ICON],
+    apple: [{ url: APPLE_TOUCH_ICON, sizes: "180x180", type: "image/png" }],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -34,7 +41,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* iOS PWA Meta-Tags */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href={APPLE_TOUCH_ICON} />
+        <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/apple-touch-icon-precomposed.png" />
       </head>
       <body className={`${inter.variable} font-sans bg-slate-900 text-slate-100 antialiased`}>
         <Providers>
