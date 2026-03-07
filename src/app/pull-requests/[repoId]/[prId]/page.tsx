@@ -146,7 +146,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
       {/* PR-Kopfbereich */}
       <div className="px-4 pb-4 border-b border-slate-800">
         <div className="flex items-start gap-2 mb-2">
-          <h1 className="text-base font-semibold text-white leading-snug flex-1">{pr.title}</h1>
+          <h1 className="text-base font-semibold text-slate-100 leading-snug flex-1">{pr.title}</h1>
           {pr.isDraft && <Badge variant="muted">Draft</Badge>}
         </div>
 
@@ -268,7 +268,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
                 onChange={(e) => setCommentText(e.target.value)}
                 placeholder="Kommentar schreiben..."
                 rows={3}
-                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none"
+                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none"
               />
               <Button
                 size="sm"

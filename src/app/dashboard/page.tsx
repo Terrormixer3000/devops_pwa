@@ -72,7 +72,7 @@ export default function DashboardPage() {
             <Settings size={28} className="text-blue-400" />
           </div>
           <div className="text-center">
-            <h2 className="text-lg font-semibold text-white">Einstellungen konfigurieren</h2>
+            <h2 className="text-lg font-semibold text-slate-100">Einstellungen konfigurieren</h2>
             <p className="text-sm text-slate-400 mt-1">
               Gib deine Azure DevOps Organisation und deinen PAT ein, um loszulegen.
             </p>
@@ -138,7 +138,7 @@ export default function DashboardPage() {
                     href={`/pull-requests/${pr.repository.id}/${pr.pullRequestId}`}
                     className="block p-3 bg-slate-800/60 rounded-xl hover:bg-slate-800 transition-colors"
                   >
-                    <p className="text-sm font-medium text-white line-clamp-1">{pr.title}</p>
+                    <p className="text-sm font-medium text-slate-100 line-clamp-1">{pr.title}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-xs text-slate-500">{pr.createdBy.displayName}</span>
                       {pr.isDraft && <Badge variant="muted" size="sm">Draft</Badge>}
@@ -175,7 +175,7 @@ export default function DashboardPage() {
                 >
                   <BuildStatusDot status={build.result || build.status} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{build.definition.name}</p>
+                    <p className="text-sm font-medium text-slate-100 truncate">{build.definition.name}</p>
                     <p className="text-xs text-slate-500">#{build.buildNumber}</p>
                   </div>
                   <ChevronRight size={16} className="text-slate-600" />
@@ -206,7 +206,7 @@ function QuickLink({ href, icon, label, count }: { href: string; icon: React.Rea
           </span>
         )}
       </div>
-      <span className="text-sm font-medium text-white">{label}</span>
+      <span className="text-sm font-medium text-slate-100">{label}</span>
     </Link>
   );
 }
