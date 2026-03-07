@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
@@ -28,6 +29,7 @@ export default function ReleasesPage() {
   const [startModal, setStartModal] = useState<ReleaseDefinition | null>(null);
   const [approvalModal, setApprovalModal] = useState<ReleaseApproval | null>(null);
   const [approvalComment, setApprovalComment] = useState("");
+  const router = useRouter();
 
   const { settings } = useSettingsStore();
   const { vsrmClient } = useAzureClient();
@@ -76,9 +78,10 @@ export default function ReleasesPage() {
       vsrmClient && settings
         ? releasesService.createRelease(vsrmClient, settings.project, def.id)
         : Promise.reject("Kein Client"),
-    onSuccess: () => {
+    onSuccess: (createdRelease) => {
       setStartModal(null);
       qc.invalidateQueries({ queryKey: ["releases"] });
+      router.push(`/releases/${createdRelease.id}`);
     },
   });
 
@@ -209,6 +212,15 @@ export default function ReleasesPage() {
                       {formatDistanceToNow(new Date(approval.createdOn), { addSuffix: true, locale: de })}
                     </p>
                     <div className="flex gap-2">
+                      {approval.releaseReference?.id ? (
+                        <Link
+                          href={`/releases/${approval.releaseReference.id}`}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700/70 bg-slate-800/70 px-3 py-2 text-xs font-medium text-slate-200 hover:bg-slate-700/80"
+                        >
+                          Details
+                          <ChevronRight size={13} />
+                        </Link>
+                      ) : null}
                       <Button size="sm" variant="primary" onClick={() => setApprovalModal(approval)}>
                         <ThumbsUp size={14} /> Approven
                       </Button>

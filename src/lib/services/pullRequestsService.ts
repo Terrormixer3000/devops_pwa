@@ -163,7 +163,7 @@ export const pullRequestsService = {
     repoId: string,
     prId: number,
     iterationId: number
-  ): Promise<{ changeEntries: Array<{ item: { path: string }; changeType: string }> }> {
+  ): Promise<{ changeEntries: Array<{ item: { path: string; gitObjectType?: "blob" | "tree" }; changeType: string; originalPath?: string }> }> {
     if (isDemoClient(client)) {
       return demoApi.pullRequests.getIterationChanges(repoId, prId, iterationId);
     }

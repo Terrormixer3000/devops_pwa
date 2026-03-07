@@ -18,7 +18,22 @@ import { usePipelineDefStore } from "@/lib/stores/selectionStore";
 import { PipelineSelector } from "@/components/layout/selectors/PipelineSelector";
 import { DeliveryTitleSelector } from "@/components/layout/DeliveryTitleSelector";
 import { Pipeline } from "@/types";
-import { PlayCircle, ChevronRight, Play, StopCircle } from "lucide-react";
+import { PlayCircle, ChevronRight, Play, StopCircle, GitBranch, Info } from "lucide-react";
+
+const QUICK_BRANCHES = ["main", "develop", "release/2026.03", "hotfix/urgent-fix"];
+
+function normalizeBranchInput(branch: string): string {
+  return branch.replace(/^refs\/heads\//, "").trim();
+}
+
+function getBranchValidationError(branch: string): string | null {
+  if (!branch) return "Bitte einen Branch-Namen eingeben.";
+  if (branch.startsWith("/") || branch.endsWith("/")) return "Branch darf nicht mit / starten oder enden.";
+  if (branch.endsWith(".") || branch.endsWith(".lock")) return "Branch endet mit einem ungueltigen Suffix.";
+  if (branch.includes(" ") || branch.includes("..") || branch.includes("//")) return "Branch enthaelt ungueltige Zeichen.";
+  if (branch.includes("@{") || branch.includes("\\")) return "Branch-Format ist ungueltig.";
+  return null;
+}
 
 export default function PipelinesPage() {
   const [view, setView] = useState<"pipelines" | "builds">("builds");
@@ -61,12 +76,18 @@ export default function PipelinesPage() {
 
   // Build starten
   const startMutation = useMutation({
-    mutationFn: (pipeline: Pipeline) =>
-      client && settings
-        ? pipelinesService.queueBuild(client, settings.project, pipeline.id, `refs/heads/${startBranch}`)
-        : Promise.reject(new Error("Kein Client")),
+    mutationFn: (pipeline: Pipeline) => {
+      const normalizedBranch = normalizeBranchInput(startBranch);
+      const branchError = getBranchValidationError(normalizedBranch);
+      if (branchError) return Promise.reject(new Error(branchError));
+
+      return client && settings
+        ? pipelinesService.queueBuild(client, settings.project, pipeline.id, `refs/heads/${normalizedBranch}`)
+        : Promise.reject(new Error("Kein Client"));
+    },
     onSuccess: () => {
       setStartModal(null);
+      setStartBranch("main");
       qc.invalidateQueries({ queryKey: ["builds", selectedDefNumbers] });
     },
   });
@@ -79,6 +100,29 @@ export default function PipelinesPage() {
         : Promise.reject(new Error("Kein Client")),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["builds", selectedDefNumbers] }),
   });
+
+  const normalizedStartBranch = normalizeBranchInput(startBranch);
+  const startBranchError = getBranchValidationError(normalizedStartBranch);
+  const startBranchRef = normalizedStartBranch ? `refs/heads/${normalizedStartBranch}` : "";
+  const canStartPipeline = !!startModal && !startBranchError && !startMutation.isPending;
+
+  const openStartDialog = (pipeline: Pipeline) => {
+    startMutation.reset();
+    setStartModal(pipeline);
+    setStartBranch("main");
+  };
+
+  const closeStartDialog = () => {
+    if (startMutation.isPending) return;
+    startMutation.reset();
+    setStartModal(null);
+    setStartBranch("main");
+  };
+
+  const handleStartPipeline = () => {
+    if (!startModal || startBranchError) return;
+    startMutation.mutate(startModal);
+  };
 
   return (
     <div className="min-h-screen">
@@ -123,7 +167,7 @@ export default function PipelinesPage() {
                       )}
                     </div>
                     <button
-                      onClick={() => { setStartModal(pipeline); setStartBranch("main"); }}
+                      onClick={() => openStartDialog(pipeline)}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-green-700/30 hover:bg-green-700/50 text-green-400 rounded-lg text-xs font-medium transition-colors"
                     >
                       <Play size={12} />
@@ -186,27 +230,97 @@ export default function PipelinesPage() {
       </div>
 
       {/* Pipeline starten Modal */}
-      <Modal open={!!startModal} onClose={() => setStartModal(null)} title="Pipeline starten">
-        <div className="space-y-4">
-          <p className="text-sm text-slate-300">{startModal?.name}</p>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-400">Branch</label>
-            <input
-              type="text"
-              value={startBranch}
-              onChange={(e) => setStartBranch(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-blue-500"
-              placeholder="main"
-            />
+      <Modal open={!!startModal} onClose={closeStartDialog} title="Pipeline starten">
+        <div className="space-y-5">
+          <div className="rounded-2xl border border-slate-700/70 bg-slate-800/45 px-4 py-3">
+            <p className="text-[11px] uppercase tracking-wide text-slate-500">Definition</p>
+            <p className="mt-1 truncate text-sm font-medium text-slate-100">{startModal?.name}</p>
+            {startModal?.folder && startModal.folder !== "\\" ? (
+              <p className="mt-1 text-xs text-slate-500">{startModal.folder}</p>
+            ) : null}
           </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-300">Branch</label>
+            <div className="overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-900/60">
+              <div className="flex items-center gap-1.5 border-b border-slate-800 px-3 py-2 text-[11px] text-slate-500">
+                <GitBranch size={13} />
+                <span className="font-mono">refs/heads/</span>
+              </div>
+              <input
+                type="text"
+                value={startBranch}
+                onChange={(event) => setStartBranch(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && canStartPipeline) {
+                    event.preventDefault();
+                    handleStartPipeline();
+                  }
+                }}
+                className="w-full bg-transparent px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none"
+                placeholder="main"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {QUICK_BRANCHES.map((branch) => (
+                <button
+                  key={branch}
+                  type="button"
+                  onClick={() => setStartBranch(branch)}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                    normalizedStartBranch === branch
+                      ? "border-blue-400/70 bg-blue-600/20 text-blue-300"
+                      : "border-slate-700 bg-slate-800/70 text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  {branch}
+                </button>
+              ))}
+            </div>
+
+            {startBranchError ? (
+              <p className="text-xs text-red-400">{startBranchError}</p>
+            ) : (
+              <p className="text-xs text-slate-500">
+                Ziel-Ref: <span className="font-mono text-slate-300">{startBranchRef}</span>
+              </p>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 px-3 py-2.5">
+            <p className="flex items-start gap-2 text-xs text-blue-200">
+              <Info size={14} className="mt-0.5 flex-shrink-0 text-blue-300" />
+              Der Run startet sofort mit dem Branch-Stand. Build-Parameter koennen danach in Azure DevOps angepasst werden.
+            </p>
+          </div>
+
           {startMutation.isError && (
-            <p className="text-sm text-red-400">{(startMutation.error as Error).message}</p>
+            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2.5">
+              <p className="text-sm text-red-300">{(startMutation.error as Error).message}</p>
+            </div>
           )}
-          <Button fullWidth loading={startMutation.isPending} onClick={() => startModal && startMutation.mutate(startModal)}>
-            <Play size={16} />
-            Pipeline starten
-          </Button>
-          <Button fullWidth variant="ghost" onClick={() => setStartModal(null)}>Abbrechen</Button>
+
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              className="flex-1"
+              onClick={closeStartDialog}
+              disabled={startMutation.isPending}
+            >
+              Abbrechen
+            </Button>
+            <Button
+              className="flex-1"
+              loading={startMutation.isPending}
+              disabled={!canStartPipeline}
+              onClick={handleStartPipeline}
+            >
+              <Play size={16} />
+              Jetzt starten
+            </Button>
+          </div>
         </div>
       </Modal>
     </div>

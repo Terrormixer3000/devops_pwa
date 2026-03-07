@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AppBar } from "@/components/layout/AppBar";
 import { Button } from "@/components/ui/Button";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
@@ -9,17 +10,20 @@ import { Eye, EyeOff, CheckCircle, Trash2, ExternalLink } from "lucide-react";
 import { createAzureClient } from "@/lib/api/client";
 import { demoSettings } from "@/lib/mocks/demoData";
 
+const EMPTY_SETTINGS: AppSettings = {
+  organization: "",
+  project: "",
+  pat: "",
+  demoMode: false,
+  theme: "dark",
+};
+
 export default function SettingsPage() {
   const { settings, setSettings, clearSettings } = useSettingsStore();
+  const queryClient = useQueryClient();
 
   // Formular-Zustand
-  const [form, setForm] = useState<AppSettings>({
-    organization: "",
-    project: "",
-    pat: "",
-    demoMode: false,
-    theme: "dark",
-  });
+  const [form, setForm] = useState<AppSettings>(EMPTY_SETTINGS);
   const [showPat, setShowPat] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
@@ -28,9 +32,7 @@ export default function SettingsPage() {
 
   // Gespeicherte Einstellungen in Formular laden
   useEffect(() => {
-    if (settings) {
-      setForm(settings);
-    }
+    setForm(settings || EMPTY_SETTINGS);
   }, [settings]);
 
   useEffect(() => {
@@ -105,7 +107,12 @@ export default function SettingsPage() {
   const handleClear = () => {
     if (confirm("Alle Einstellungen loeschen?")) {
       clearSettings();
-      setForm({ organization: "", project: "", pat: "", demoMode: false, theme: "dark" });
+      setForm(EMPTY_SETTINGS);
+      setShowPat(false);
+      setTestResult(null);
+      setTestError("");
+      setSaved(false);
+      queryClient.clear();
     }
   };
 

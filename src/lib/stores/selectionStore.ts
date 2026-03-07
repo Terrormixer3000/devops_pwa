@@ -14,6 +14,7 @@ interface FavoritesState {
   favoriteIds: string[];
   toggleFavorite: (id: string) => void;
   load: () => void;
+  clear: () => void;
 }
 
 function createFavoritesStore(storageKey: string) {
@@ -35,6 +36,11 @@ function createFavoritesStore(storageKey: string) {
         const raw = localStorage.getItem(storageKey);
         if (raw) set({ favoriteIds: JSON.parse(raw) });
       } catch { /* ignore */ }
+    },
+
+    clear: () => {
+      set({ favoriteIds: [] });
+      localStorage.removeItem(storageKey);
     },
   }));
 }
