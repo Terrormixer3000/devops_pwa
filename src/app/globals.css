@@ -12,11 +12,11 @@
   --app-bar-height: calc(
     var(--safe-area-top-effective) + var(--app-bar-content-height) + var(--app-bar-bottom-padding)
   );
-  --bottom-nav-content-height: 3.6rem;
-  --bottom-nav-offset: 0px;
+  --bottom-nav-content-height: 3.35rem;
+  --bottom-nav-offset: 0.55rem;
   /* Fuer die untere Leiste reduzieren wir den effektiven Inset leicht, damit sie nicht zu hoch wird. */
   --bottom-nav-safe-area: max(0px, calc(var(--safe-area-bottom-effective) - 0.2rem));
-  --bottom-nav-height: calc(var(--bottom-nav-content-height) + var(--bottom-nav-safe-area));
+  --bottom-nav-height: calc(var(--bottom-nav-content-height) + var(--bottom-nav-safe-area) + var(--bottom-nav-offset));
   /* Auswahl-Sheets sollen unterhalb der AppBar bleiben und oberhalb der Bottom Navigation andocken. */
   --selection-sheet-viewport-height: 72vh;
   --viewport-height: 100vh;
