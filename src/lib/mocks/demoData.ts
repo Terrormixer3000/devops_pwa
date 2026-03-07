@@ -1295,6 +1295,24 @@ export const demoApi = {
       }));
     },
 
+    createBranch(repoId: string, branchName: string, sourceObjectId: string): void {
+      withDemoState((state) => {
+        const existing = state.branches[repoId] || [];
+        if (existing.some((b) => b.name === branchName)) {
+          throw new Error(`Branch "${branchName}" existiert bereits.`);
+        }
+        state.branches[repoId] = [
+          {
+            name: branchName,
+            objectId: sourceObjectId,
+            creator: existing[0]?.creator ?? { displayName: "Demo", uniqueName: "demo", id: "0" },
+            url: `https://demo.local/repos/${repoId}/branches/${branchName}`,
+          },
+          ...existing,
+        ];
+      });
+    },
+
     getCommits(repoId: string, branch: string, top = 30, filePath?: string): Commit[] {
       const all = loadDemoState().commits[repoKey(repoId, branch)] || [];
       // Bei Dateihistorie nur jeden 3. Commit zurueckgeben (simuliert gezielte Aenderungen)

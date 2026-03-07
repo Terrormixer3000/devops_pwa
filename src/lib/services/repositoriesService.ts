@@ -54,6 +54,32 @@ export const repositoriesService = {
     }));
   },
 
+  async createBranch(
+    client: AxiosInstance,
+    project: string,
+    repoId: string,
+    newBranchName: string,
+    sourceObjectId: string
+  ): Promise<void> {
+    if (isDemoClient(client)) {
+      return demoApi.repositories.createBranch(repoId, newBranchName, sourceObjectId);
+    }
+
+    const res = await client.post<{ value: Array<{ success: boolean; updateStatus?: string }> }>(
+      `/${project}/_apis/git/repositories/${repoId}/refs?api-version=7.1`,
+      [{
+        name: `refs/heads/${newBranchName}`,
+        newObjectId: sourceObjectId,
+        oldObjectId: "0000000000000000000000000000000000000000",
+      }]
+    );
+
+    const result = res.data.value?.[0];
+    if (result && result.success === false) {
+      throw new Error(result.updateStatus || "Branch konnte nicht erstellt werden.");
+    }
+  },
+
   async getTags(client: AxiosInstance, project: string, repoId: string): Promise<Branch[]> {
     if (isDemoClient(client)) {
       return demoApi.repositories.getTags(repoId);

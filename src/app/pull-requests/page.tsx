@@ -130,7 +130,8 @@ export default function PullRequestsPage() {
       {/* FAB: Neuer PR erstellen */}
       <Link
         href="/pull-requests/new"
-        className="fixed bottom-24 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/30 hover:bg-blue-500 active:scale-95 transition-all"
+        className="fixed right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/30 hover:bg-blue-500 active:scale-95 transition-all"
+        style={{ bottom: "var(--fab-bottom-offset)" }}
         aria-label="Neuen Pull Request erstellen"
       >
         <Plus size={24} />

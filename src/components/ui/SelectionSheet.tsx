@@ -92,6 +92,7 @@ export function SelectionSheet({
       modal={true}
       noBodyStyles={true}
       handleOnly={true}
+      repositionInputs={false}
       shouldScaleBackground={false}
     >
       <Drawer.Trigger asChild>
