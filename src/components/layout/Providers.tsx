@@ -30,6 +30,26 @@ function AppInit() {
   }, [loadSettings, loadFavorites, loadPersistedSelection]);
 
   useEffect(() => {
+    // iOS Home-Screen-Apps melden den Standalone-Modus nicht immer sauber per CSS-Media-Query.
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.matchMedia("(display-mode: fullscreen)").matches ||
+      ("standalone" in window.navigator && (window.navigator as Navigator & { standalone?: boolean }).standalone === true);
+
+    document.documentElement.dataset.displayMode = isStandalone ? "standalone" : "browser";
+  }, []);
+
+  useEffect(() => {
+    // Das Theme wird global am HTML-Element gesetzt, damit alle Farbvariablen zentral umschalten.
+    const theme = settings?.theme || "dark";
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", theme === "light" ? "#f7f4ee" : "#1b1a19");
+  }, [settings?.theme]);
+
+  useEffect(() => {
     // Repositories laden wenn Einstellungen vorhanden
     if (!isConfigured || !settings) {
       setRepositories([]);

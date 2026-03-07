@@ -1,12 +1,69 @@
 @import "tailwindcss";
 
 :root {
-  /* Gemeinsame Hoehen fuer AppBar und Bottom Navigation */
-  --app-bar-height: 3.5rem;
+  /* Im Browser sollen die Safe-Areas standardmaessig nicht zusaetzlich aufgeschlagen werden. */
+  --safe-area-top-effective: 0px;
+  --safe-area-bottom-effective: 0px;
+  /* Die sichtbare Titelzeile und die Safe-Area werden getrennt gerechnet,
+     damit in der installierten iPhone-App kein kuenstlicher Leerraum unter dem Titel entsteht. */
+  --app-bar-content-height: 3.35rem;
+  --app-bar-offset: 0px;
+  --app-bar-bottom-padding: 0rem;
+  --app-bar-height: calc(
+    var(--safe-area-top-effective) + var(--app-bar-content-height) + var(--app-bar-bottom-padding)
+  );
   --bottom-nav-content-height: 3.6rem;
-  /* iOS liefert in PWAs oft einen sehr grossen Bottom-Inset. Wir reduzieren ihn nur leicht, damit die Nav luftiger bleibt. */
-  --bottom-nav-safe-area: max(0px, calc(env(safe-area-inset-bottom) - 0.35rem));
+  --bottom-nav-offset: 0px;
+  /* Fuer die untere Leiste reduzieren wir den effektiven Inset leicht, damit sie nicht zu hoch wird. */
+  --bottom-nav-safe-area: max(0px, calc(var(--safe-area-bottom-effective) - 0.2rem));
   --bottom-nav-height: calc(var(--bottom-nav-content-height) + var(--bottom-nav-safe-area));
+  /* Auswahl-Sheets sollen unterhalb der AppBar bleiben und oberhalb der Bottom Navigation andocken. */
+  --selection-sheet-viewport-height: 72vh;
+  --viewport-height: 100vh;
+  --selection-sheet-max-height: min(
+    calc(var(--viewport-height) - var(--app-bar-height) - var(--bottom-nav-height) - 0.75rem),
+    var(--selection-sheet-viewport-height)
+  );
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --selection-sheet-viewport-height: 72dvh;
+    --viewport-height: 100dvh;
+  }
+}
+
+html[data-display-mode="browser"] {
+  --app-bar-content-height: 3.35rem;
+  --app-bar-bottom-padding: 0rem;
+  --selection-sheet-viewport-height: 72vh;
+}
+
+/* Nur in der installierten Home-Screen-App greifen die vollen iPhone-Safe-Areas. */
+html[data-display-mode="standalone"] {
+  --safe-area-top-effective: env(safe-area-inset-top);
+  --safe-area-bottom-effective: env(safe-area-inset-bottom);
+  --app-bar-bottom-padding: 0rem;
+  --app-bar-content-height: 3.45rem;
+  --selection-sheet-viewport-height: 70vh;
+}
+
+@supports (height: 100dvh) {
+  html[data-display-mode="browser"] {
+    --selection-sheet-viewport-height: 72dvh;
+  }
+
+  html[data-display-mode="standalone"] {
+    --selection-sheet-viewport-height: 70dvh;
+  }
+}
+
+/* Fallback fuer Browser, die den Standalone-Modus korrekt per Media-Query melden. */
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  html {
+    --safe-area-top-effective: env(safe-area-inset-top);
+    --safe-area-bottom-effective: env(safe-area-inset-bottom);
+  }
 }
 
 /* Azure DevOps Fluent UI Farbpalette (Dark Mode) */
@@ -57,13 +114,33 @@
   --color-purple-400: #a77ac1;
 }
 
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  /* Im Light Mode werden die Slate-Tokens invertiert, damit bestehende Utility-Klassen weiter funktionieren. */
+  --color-slate-950: #f4f0e8;
+  --color-slate-900: #fbf8f2;
+  --color-slate-800: #f1ece2;
+  --color-slate-700: #e4ddd1;
+  --color-slate-600: #cdc5b8;
+  --color-slate-500: #9d9488;
+  --color-slate-400: #746b60;
+  --color-slate-300: #564f46;
+  --color-slate-200: #38332d;
+  --color-slate-100: #1e1a16;
+  --color-slate-50: #0f0d0a;
+}
+
 /* Sichere Bereiche fuer iPhone Notch/Home-Indicator */
 .safe-area-top {
-  padding-top: env(safe-area-inset-top);
+  padding-top: var(--safe-area-top-effective);
 }
 
 .safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: var(--safe-area-bottom-effective);
 }
 
 .bottom-nav-safe-area {
@@ -114,7 +191,17 @@
 /* Sticky Subnav direkt unterhalb der AppBar (AppBar-Hoehe + Safe-Area-Inset) */
 .sticky-below-appbar {
   position: sticky;
-  top: calc(var(--app-bar-height) + env(safe-area-inset-top));
+  top: var(--app-bar-height);
+  z-index: 30;
+}
+
+/* Filter- und Bereichstabs direkt unter der AppBar werden fest positioniert,
+   damit sie sich in der installierten iPhone-App beim Herunterziehen nicht sichtbar mitbewegen. */
+.fixed-below-appbar {
+  position: fixed;
+  top: var(--app-bar-height);
+  left: 0;
+  right: 0;
   z-index: 30;
 }
 
@@ -124,8 +211,92 @@
 }
 
 body {
-  /* Azure DevOps Basis-Hintergrund */
-  background-color: #1b1a19;
+  /* Azure DevOps Basis-Hintergrund mit sanfter Tiefenstaffelung wie bei iOS-Glasflaechen */
+  background:
+    radial-gradient(circle at top, rgba(43, 136, 216, 0.08), transparent 28%),
+    linear-gradient(180deg, #201f1d 0%, #1b1a19 38%, #161514 100%);
   color: #f3f2f1;
   overscroll-behavior: none;
+}
+
+html[data-theme="light"] body {
+  background:
+    radial-gradient(circle at top, rgba(43, 136, 216, 0.1), transparent 28%),
+    linear-gradient(180deg, #fcfaf5 0%, #f7f4ee 38%, #f0ebdf 100%);
+  color: var(--color-slate-100);
+}
+
+/* Der Light Mode wird zusaetzlich auf die im Projekt haeufigsten Slate-Utilities gemappt.
+   So bleibt der Theme-Wechsel robust, auch wenn einzelne Komponenten noch feste Utility-Klassen tragen. */
+html[data-theme="light"] .bg-slate-900 {
+  background-color: #fbf8f2 !important;
+}
+
+html[data-theme="light"] .bg-slate-800 {
+  background-color: #f1ece2 !important;
+}
+
+html[data-theme="light"] .bg-slate-700 {
+  background-color: #e4ddd1 !important;
+}
+
+html[data-theme="light"] .bg-slate-600 {
+  background-color: #cdc5b8 !important;
+}
+
+html[data-theme="light"] .bg-slate-500 {
+  background-color: #b6ad9f !important;
+}
+
+html[data-theme="light"] [class*="bg-slate-900/"] {
+  background-color: rgba(251, 248, 242, 0.88) !important;
+}
+
+html[data-theme="light"] [class*="bg-slate-800/"] {
+  background-color: rgba(241, 236, 226, 0.84) !important;
+}
+
+html[data-theme="light"] [class*="bg-slate-700/"] {
+  background-color: rgba(228, 221, 209, 0.86) !important;
+}
+
+html[data-theme="light"] [class*="bg-slate-600/"] {
+  background-color: rgba(205, 197, 184, 0.85) !important;
+}
+
+html[data-theme="light"] .text-white,
+html[data-theme="light"] .text-slate-100 {
+  color: #1e1a16 !important;
+}
+
+html[data-theme="light"] .text-slate-200 {
+  color: #2a251f !important;
+}
+
+html[data-theme="light"] .text-slate-300 {
+  color: #403932 !important;
+}
+
+html[data-theme="light"] .text-slate-400 {
+  color: #5c5449 !important;
+}
+
+html[data-theme="light"] .text-slate-500 {
+  color: #746b60 !important;
+}
+
+html[data-theme="light"] .text-slate-600 {
+  color: #92887b !important;
+}
+
+html[data-theme="light"] .border-slate-800 {
+  border-color: rgba(201, 192, 178, 0.9) !important;
+}
+
+html[data-theme="light"] .border-slate-700 {
+  border-color: rgba(189, 179, 164, 0.92) !important;
+}
+
+html[data-theme="light"] .border-slate-600 {
+  border-color: rgba(161, 150, 135, 0.9) !important;
 }
