@@ -1,26 +1,31 @@
 "use client";
 
-import { use } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { use, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
 import { AppBar } from "@/components/layout/AppBar";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
 import { BackLink } from "@/components/ui/BackButton";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { useAzureClient } from "@/lib/hooks/useAzureClient";
 import { releasesService } from "@/lib/services/releasesService";
-import { ReleaseEnvironment } from "@/types";
-import { CheckCircle, XCircle, Clock, Loader } from "lucide-react";
+import { ReleaseEnvironment, ReleaseApproval } from "@/types";
+import { CheckCircle, XCircle, Clock, Loader, ThumbsUp, ThumbsDown } from "lucide-react";
 
 export default function ReleaseDetailPage({ params }: { params: Promise<{ releaseId: string }> }) {
   const { releaseId } = use(params);
   const releaseIdNum = parseInt(releaseId);
+  const [approvalModal, setApprovalModal] = useState<ReleaseApproval | null>(null);
+  const [approvalComment, setApprovalComment] = useState("");
 
   const { settings } = useSettingsStore();
   const { vsrmClient } = useAzureClient();
+  const qc = useQueryClient();
 
   // Release-Details laden
   const { data: release, isLoading, error } = useQuery({
@@ -30,6 +35,22 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
       : Promise.reject("Kein Client"),
     enabled: !!vsrmClient && !!settings,
     refetchInterval: 15000,
+  });
+
+  // Approval erteilen
+  const approveMutation = useMutation({
+    mutationFn: ({ id, approve }: { id: number; approve: boolean }) =>
+      vsrmClient && settings
+        ? approve
+          ? releasesService.approveRelease(vsrmClient, settings.project, id, approvalComment)
+          : releasesService.rejectApproval(vsrmClient, settings.project, id, approvalComment)
+        : Promise.reject("Kein Client"),
+    onSuccess: () => {
+      setApprovalModal(null);
+      setApprovalComment("");
+      qc.invalidateQueries({ queryKey: ["release", releaseIdNum] });
+      qc.invalidateQueries({ queryKey: ["release-approvals"] });
+    },
   });
 
   if (isLoading) return <div className="min-h-screen"><AppBar title="Release" /><PageLoader /></div>;
@@ -62,15 +83,51 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
         {(release.environments ?? [])
           .sort((a, b) => a.rank - b.rank)
           .map((env) => (
-            <EnvironmentCard key={env.id} env={env} />
+            <EnvironmentCard key={env.id} env={env} onApprove={(a) => setApprovalModal(a)} />
           ))}
       </div>
+
+      {/* Approval Modal */}
+      <Modal open={!!approvalModal} onClose={() => setApprovalModal(null)} title="Approval erteilen">
+        <div className="space-y-4">
+          {approvalModal && (
+            <p className="text-sm text-slate-300">
+              {release.name} → {approvalModal.releaseEnvironmentReference?.name || "Environment"}
+            </p>
+          )}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-slate-400">Kommentar (optional)</label>
+            <textarea
+              value={approvalComment}
+              onChange={(e) => setApprovalComment(e.target.value)}
+              rows={2}
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-blue-500 resize-none"
+            />
+          </div>
+          <Button
+            fullWidth
+            loading={approveMutation.isPending}
+            onClick={() => approvalModal && approveMutation.mutate({ id: approvalModal.id, approve: true })}
+          >
+            <ThumbsUp size={16} /> Approven
+          </Button>
+          <Button
+            fullWidth
+            variant="danger"
+            loading={approveMutation.isPending}
+            onClick={() => approvalModal && approveMutation.mutate({ id: approvalModal.id, approve: false })}
+          >
+            <ThumbsDown size={16} /> Ablehnen
+          </Button>
+          <Button fullWidth variant="ghost" onClick={() => setApprovalModal(null)}>Abbrechen</Button>
+        </div>
+      </Modal>
     </div>
   );
 }
 
 // Umgebungskarte mit Status und Deploy-Schritten
-function EnvironmentCard({ env }: { env: ReleaseEnvironment }) {
+function EnvironmentCard({ env, onApprove }: { env: ReleaseEnvironment; onApprove: (approval: ReleaseApproval) => void }) {
   const variants: Record<string, "success" | "danger" | "info" | "muted" | "warning"> = {
     succeeded: "success",
     rejected: "danger",
@@ -104,10 +161,22 @@ function EnvironmentCard({ env }: { env: ReleaseEnvironment }) {
 
       {/* Ausstehende Pre-Deploy Approvals */}
       {env.preDeployApprovals?.filter((a) => a.status === "pending").length > 0 && (
-        <div className="px-4 py-2 bg-yellow-900/20 border-b border-slate-700/50">
-          <p className="text-xs text-yellow-400">
+        <div className="px-4 py-2.5 bg-yellow-900/20 border-b border-slate-700/50">
+          <p className="text-xs text-yellow-400 mb-2">
             Warte auf Approval von: {env.preDeployApprovals.filter((a) => a.status === "pending").map((a) => a.approver.displayName).join(", ")}
           </p>
+          <div className="flex gap-2">
+            {env.preDeployApprovals.filter((a) => a.status === "pending").map((a) => (
+              <button
+                key={a.id}
+                onClick={() => onApprove(a)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-700/30 hover:bg-green-700/50 text-green-400 rounded-lg text-xs font-medium transition-colors"
+              >
+                <ThumbsUp size={12} />
+                Approven
+              </button>
+            ))}
+          </div>
         </div>
       )}
 

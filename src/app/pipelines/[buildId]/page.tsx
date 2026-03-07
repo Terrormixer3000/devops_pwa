@@ -1,7 +1,8 @@
 "use client";
 
 import { use, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
 import { AppBar } from "@/components/layout/AppBar";
@@ -23,6 +24,8 @@ import {
   FileText,
   Loader,
   MinusCircle,
+  RotateCcw,
+  StopCircle,
   XCircle,
 } from "lucide-react";
 
@@ -129,6 +132,8 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
 
   const { settings } = useSettingsStore();
   const { client } = useAzureClient();
+  const router = useRouter();
+  const qc = useQueryClient();
 
   // Build-Details laden
   const { data: build, isLoading, error } = useQuery({
@@ -182,6 +187,29 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
     [timelineRecords]
   );
 
+  // Build erneut starten (gleiche Definition + Branch)
+  const retryMutation = useMutation({
+    mutationFn: () => {
+      if (!client || !settings || !build) return Promise.reject(new Error("Kein Client"));
+      return pipelinesService.queueBuild(client, settings.project, build.definition.id, build.sourceBranch);
+    },
+    onSuccess: (newBuild) => {
+      qc.invalidateQueries({ queryKey: ["builds"] });
+      router.push(`/pipelines/${newBuild.id}`);
+    },
+  });
+
+  // Laufenden Build abbrechen
+  const cancelMutation = useMutation({
+    mutationFn: () => {
+      if (!client || !settings) return Promise.reject(new Error("Kein Client"));
+      return pipelinesService.cancelBuild(client, settings.project, buildIdNum);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["build", buildIdNum] });
+    },
+  });
+
   if (isLoading) return <div className="min-h-screen"><AppBar title="Build" /><PageLoader /></div>;
   if (error || !build) return <div className="min-h-screen"><AppBar title="Build" /><ErrorMessage message="Build konnte nicht geladen werden" /></div>;
 
@@ -214,6 +242,32 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
         <p className="text-xs text-slate-600 mt-1">
           {formatDistanceToNow(new Date(build.queueTime), { addSuffix: true, locale: de })}
         </p>
+
+        {/* Aktionsknopfe */}
+        <div className="flex gap-2 mt-3">
+          {/* Re-Run fuer abgeschlossene Builds */}
+          {build.status === "completed" && (
+            <button
+              onClick={() => retryMutation.mutate()}
+              disabled={retryMutation.isPending}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-700/30 hover:bg-blue-700/50 text-blue-400 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+            >
+              {retryMutation.isPending ? <Loader size={12} className="animate-spin" /> : <RotateCcw size={12} />}
+              Erneut starten
+            </button>
+          )}
+          {/* Abbrechen fuer laufende Builds */}
+          {build.status === "inProgress" && (
+            <button
+              onClick={() => cancelMutation.mutate()}
+              disabled={cancelMutation.isPending}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-700/30 hover:bg-red-700/50 text-red-400 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+            >
+              {cancelMutation.isPending ? <Loader size={12} className="animate-spin" /> : <StopCircle size={12} />}
+              Abbrechen
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}

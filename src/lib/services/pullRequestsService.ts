@@ -101,7 +101,8 @@ export const pullRequestsService = {
     repoId: string,
     prId: number,
     lastMergeSourceCommitId: string,
-    deleteSourceBranch = false
+    deleteSourceBranch = false,
+    mergeStrategy: "noFastForward" | "squash" | "rebase" | "rebaseMerge" = "noFastForward"
   ): Promise<PullRequest> {
     if (isDemoClient(client)) {
       return demoApi.pullRequests.complete(repoId, prId, lastMergeSourceCommitId, deleteSourceBranch);
@@ -112,7 +113,7 @@ export const pullRequestsService = {
       {
         status: "completed",
         lastMergeSourceCommit: { commitId: lastMergeSourceCommitId },
-        completionOptions: { deleteSourceBranch, mergeStrategy: "noFastForward" },
+        completionOptions: { deleteSourceBranch, mergeStrategy },
       }
     );
     return res.data;
@@ -128,6 +129,7 @@ export const pullRequestsService = {
       sourceRefName: string;
       targetRefName: string;
       isDraft?: boolean;
+      reviewers?: { id: string }[];
     }
   ): Promise<PullRequest> {
     if (isDemoClient(client)) {

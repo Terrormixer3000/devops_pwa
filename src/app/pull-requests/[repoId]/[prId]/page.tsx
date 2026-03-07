@@ -14,6 +14,7 @@ import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { useAzureClient } from "@/lib/hooks/useAzureClient";
 import { pullRequestsService } from "@/lib/services/pullRequestsService";
 import { repositoriesService, GitChangeEntry } from "@/lib/services/repositoriesService";
+import { identityService } from "@/lib/services/identityService";
 import { PRThread, PRComment } from "@/types";
 import { RichDiffViewer } from "@/components/ui/RichDiffViewer";
 import { isImagePath } from "@/lib/utils/fileTypes";
@@ -44,6 +45,8 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
   const [commentText, setCommentText] = useState("");
   const [approveModal, setApproveModal] = useState(false);
   const [completeModal, setCompleteModal] = useState(false);
+  const [mergeStrategy, setMergeStrategy] = useState<"noFastForward" | "squash" | "rebase" | "rebaseMerge">("noFastForward");
+  const [deleteSourceBranch, setDeleteSourceBranch] = useState(false);
   const [selectedChangeKey, setSelectedChangeKey] = useState<string | null>(null);
 
   const { settings } = useSettingsStore();
@@ -57,6 +60,14 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
       ? pullRequestsService.getPullRequest(client, settings.project, repoId, prIdNum)
       : Promise.reject(new Error("Kein Client")),
     enabled: !!client && !!settings,
+  });
+
+  // Aktuelle Benutzer-ID laden (fuer korrekte Vote-Zuordnung)
+  const { data: currentUser } = useQuery({
+    queryKey: ["current-user", settings?.demoMode],
+    queryFn: () => client ? identityService.getCurrentUser(client) : Promise.reject(new Error("Kein Client")),
+    enabled: !!client,
+    staleTime: Infinity,
   });
 
   // Kommentare / Threads laden
@@ -103,8 +114,8 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
   const voteMutation = useMutation({
     mutationFn: (vote: number) => {
       if (!client || !settings) throw new Error("Kein Client");
-      // Reviewer-ID wird aus den Reviewern des PRs ermittelt
-      const reviewerId = pr?.reviewers[0]?.id || "me";
+      // Echte User-ID aus identityService verwenden
+      const reviewerId = currentUser?.id || "me";
       return pullRequestsService.vote(client, settings.project, repoId, prIdNum, reviewerId, vote);
     },
     onSuccess: () => {
@@ -123,7 +134,8 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
         repoId,
         prIdNum,
         pr.sourceRefName,
-        false
+        deleteSourceBranch,
+        mergeStrategy
       );
     },
     onSuccess: () => {
@@ -472,10 +484,47 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
 
       {/* Complete Modal */}
       <Modal open={completeModal} onClose={() => setCompleteModal(false)} title="PR abschliessen">
-        <div className="space-y-3">
-          <p className="text-sm text-slate-400">
-            Moechtest du diesen Pull Request abschliessen und mergen?
-          </p>
+        <div className="space-y-4">
+          {/* Merge-Strategie */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Merge-Strategie</label>
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { key: "noFastForward" as const, label: "Merge", desc: "Merge-Commit" },
+                { key: "squash" as const, label: "Squash", desc: "Ein Commit" },
+                { key: "rebase" as const, label: "Rebase", desc: "Linear" },
+                { key: "rebaseMerge" as const, label: "Rebase+Merge", desc: "Rebase mit Merge" },
+              ]).map(({ key, label, desc }) => (
+                <button
+                  key={key}
+                  onClick={() => setMergeStrategy(key)}
+                  className={`px-3 py-2.5 rounded-xl border text-left transition-colors ${
+                    mergeStrategy === key
+                      ? "border-blue-500 bg-blue-500/15 text-blue-300"
+                      : "border-slate-700 bg-slate-800/60 text-slate-300 hover:border-slate-600"
+                  }`}
+                >
+                  <p className="text-sm font-medium">{label}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Quell-Branch loeschen */}
+          <div className="flex items-center justify-between py-3 border-t border-slate-800">
+            <div>
+              <p className="text-sm text-slate-300">Quell-Branch loeschen</p>
+              <p className="text-xs text-slate-500">{sourceBranch}</p>
+            </div>
+            <button
+              onClick={() => setDeleteSourceBranch((v) => !v)}
+              className={`relative w-12 h-6 rounded-full transition-colors ${deleteSourceBranch ? "bg-blue-600" : "bg-slate-700"}`}
+            >
+              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${deleteSourceBranch ? "translate-x-7" : "translate-x-1"}`} />
+            </button>
+          </div>
+
           <Button
             fullWidth
             onClick={() => completeMutation.mutate()}
