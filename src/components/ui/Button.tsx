@@ -11,17 +11,17 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants = {
-  primary: "bg-blue-600 hover:bg-blue-700 text-white disabled:bg-blue-800",
-  secondary: "bg-slate-700 hover:bg-slate-600 text-white disabled:bg-slate-800",
-  danger: "bg-red-700 hover:bg-red-600 text-white disabled:bg-red-800",
-  ghost: "bg-transparent hover:bg-slate-800 text-slate-300",
-  outline: "border border-slate-600 hover:bg-slate-800 text-slate-200",
+  primary: "border border-blue-400/30 bg-blue-600 text-white shadow-[0_10px_24px_rgba(0,120,212,0.28)] hover:bg-blue-500 disabled:bg-blue-800",
+  secondary: "border border-slate-600/70 bg-slate-700/80 text-slate-100 shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-slate-600/90 disabled:bg-slate-800",
+  danger: "border border-red-500/30 bg-red-700 text-white shadow-[0_10px_24px_rgba(164,38,44,0.24)] hover:bg-red-600 disabled:bg-red-800",
+  ghost: "bg-transparent text-slate-300 hover:bg-slate-800/70",
+  outline: "border border-slate-600/80 bg-slate-900/30 text-slate-200 hover:bg-slate-800/70",
 };
 
 const sizes = {
-  sm: "px-3 py-1.5 text-sm min-h-[36px]",
-  md: "px-4 py-2 text-sm min-h-[44px]",
-  lg: "px-6 py-3 text-base min-h-[52px]",
+  sm: "min-h-[38px] px-3.5 py-2 text-sm",
+  md: "min-h-[46px] px-4 py-2.5 text-sm",
+  lg: "min-h-[54px] px-6 py-3 text-base",
 };
 
 export const Button = forwardRef<HTMLButtonElement, Props>(
@@ -31,8 +31,8 @@ export const Button = forwardRef<HTMLButtonElement, Props>(
         ref={ref}
         disabled={disabled || loading}
         className={`
-          inline-flex items-center justify-center gap-2 rounded-xl font-medium
-          transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-slate-900
+          inline-flex items-center justify-center gap-2 rounded-2xl font-medium tracking-[-0.01em]
+          transition-all active:scale-[0.985] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-slate-900
           disabled:opacity-50 disabled:cursor-not-allowed
           ${variants[variant]} ${sizes[size]} ${fullWidth ? "w-full" : ""} ${className}
         `}

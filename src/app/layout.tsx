@@ -29,7 +29,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="de" className="dark">
+    <html lang="de" data-theme="dark">
       <head>
         {/* iOS PWA Meta-Tags */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -38,8 +38,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={`${inter.variable} font-sans bg-slate-900 text-slate-100 antialiased`}>
         <Providers>
-          {/* Hauptinhalt: oben AppBar + Notch, unten die tatsaechliche Bottom-Nav-Hoehe */}
-          <main className="min-h-screen" style={{ paddingTop: "calc(var(--app-bar-height) + env(safe-area-inset-top))", paddingBottom: "var(--bottom-nav-height)" }}>
+          {/* Hauptinhalt: oben feste AppBar, unten feste Bottom-Nav mit iPhone-Safe-Area */}
+          <main className="min-h-screen" style={{ paddingTop: "var(--app-bar-height)", paddingBottom: "var(--bottom-nav-height)" }}>
             {children}
           </main>
           <BottomNav />
