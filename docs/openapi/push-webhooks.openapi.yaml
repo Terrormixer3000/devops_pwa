@@ -1,0 +1,536 @@
+openapi: 3.1.0
+info:
+  title: Azure DevOps PWA Push API
+  version: 1.0.0
+  description: |
+    OpenAPI-Dokumentation der Push- und Webhook-Endpunkte.
+
+    Die Endpunkte sind fuer die interne App-Nutzung gedacht:
+    - Push-Subscription verwalten
+    - Test-Notification ausloesen
+    - Azure DevOps Service Hooks als Web Push verteilen
+servers:
+  - url: https://localhost:3000
+    description: Lokale Entwicklung (HTTPS)
+tags:
+  - name: Push
+    description: Subscription- und Test-Endpunkte
+  - name: Webhooks
+    description: Eingehende Azure DevOps Service Hooks
+paths:
+  /api/push/subscribe:
+    post:
+      tags: [Push]
+      summary: Push-Subscription registrieren oder aktualisieren
+      operationId: registerPushSubscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PushSubscribeRequest'
+            examples:
+              default:
+                value:
+                  subscription:
+                    endpoint: https://fcm.googleapis.com/fcm/send/abc123
+                    keys:
+                      p256dh: BKBm...example
+                      auth: oL0c...example
+                  org: my-org
+                  project: mobile-app
+                  azureUserId: 2dfce5a9-4d7f-47bf-8c55-a4b1f6c4fb8a
+                  displayName: Max Mustermann
+      responses:
+        '201':
+          description: Subscription gespeichert
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          description: Ungueltiger Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Serverfehler beim Speichern
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags: [Push]
+      summary: Push-Subscription entfernen
+      operationId: deletePushSubscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PushUnsubscribeRequest'
+            examples:
+              default:
+                value:
+                  endpoint: https://fcm.googleapis.com/fcm/send/abc123
+      responses:
+        '200':
+          description: Subscription entfernt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          description: Ungueltiger Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Serverfehler beim Loeschen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/push/test:
+    post:
+      tags: [Push]
+      summary: Test-Notification senden
+      description: |
+        Sendet eine echte Web Push Notification an den angegebenen Azure-User
+        innerhalb von Organisation und Projekt.
+      operationId: sendPushTestEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestPushRequest'
+            examples:
+              buildFailed:
+                value:
+                  org: my-org
+                  project: mobile-app
+                  azureUserId: 2dfce5a9-4d7f-47bf-8c55-a4b1f6c4fb8a
+                  eventType: build.failed
+      responses:
+        '200':
+          description: Test wurde verarbeitet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestPushResponse'
+        '400':
+          description: Request ungueltig
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Keine passende Subscription fuer azureUserId gefunden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestPushNotFoundResponse'
+        '500':
+          description: Web Push nicht konfiguriert oder interner Fehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestPushServerErrorResponse'
+
+  /api/push/webhook:
+    post:
+      tags: [Webhooks]
+      summary: Azure DevOps Service Hook empfangen
+      description: |
+        Empfaengt Service Hook Events von Azure DevOps und verteilt Web Push Notifications
+        an betroffene, abonnierte Benutzer.
+
+        Authentifizierung:
+        - Wenn `WEBHOOK_SECRET` gesetzt ist, wird HTTP Basic Auth erwartet.
+        - Wenn `WEBHOOK_SECRET` nicht gesetzt ist, werden Requests ohne Auth akzeptiert.
+      operationId: receiveAzureServiceHook
+      security:
+        - {}
+        - BasicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AzureServiceHookPayload'
+            examples:
+              buildComplete:
+                value:
+                  eventType: build.complete
+                  resource:
+                    id: 42
+                    buildNumber: 2026.03.07.1
+                    result: failed
+                    definition:
+                      id: 12
+                      name: CI
+                    requestedFor:
+                      id: 2dfce5a9-4d7f-47bf-8c55-a4b1f6c4fb8a
+                      displayName: Max Mustermann
+                    requestedBy:
+                      id: 2dfce5a9-4d7f-47bf-8c55-a4b1f6c4fb8a
+                      displayName: Max Mustermann
+                    project:
+                      name: mobile-app
+                  resourceContainers:
+                    account:
+                      baseUrl: https://dev.azure.com/my-org/
+      responses:
+        '200':
+          description: Event verarbeitet oder bewusst uebersprungen
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/WebhookSentResponse'
+                  - $ref: '#/components/schemas/WebhookSkippedResponse'
+                  - $ref: '#/components/schemas/WebhookNoSubscriptionsResponse'
+        '400':
+          description: Ungueltiger JSON-Body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Nicht autorisiert
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Web Push nicht konfiguriert
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestPushServerErrorResponse'
+
+components:
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
+
+  schemas:
+    OkResponse:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+          const: true
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    PushSubscriptionKeys:
+      type: object
+      required: [p256dh, auth]
+      properties:
+        p256dh:
+          type: string
+        auth:
+          type: string
+
+    PushSubscriptionJson:
+      type: object
+      required: [endpoint, keys]
+      properties:
+        endpoint:
+          type: string
+          format: uri
+          description: Muss ein HTTPS-Endpoint sein.
+        keys:
+          $ref: '#/components/schemas/PushSubscriptionKeys'
+
+    PushSubscribeRequest:
+      type: object
+      required: [subscription, org, project, azureUserId]
+      properties:
+        subscription:
+          $ref: '#/components/schemas/PushSubscriptionJson'
+        org:
+          type: string
+        project:
+          type: string
+        azureUserId:
+          type: string
+        displayName:
+          type: string
+
+    PushUnsubscribeRequest:
+      type: object
+      required: [endpoint]
+      properties:
+        endpoint:
+          type: string
+          format: uri
+
+    TestEventType:
+      type: string
+      enum:
+        - build.failed
+        - build.succeeded
+        - pr.reviewer
+        - pr.comment
+        - release.approval
+
+    TestPushRequest:
+      type: object
+      required: [org, project, azureUserId, eventType]
+      properties:
+        org:
+          type: string
+        project:
+          type: string
+        azureUserId:
+          type: string
+        eventType:
+          $ref: '#/components/schemas/TestEventType'
+
+    WebhookNotificationPayload:
+      type: object
+      required: [title, body, tag, url]
+      properties:
+        title:
+          type: string
+        body:
+          type: string
+        tag:
+          type: string
+        url:
+          type: string
+
+    TestPushResponse:
+      type: object
+      required: [ok, sent, total, notification]
+      properties:
+        ok:
+          type: boolean
+        sent:
+          type: integer
+          minimum: 0
+        total:
+          type: integer
+          minimum: 0
+        notification:
+          $ref: '#/components/schemas/WebhookNotificationPayload'
+        errors:
+          type: array
+          items:
+            type: string
+
+    TestPushNotFoundResponse:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          const: false
+        error:
+          type: string
+
+    TestPushServerErrorResponse:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          const: false
+        error:
+          type: string
+
+    WebhookSentResponse:
+      type: object
+      required: [ok, sent, total, matchedUsers]
+      properties:
+        ok:
+          type: boolean
+          const: true
+        sent:
+          type: integer
+          minimum: 0
+        total:
+          type: integer
+          minimum: 0
+        matchedUsers:
+          type: integer
+          minimum: 0
+
+    WebhookNoSubscriptionsResponse:
+      type: object
+      required: [ok, sent, matchedUsers]
+      properties:
+        ok:
+          type: boolean
+          const: true
+        sent:
+          type: integer
+          const: 0
+        matchedUsers:
+          type: integer
+          minimum: 0
+
+    WebhookSkippedResponse:
+      type: object
+      required: [ok, skipped]
+      properties:
+        ok:
+          type: boolean
+          const: true
+        skipped:
+          type: boolean
+          const: true
+        sent:
+          type: integer
+          minimum: 0
+        matchedUsers:
+          type: integer
+          minimum: 0
+
+    AzureIdentityRef:
+      type: object
+      required: [id, displayName]
+      properties:
+        id:
+          type: string
+        displayName:
+          type: string
+        uniqueName:
+          type: string
+
+    AzureServiceHookPayload:
+      type: object
+      required: [eventType, resource]
+      properties:
+        eventType:
+          type: string
+          description: Azure DevOps Event-Typ, z.B. build.complete.
+        resource:
+          type: object
+          required: []
+          properties:
+            id:
+              type: integer
+            buildNumber:
+              type: string
+            result:
+              type: string
+            status:
+              type: string
+            definition:
+              type: object
+              properties:
+                id:
+                  type: integer
+                name:
+                  type: string
+            repository:
+              type: object
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                project:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+            project:
+              type: object
+              properties:
+                name:
+                  type: string
+            pullRequestId:
+              type: integer
+            title:
+              type: string
+            createdBy:
+              $ref: '#/components/schemas/AzureIdentityRef'
+            comment:
+              type: object
+              properties:
+                content:
+                  type: string
+                author:
+                  $ref: '#/components/schemas/AzureIdentityRef'
+            reviewers:
+              type: array
+              items:
+                $ref: '#/components/schemas/AzureIdentityRef'
+            reviewer:
+              $ref: '#/components/schemas/AzureIdentityRef'
+            approval:
+              type: object
+              properties:
+                approver:
+                  $ref: '#/components/schemas/AzureIdentityRef'
+                release:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                releaseEnvironment:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+            release:
+              type: object
+              properties:
+                id:
+                  type: integer
+                name:
+                  type: string
+            releaseEnvironment:
+              type: object
+              properties:
+                name:
+                  type: string
+            requestedFor:
+              $ref: '#/components/schemas/AzureIdentityRef'
+            requestedBy:
+              $ref: '#/components/schemas/AzureIdentityRef'
+          additionalProperties: true
+        resourceContainers:
+          type: object
+          properties:
+            project:
+              type: object
+              properties:
+                baseUrl:
+                  type: string
+                id:
+                  type: string
+            account:
+              type: object
+              properties:
+                baseUrl:
+                  type: string
+            collection:
+              type: object
+              properties:
+                baseUrl:
+                  type: string
+          additionalProperties: true
+        message:
+          type: object
+          properties:
+            text:
+              type: string
+      additionalProperties: true
