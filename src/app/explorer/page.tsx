@@ -28,7 +28,9 @@ import {
   Tag,
   History,
   GitCompare,
+  Plus,
 } from "lucide-react";
+import { Modal } from "@/components/ui/Modal";
 import { formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -305,6 +307,12 @@ function RepoExplorer({ repo, settings }: { repo: Repository; settings: AppSetti
     setView("compare");
   };
 
+  const handleCreateBranch = async (branchName: string, sourceObjectId: string): Promise<void> => {
+    if (!client || !settings) throw new Error("Kein Client");
+    await repositoriesService.createBranch(client, settings.project, repo.id, branchName, sourceObjectId);
+    refetchBranches();
+  };
+
   const handleNavigateFolder = (entry: TreeEntry) => {
     setPathHistory((history) => [...history, currentPath]);
     setCurrentPath(entry.path);
@@ -410,6 +418,7 @@ function RepoExplorer({ repo, settings }: { repo: Repository; settings: AppSetti
             onSelect={handleSelectBranch}
             onCompare={handleOpenCompare}
             onRefetch={refetchBranches}
+            onCreateBranch={handleCreateBranch}
           />
         ) : view === "commits" ? (
           <CommitList commits={commits || []} loading={commitsLoading} onSelect={handleOpenCommit} />
@@ -456,7 +465,7 @@ function RepoExplorer({ repo, settings }: { repo: Repository; settings: AppSetti
 }
 
 // Branch-Liste
-function BranchList({ branches, tags, loading, error, onSelect, onCompare, onRefetch }: {
+function BranchList({ branches, tags, loading, error, onSelect, onCompare, onRefetch, onCreateBranch }: {
   branches: Branch[];
   tags: Branch[];
   loading: boolean;
@@ -464,16 +473,83 @@ function BranchList({ branches, tags, loading, error, onSelect, onCompare, onRef
   onSelect: (b: Branch) => void;
   onCompare: (b: Branch) => void;
   onRefetch: () => void;
+  onCreateBranch: (branchName: string, sourceObjectId: string) => Promise<void>;
 }) {
   const [mode, setMode] = useState<"branches" | "tags">("branches");
   const items = mode === "branches" ? branches : tags;
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newBranchName, setNewBranchName] = useState("");
+  const [sourceMode, setSourceMode] = useState<"branch" | "commit">("branch");
+  const [sourceBranchName, setSourceBranchName] = useState("");
+  const [sourceCommitHash, setSourceCommitHash] = useState("");
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createPending, setCreatePending] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const resetForm = () => {
+    setNewBranchName("");
+    setSourceMode("branch");
+    setSourceBranchName("");
+    setSourceCommitHash("");
+    setCreateError(null);
+  };
+
+  const handleCloseModal = () => {
+    setCreateOpen(false);
+    resetForm();
+  };
+
+  const isSubmitDisabled =
+    createPending ||
+    !newBranchName.trim() ||
+    (sourceMode === "branch" ? !sourceBranchName : !sourceCommitHash.trim());
+
+  const handleCreateSubmit = async () => {
+    const trimmedName = newBranchName.trim();
+    if (!trimmedName) {
+      setCreateError("Branch-Name darf nicht leer sein.");
+      return;
+    }
+
+    let sourceObjectId = "";
+    if (sourceMode === "branch") {
+      const sourceBranch = branches.find((b) => b.name === sourceBranchName);
+      if (!sourceBranch) {
+        setCreateError("Quell-Branch nicht gefunden.");
+        return;
+      }
+      sourceObjectId = sourceBranch.objectId;
+    } else {
+      const hash = sourceCommitHash.trim();
+      if (!hash) {
+        setCreateError("Commit-Hash darf nicht leer sein.");
+        return;
+      }
+      sourceObjectId = hash;
+    }
+
+    setCreateError(null);
+    setCreatePending(true);
+    try {
+      await onCreateBranch(trimmedName, sourceObjectId);
+      setCreateOpen(false);
+      resetForm();
+      setSuccessMessage(`Branch "${trimmedName}" wurde erstellt.`);
+      setTimeout(() => setSuccessMessage(null), 3500);
+    } catch (err) {
+      setCreateError((err as Error).message || "Fehler beim Erstellen des Branches.");
+    } finally {
+      setCreatePending(false);
+    }
+  };
 
   if (loading) return <PageLoader />;
   if (error) return <ErrorMessage message="Branches konnten nicht geladen werden" onRetry={onRefetch} />;
 
   return (
-    <div>
-      {/* Branches / Tags Tab-Toggle */}
+    <div className={mode === "branches" ? "pb-24" : undefined}>
+      {/* Branches / Tags Tab-Toggle + Create button */}
       <div className="flex items-center gap-1 px-4 py-2 border-b border-slate-800">
         {(["branches", "tags"] as const).map((tab) => (
           <button
@@ -489,6 +565,12 @@ function BranchList({ branches, tags, loading, error, onSelect, onCompare, onRef
           </button>
         ))}
       </div>
+
+      {successMessage && (
+        <div className="px-4 py-2 bg-green-900/30 border-b border-green-800/40 text-sm text-green-400">
+          {successMessage}
+        </div>
+      )}
 
       {items.length === 0 ? (
         <EmptyState icon={mode === "branches" ? GitBranch : Tag} title={mode === "branches" ? "Keine Branches gefunden" : "Keine Tags gefunden"} />
@@ -523,6 +605,106 @@ function BranchList({ branches, tags, loading, error, onSelect, onCompare, onRef
             </div>
           ))}
         </div>
+      )}
+
+      <Modal open={createOpen} onClose={handleCloseModal} title="Branch erstellen">
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-slate-300">Branch-Name *</label>
+            <input
+              type="text"
+              value={newBranchName}
+              onChange={(e) => setNewBranchName(e.target.value.replace(/\s+/g, "-"))}
+              placeholder="z.B. feature/mein-feature"
+              autoCapitalize="none"
+              autoCorrect="off"
+              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm"
+            />
+            <p className="text-xs text-slate-500">Leerzeichen werden automatisch durch - ersetzt.</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-slate-300">Quelle</label>
+            <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-800/90 p-1">
+              <button
+                onClick={() => setSourceMode("branch")}
+                className={`rounded-[0.9rem] py-2.5 text-sm font-medium transition-colors ${
+                  sourceMode === "branch"
+                    ? "bg-slate-700 text-slate-100 shadow-[0_6px_16px_rgba(0,0,0,0.18)]"
+                    : "text-slate-400"
+                }`}
+              >
+                Branch
+              </button>
+              <button
+                onClick={() => setSourceMode("commit")}
+                className={`rounded-[0.9rem] py-2.5 text-sm font-medium transition-colors ${
+                  sourceMode === "commit"
+                    ? "bg-slate-700 text-slate-100 shadow-[0_6px_16px_rgba(0,0,0,0.18)]"
+                    : "text-slate-400"
+                }`}
+              >
+                Commit-Hash
+              </button>
+            </div>
+          </div>
+
+          {sourceMode === "branch" ? (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-300">Von Branch *</label>
+              <select
+                value={sourceBranchName}
+                onChange={(e) => setSourceBranchName(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-blue-500 text-sm"
+              >
+                <option value="">Branch auswaehlen...</option>
+                {branches.map((b) => (
+                  <option key={b.name} value={b.name}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-300">Commit-Hash *</label>
+              <input
+                type="text"
+                value={sourceCommitHash}
+                onChange={(e) => setSourceCommitHash(e.target.value)}
+                placeholder="z.B. a1b2c3d4e5f6..."
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                className="w-full px-4 py-3 bg-slate-800 font-mono border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm"
+              />
+            </div>
+          )}
+
+          {createError && (
+            <p className="text-sm text-red-400">{createError}</p>
+          )}
+
+          <button
+            onClick={handleCreateSubmit}
+            disabled={isSubmitDisabled}
+            className="w-full rounded-xl bg-blue-600 py-3.5 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {createPending ? "Erstelle..." : "Branch erstellen"}
+          </button>
+        </div>
+      </Modal>
+
+      {mode === "branches" && (
+        <button
+          onClick={() => setCreateOpen(true)}
+          className="fixed right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/30 transition-all hover:bg-blue-500 active:scale-95"
+          style={{ bottom: "var(--fab-bottom-offset)" }}
+          aria-label="Branch erstellen"
+          title="Branch erstellen"
+        >
+          <Plus size={24} />
+        </button>
       )}
     </div>
   );
