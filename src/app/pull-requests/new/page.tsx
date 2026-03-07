@@ -13,16 +13,19 @@ import { repositoriesService } from "@/lib/services/repositoriesService";
 import { identityService } from "@/lib/services/identityService";
 import { BackLink } from "@/components/ui/BackButton";
 import { IdentityRef } from "@/types";
-import { X, UserPlus } from "lucide-react";
+import { X, UserPlus, Wand2, GitBranch } from "lucide-react";
 
 export default function NewPRPage() {
   const router = useRouter();
   const { settings } = useSettingsStore();
-  const { selectedRepositories } = useRepositoryStore();
+  const { repositories, selectedRepositories } = useRepositoryStore();
   const { client } = useAzureClient();
 
-  // Erstes ausgewaehltes Repository als Standard
-  const repo = selectedRepositories[0];
+  // Repository-Auswahl (Standard: erstes ausgewaehltes Repository)
+  const [selectedRepoId, setSelectedRepoId] = useState(
+    () => selectedRepositories[0]?.id || repositories[0]?.id || ""
+  );
+  const repo = repositories.find((r) => r.id === selectedRepoId) || selectedRepositories[0] || null;
 
   const [form, setForm] = useState({
     title: "",
@@ -34,8 +37,9 @@ export default function NewPRPage() {
   const [selectedReviewers, setSelectedReviewers] = useState<IdentityRef[]>([]);
   const [reviewerSearch, setReviewerSearch] = useState("");
   const [showReviewerPicker, setShowReviewerPicker] = useState(false);
+  const [autoFilling, setAutoFilling] = useState(false);
 
-  // Branches laden
+  // Branches laden (abhaengig vom ausgewaehlten Repo)
   const { data: branches } = useQuery({
     queryKey: ["branches", repo?.id, settings?.project, settings?.demoMode],
     queryFn: () => client && settings && repo
@@ -44,6 +48,37 @@ export default function NewPRPage() {
     enabled: !!client && !!settings && !!repo,
   });
   const defaultTargetBranch = repo?.defaultBranch?.replace("refs/heads/", "") || "";
+
+  // Letzten Commit des Quell-Branch laden (fuer Auto-Fill)
+  const { refetch: fetchLatestCommit, isFetching: commitFetching } = useQuery({
+    queryKey: ["new-pr-latest-commit", repo?.id, form.sourceRefName, settings?.project],
+    queryFn: () =>
+      client && settings && repo && form.sourceRefName
+        ? repositoriesService.getCommits(client, settings.project, repo.id, form.sourceRefName, 1)
+        : Promise.resolve([]),
+    enabled: false, // nur auf expliziten Aufruf hin laden
+  });
+
+  const handleAutoFill = async () => {
+    if (!form.sourceRefName) return;
+    setAutoFilling(true);
+    try {
+      const result = await fetchLatestCommit();
+      const commit = result.data?.[0];
+      if (commit?.comment) {
+        const lines = commit.comment.trim().split("\n");
+        const title = lines[0].trim();
+        const description = lines.slice(1).filter(Boolean).join("\n").trim();
+        setForm((f) => ({
+          ...f,
+          title: title || f.title,
+          description: description || f.description,
+        }));
+      }
+    } finally {
+      setAutoFilling(false);
+    }
+  };
 
   // Team-Mitglieder laden (fuer Reviewer-Auswahl)
   const { data: teamMembers } = useQuery({
@@ -100,16 +135,49 @@ export default function NewPRPage() {
         {/* Zurueck-Link */}
         <BackLink href="/pull-requests" size="default" />
 
-        {/* Repository-Hinweis */}
-        {!repo ? (
-          <p className="text-sm text-yellow-400">Bitte zuerst ein Repository auswaehlen</p>
-        ) : (
-          <p className="text-xs text-slate-500">Repository: <span className="text-slate-300">{repo.name}</span></p>
-        )}
+        {/* Repository-Auswahl */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-slate-300">Repository *</label>
+          {repositories.length === 0 ? (
+            <p className="text-sm text-yellow-400">Kein Repository verfuegbar – Einstellungen pruefen</p>
+          ) : (
+            <div className="relative">
+              <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
+                <GitBranch size={15} className="text-slate-500" />
+              </div>
+              <select
+                value={selectedRepoId}
+                onChange={(e) => {
+                  setSelectedRepoId(e.target.value);
+                  // Branch-Auswahl zuruecksetzen wenn Repo wechselt
+                  setForm((f) => ({ ...f, sourceRefName: "", targetRefName: "" }));
+                }}
+                className="w-full pl-9 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-blue-500 text-sm appearance-none"
+              >
+                {repositories.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
 
         {/* Titel */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-300">Titel *</label>
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-slate-300">Titel *</label>
+            {form.sourceRefName && (
+              <button
+                type="button"
+                onClick={handleAutoFill}
+                disabled={autoFilling || commitFetching}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-900/30 transition-colors disabled:opacity-50"
+              >
+                <Wand2 size={12} />
+                {autoFilling || commitFetching ? "Lade..." : "Aus Commit befuellen"}
+              </button>
+            )}
+          </div>
           <input
             type="text"
             value={form.title}
