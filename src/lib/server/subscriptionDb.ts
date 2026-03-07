@@ -21,6 +21,7 @@
 
 import fs from "fs";
 import path from "path";
+import { timingSafeEqual } from "node:crypto";
 import type { PushSubscriptionRecord } from "@/types";
 
 const DB_PATH = path.join(process.cwd(), "data", "subscriptions.json");
@@ -55,6 +56,8 @@ function normalizeRecord(record: PushSubscriptionRecord): PushSubscriptionRecord
     project: normalizeSegment(record.project),
     azureUserId: normalizeAzureUserId(record.azureUserId),
     displayName: record.displayName.trim() || "Unbekannter Benutzer",
+    // webhookToken unveraendert lassen — er wird als Auth-Credential genutzt
+    webhookToken: record.webhookToken,
   };
 }
 
@@ -166,6 +169,29 @@ export function removeSubscription(endpoint: string): void {
     }
   }
   writeDb(db);
+}
+
+/**
+ * Sucht eine Subscription anhand ihres Webhook-Tokens.
+ * Verwendet timing-sicheren Vergleich um Timing-Angriffe zu verhindern.
+ * Gibt null zurueck wenn kein Match gefunden wird.
+ */
+export function getSubscriptionByToken(token: string): PushSubscriptionRecord | null {
+  if (!token) return null;
+
+  const db = readDb();
+  const all = Object.values(db).flat();
+
+  const tokenBuf = Buffer.from(token, "utf-8");
+
+  for (const sub of all) {
+    if (!sub.webhookToken) continue;
+    const subBuf = Buffer.from(sub.webhookToken, "utf-8");
+    if (tokenBuf.length !== subBuf.length) continue;
+    if (timingSafeEqual(tokenBuf, subBuf)) return sub;
+  }
+
+  return null;
 }
 
 /** Gibt alle Subscriptions aus der gesamten DB zurueck (fuer Admin-Zwecke). */

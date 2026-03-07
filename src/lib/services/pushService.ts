@@ -200,6 +200,7 @@ export const pushService = {
   /**
    * Sendet die PushSubscription an den eigenen API-Server, damit der Server
    * spaeter Web Push Nachrichten an diesen Browser senden kann.
+   * Gibt den generierten Webhook-Token zurueck.
    */
   async registerSubscription(
     subscription: PushSubscription,
@@ -207,7 +208,7 @@ export const pushService = {
     project: string,
     azureUserId: string,
     displayName: string
-  ): Promise<void> {
+  ): Promise<{ webhookToken: string }> {
     const response = await fetch("/api/push/subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -224,6 +225,9 @@ export const pushService = {
       const message = await readErrorMessage(response);
       throw new Error(`Subscription-Registrierung fehlgeschlagen: ${message}`);
     }
+
+    const data = (await response.json()) as { ok: boolean; webhookToken: string };
+    return { webhookToken: data.webhookToken };
   },
 
   /**
@@ -264,5 +268,26 @@ export const pushService = {
     if (errors.length > 0) {
       throw new Error(errors.join(" | "));
     }
+
+    // Token nach erfolgreichem Deaktivieren aus dem lokalen Speicher entfernen
+    this.clearStoredToken();
+  },
+
+  /** Liest den gespeicherten Webhook-Token aus dem lokalen Speicher. */
+  getStoredToken(): string | null {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("azdevops_push_token");
+  },
+
+  /** Speichert den Webhook-Token im lokalen Speicher. */
+  storeToken(token: string): void {
+    if (typeof window === "undefined") return;
+    localStorage.setItem("azdevops_push_token", token);
+  },
+
+  /** Entfernt den Webhook-Token aus dem lokalen Speicher. */
+  clearStoredToken(): void {
+    if (typeof window === "undefined") return;
+    localStorage.removeItem("azdevops_push_token");
   },
 };

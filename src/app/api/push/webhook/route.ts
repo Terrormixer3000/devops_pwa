@@ -1,7 +1,6 @@
-import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { dedupeSubscriptionsByEndpoint, normalizeText } from "@/lib/server/pushRouteUtils";
-import { getSubscriptionsForUsers, removeSubscription } from "@/lib/server/subscriptionDb";
+import { getSubscriptionByToken, getSubscriptionsForUsers, removeSubscription } from "@/lib/server/subscriptionDb";
 import {
   ensureWebPushConfigured,
   getWebPushClient,
@@ -11,37 +10,6 @@ import {
 import type { AzureServiceHookPayload, WebhookNotificationPayload } from "@/types";
 
 export const runtime = "nodejs";
-
-function decodeBasicAuthPassword(req: NextRequest): string | null {
-  const authHeader = req.headers.get("authorization") ?? "";
-  if (!authHeader.startsWith("Basic ")) return null;
-
-  const encoded = authHeader.slice("Basic ".length);
-  try {
-    const decoded = Buffer.from(encoded, "base64").toString("utf-8");
-    return decoded.split(":").slice(1).join(":");
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Prueft die Basic-Auth des eingehenden Webhooks gegen das konfigurierte WEBHOOK_SECRET.
- * Azure DevOps sendet Basic Auth wenn im Service Hook ein Passwort gesetzt wurde.
- */
-function isAuthorized(req: NextRequest): boolean {
-  const secret = (process.env.WEBHOOK_SECRET ?? "").trim();
-  // Wenn kein Secret konfiguriert, Anfragen ohne Pruefung zulassen (nur fuer lokale Entwicklung)
-  if (!secret) return true;
-
-  const password = decodeBasicAuthPassword(req);
-  if (password === null) return false;
-
-  const expected = Buffer.from(secret, "utf-8");
-  const provided = Buffer.from(password, "utf-8");
-  if (expected.length !== provided.length) return false;
-  return timingSafeEqual(expected, provided);
-}
 
 function extractOrgFromBaseUrl(baseUrl: string): string {
   try {
@@ -223,8 +191,11 @@ function getTargetAzureUserIds(payload: AzureServiceHookPayload): string[] {
  * nur an die Benutzer, die sowohl betroffen sind als auch Push aktiviert haben.
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  // Authentifizierung pruefen
-  if (!isAuthorized(req)) {
+  // Token-Authentifizierung: ?t=<webhookToken> ist Pflicht.
+  // Jeder User hat einen eigenen Token, der beim Aktivieren der Notifications generiert wird.
+  const token = req.nextUrl.searchParams.get("t") ?? "";
+  const tokenOwner = getSubscriptionByToken(token);
+  if (!tokenOwner) {
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
 

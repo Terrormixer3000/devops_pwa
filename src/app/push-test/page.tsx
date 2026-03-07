@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { AppBar } from "@/components/layout/AppBar";
-import { Button } from "@/components/ui/Button";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { createAzureClient } from "@/lib/api/client";
 import { identityService, type AzureCurrentUser } from "@/lib/services/identityService";
 import { pushService, type PushPermissionState, type PushSupportStatus } from "@/lib/services/pushService";
 import {
-  Bell,
   BellOff,
   CheckCircle,
   XCircle,
@@ -19,6 +18,9 @@ import {
   Play,
   ChevronRight,
   Loader2,
+  Link2,
+  Copy,
+  Check,
 } from "lucide-react";
 
 type TestEventType =
@@ -165,6 +167,42 @@ function ResultBanner({ result }: { result: TestResult | null }) {
   );
 }
 
+// Webhook-URL Anzeige (read-only)
+function WebhookUrlReadOnly({ token }: { token: string }) {
+  const [copied, setCopied] = useState(false);
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const webhookUrl = `${origin}/api/push/webhook?t=${token}`;
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(webhookUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // ignorieren
+    }
+  };
+
+  return (
+    <div className="space-y-2 rounded-xl border border-slate-700/60 bg-slate-800/40 p-3">
+      <div className="flex items-center gap-2 text-xs text-slate-400">
+        <Link2 size={13} className="flex-shrink-0" />
+        <span className="font-medium">Deine Webhook-URL</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="min-w-0 flex-1 truncate font-mono text-xs text-slate-400">{webhookUrl}</span>
+        <button
+          onClick={handleCopy}
+          className="flex flex-shrink-0 items-center gap-1 rounded-lg bg-slate-700 px-2 py-1 text-xs text-slate-300 transition-colors hover:bg-slate-600"
+        >
+          {copied ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
+          {copied ? "OK" : "Kopieren"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function PushTestPage() {
   const { settings } = useSettingsStore();
 
@@ -172,7 +210,7 @@ export default function PushTestPage() {
   const [supportStatus, setSupportStatus] = useState<PushSupportStatus>("unsupported");
   const [permission, setPermission] = useState<PushPermissionState>("default");
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const [subLoading, setSubLoading] = useState(false);
+  const [webhookToken, setWebhookToken] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<AzureCurrentUser | null>(null);
 
   // Test-State
@@ -199,6 +237,11 @@ export default function PushTestPage() {
   }, [refreshState]);
 
   useEffect(() => {
+    const stored = pushService.getStoredToken();
+    if (stored) setWebhookToken(stored);
+  }, []);
+
+  useEffect(() => {
     if (!settings?.organization || !settings?.project || (!settings?.pat && !settings?.demoMode)) {
       setCurrentUser(null);
       return;
@@ -210,36 +253,6 @@ export default function PushTestPage() {
       .then(setCurrentUser)
       .catch(() => setCurrentUser(null));
   }, [settings]);
-
-  // Subscribe / Unsubscribe
-  const handleToggleSubscription = async () => {
-    setSubLoading(true);
-    try {
-      if (isSubscribed) {
-        await pushService.unsubscribe();
-      } else {
-        if (!currentUser) {
-          throw new Error("Azure DevOps Benutzer konnte nicht ermittelt werden.");
-        }
-        const sub = await pushService.subscribe();
-        await pushService.registerSubscription(
-          sub,
-          settings?.organization ?? "",
-          settings?.project ?? "",
-          currentUser.id,
-          currentUser.displayName
-        );
-      }
-      await refreshState();
-    } catch (err) {
-      setLastResult({
-        ok: false,
-        error: err instanceof Error ? err.message : "Unbekannter Fehler",
-      });
-    } finally {
-      setSubLoading(false);
-    }
-  };
 
   // Test-Notification senden
   const handleTest = async (eventType: TestEventType) => {
@@ -406,21 +419,23 @@ export default function PushTestPage() {
             </div>
           )}
 
-          {/* Toggle-Button */}
-          {supportStatus === "supported" && permission !== "denied" && (
-            <Button
-              fullWidth
-              variant={isSubscribed ? "secondary" : "primary"}
-              loading={subLoading}
-              onClick={handleToggleSubscription}
-              disabled={!settings?.organization || !settings?.project}
+          {/* CTA: Nicht abonniert → Wizard */}
+          {supportStatus === "supported" && !isSubscribed && permission !== "denied" && (
+            <Link
+              href="/push-setup"
+              className="flex items-center justify-between gap-3 w-full rounded-xl border border-blue-700/40 bg-blue-900/15 p-3.5 text-left transition-colors hover:bg-blue-900/25"
             >
-              {isSubscribed ? (
-                <><BellOff size={16} /> Notifications deaktivieren</>
-              ) : (
-                <><Bell size={16} /> Notifications aktivieren</>
-              )}
-            </Button>
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium text-blue-300">Notifications noch nicht eingerichtet</p>
+                <p className="text-xs text-blue-400/70">Zum Einrichtungs-Wizard wechseln</p>
+              </div>
+              <ChevronRight size={16} className="flex-shrink-0 text-blue-400" />
+            </Link>
+          )}
+
+          {/* Webhook-URL (read-only) */}
+          {isSubscribed && webhookToken && (
+            <WebhookUrlReadOnly token={webhookToken} />
           )}
 
           {permission === "denied" && (
