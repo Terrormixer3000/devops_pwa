@@ -16,6 +16,7 @@ interface Props {
   // Angezeigtes Label und Icon im AppBar-Button
   buttonLabel: string;
   buttonIcon?: React.ReactNode;
+  trigger?: React.ReactNode;
   sheetTitle: string;
 
   // Verfuegbare Eintraege
@@ -40,6 +41,7 @@ interface Props {
 export function SelectionSheet({
   buttonLabel,
   buttonIcon,
+  trigger,
   sheetTitle,
   items,
   loading,
@@ -93,14 +95,16 @@ export function SelectionSheet({
       shouldScaleBackground={false}
     >
       <Drawer.Trigger asChild>
-        {/* AppBar-Button */}
-        <button
-          className="flex max-w-[190px] items-center gap-2 rounded-full border border-slate-700/70 bg-slate-800/80 px-3.5 py-2 text-left shadow-[0_8px_22px_rgba(0,0,0,0.18)] transition-colors hover:bg-slate-700/85"
-        >
-          {buttonIcon && <span className="flex-shrink-0">{buttonIcon}</span>}
-          <span className="truncate text-xs font-medium tracking-[-0.01em] text-slate-200">{buttonLabel}</span>
-          <ChevronDown size={13} className="text-slate-400 flex-shrink-0" />
-        </button>
+        {trigger ?? (
+          // AppBar-Button
+          <button
+            className="flex max-w-[190px] items-center gap-2 rounded-full border border-slate-700/70 bg-slate-800/80 px-3.5 py-2 text-left shadow-[0_8px_22px_rgba(0,0,0,0.18)] transition-colors hover:bg-slate-700/85"
+          >
+            {buttonIcon && <span className="flex-shrink-0">{buttonIcon}</span>}
+            <span className="truncate text-xs font-medium tracking-[-0.01em] text-slate-200">{buttonLabel}</span>
+            <ChevronDown size={13} className="text-slate-400 flex-shrink-0" />
+          </button>
+        )}
       </Drawer.Trigger>
 
       <Drawer.Portal>

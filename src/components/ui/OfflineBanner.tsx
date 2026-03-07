@@ -8,9 +8,9 @@ import { WifiOff } from "lucide-react";
  * Verschwindet automatisch sobald die Verbindung wiederhergestellt wird.
  */
 export function OfflineBanner() {
-  // Lazy initializer: browserseitig initialisieren – schlaegt bei SSR nicht fehl
+  const isDevelopment = process.env.NODE_ENV === "development";
   const [isOffline, setIsOffline] = useState(() =>
-    typeof navigator !== "undefined" ? !navigator.onLine : false
+    typeof navigator !== "undefined" && !isDevelopment ? !navigator.onLine : false
   );
 
   useEffect(() => {
