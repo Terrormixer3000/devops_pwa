@@ -18,9 +18,14 @@ import { usePipelineDefStore } from "@/lib/stores/selectionStore";
 import { PipelineSelector } from "@/components/layout/selectors/PipelineSelector";
 import { DeliveryTitleSelector } from "@/components/layout/DeliveryTitleSelector";
 import { Pipeline } from "@/types";
-import { PlayCircle, ChevronRight, Play, StopCircle, GitBranch, Info } from "lucide-react";
+import { PlayCircle, ChevronRight, Play, StopCircle, GitBranch, Info, Plus, X } from "lucide-react";
 
 const QUICK_BRANCHES = ["main", "develop", "release/2026.03", "hotfix/urgent-fix"];
+
+interface PipelineParam {
+  key: string;
+  value: string;
+}
 
 function normalizeBranchInput(branch: string): string {
   return branch.replace(/^refs\/heads\//, "").trim();
@@ -39,6 +44,7 @@ export default function PipelinesPage() {
   const [view, setView] = useState<"pipelines" | "builds">("builds");
   const [startModal, setStartModal] = useState<Pipeline | null>(null);
   const [startBranch, setStartBranch] = useState("main");
+  const [pipelineParams, setPipelineParams] = useState<PipelineParam[]>([]);
 
   const { settings } = useSettingsStore();
   const { client } = useAzureClient();
@@ -81,8 +87,15 @@ export default function PipelinesPage() {
       const branchError = getBranchValidationError(normalizedBranch);
       if (branchError) return Promise.reject(new Error(branchError));
 
+      // Parameter-Map aus Key-Value-Paaren erstellen (leere ueberspringen)
+      const paramMap: Record<string, string> = {};
+      for (const p of pipelineParams) {
+        if (p.key.trim()) paramMap[p.key.trim()] = p.value;
+      }
+      const hasParams = Object.keys(paramMap).length > 0;
+
       return client && settings
-        ? pipelinesService.queueBuild(client, settings.project, pipeline.id, `refs/heads/${normalizedBranch}`)
+        ? pipelinesService.queueBuild(client, settings.project, pipeline.id, `refs/heads/${normalizedBranch}`, hasParams ? paramMap : undefined)
         : Promise.reject(new Error("Kein Client"));
     },
     onSuccess: () => {
@@ -110,6 +123,7 @@ export default function PipelinesPage() {
     startMutation.reset();
     setStartModal(pipeline);
     setStartBranch("main");
+    setPipelineParams([]);
   };
 
   const closeStartDialog = () => {
@@ -117,6 +131,7 @@ export default function PipelinesPage() {
     startMutation.reset();
     setStartModal(null);
     setStartBranch("main");
+    setPipelineParams([]);
   };
 
   const handleStartPipeline = () => {
@@ -289,10 +304,56 @@ export default function PipelinesPage() {
             )}
           </div>
 
+          {/* Pipeline-Parameter */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-slate-300">Parameter</label>
+              <button
+                type="button"
+                onClick={() => setPipelineParams((prev) => [...prev, { key: "", value: "" }])}
+                className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                <Plus size={12} />
+                Hinzufuegen
+              </button>
+            </div>
+            {pipelineParams.length === 0 ? (
+              <p className="text-xs text-slate-600">Keine Parameter gesetzt</p>
+            ) : (
+              <div className="space-y-2">
+                {pipelineParams.map((param, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={param.key}
+                      onChange={(e) => setPipelineParams((prev) => prev.map((p, j) => j === i ? { ...p, key: e.target.value } : p))}
+                      placeholder="Name"
+                      className="flex-1 min-w-0 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    />
+                    <input
+                      type="text"
+                      value={param.value}
+                      onChange={(e) => setPipelineParams((prev) => prev.map((p, j) => j === i ? { ...p, value: e.target.value } : p))}
+                      placeholder="Wert"
+                      className="flex-1 min-w-0 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setPipelineParams((prev) => prev.filter((_, j) => j !== i))}
+                      className="p-1.5 text-slate-500 hover:text-red-400 transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 px-3 py-2.5">
             <p className="flex items-start gap-2 text-xs text-blue-200">
               <Info size={14} className="mt-0.5 flex-shrink-0 text-blue-300" />
-              Der Run startet sofort mit dem Branch-Stand. Build-Parameter koennen danach in Azure DevOps angepasst werden.
+              Der Run startet sofort mit dem Branch-Stand und den angegebenen Parametern.
             </p>
           </div>
 

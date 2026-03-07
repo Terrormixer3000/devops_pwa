@@ -17,7 +17,7 @@ import { pullRequestsService } from "@/lib/services/pullRequestsService";
 import { usePRRepoStore } from "@/lib/stores/selectionStore";
 import { PRRepoSelector } from "@/components/layout/selectors/RepoSelector";
 import { PRStatus, PullRequest } from "@/types";
-import { GitPullRequest, ThumbsUp, Clock, GitMerge } from "lucide-react";
+import { GitPullRequest, ThumbsUp, Clock, GitMerge, Plus } from "lucide-react";
 
 // Status-Filter Optionen
 const STATUS_OPTIONS: { label: string; value: PRStatus }[] = [
@@ -110,6 +110,15 @@ export default function PullRequestsPage() {
           </div>
         )}
       </div>
+
+      {/* FAB: Neuer PR erstellen */}
+      <Link
+        href="/pull-requests/new"
+        className="fixed bottom-24 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/30 hover:bg-blue-500 active:scale-95 transition-all"
+        aria-label="Neuen Pull Request erstellen"
+      >
+        <Plus size={24} />
+      </Link>
     </div>
   );
 }
