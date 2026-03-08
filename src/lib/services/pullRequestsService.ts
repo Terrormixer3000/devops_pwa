@@ -272,6 +272,52 @@ export const pullRequestsService = {
     );
   },
 
+  // Reviewer hinzufuegen oder aktualisieren (upsert)
+  async addReviewer(
+    client: AxiosInstance,
+    project: string,
+    repoId: string,
+    prId: number,
+    reviewerId: string,
+    isRequired: boolean
+  ): Promise<void> {
+    if (isDemoClient(client)) return;
+    await client.put(
+      `/${project}/_apis/git/repositories/${repoId}/pullrequests/${prId}/reviewers/${reviewerId}?api-version=7.1`,
+      { vote: 0, isRequired }
+    );
+  },
+
+  // Reviewer entfernen
+  async removeReviewer(
+    client: AxiosInstance,
+    project: string,
+    repoId: string,
+    prId: number,
+    reviewerId: string
+  ): Promise<void> {
+    if (isDemoClient(client)) return;
+    await client.delete(
+      `/${project}/_apis/git/repositories/${repoId}/pullrequests/${prId}/reviewers/${reviewerId}?api-version=7.1`
+    );
+  },
+
+  // Auf einen Thread antworten
+  async replyToThread(
+    client: AxiosInstance,
+    project: string,
+    repoId: string,
+    prId: number,
+    threadId: number,
+    content: string
+  ): Promise<void> {
+    if (isDemoClient(client)) return;
+    await client.post(
+      `/${project}/_apis/git/repositories/${repoId}/pullRequests/${prId}/threads/${threadId}/comments?api-version=7.1`,
+      { content, commentType: 1 }
+    );
+  },
+
   // Eigenen Kommentar loeschen
   async deleteComment(
     client: AxiosInstance,
