@@ -3,6 +3,7 @@
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import Image from "next/image";
 
+/** Props fuer den Einzelbild-Viewer. */
 interface Props {
   title?: string;
   label?: string;
@@ -12,6 +13,7 @@ interface Props {
   emptyMessage?: string;
 }
 
+/** Zeigt ein einzelnes Bild (z.B. aus dem Repository) mit Lade- und Fehler-Fallback an. */
 export function ImageViewer({
   title,
   label,
@@ -55,6 +57,7 @@ export function ImageViewer({
   );
 }
 
+/** Props fuer den nebeneinander dargestellten Vor/Nach-Vergleich von Bildern. */
 interface DiffProps {
   title: string;
   oldLabel: string;
@@ -65,6 +68,7 @@ interface DiffProps {
   error?: string | null;
 }
 
+/** Zeigt Alt- und Neuzustand eines Bildes nebeneinander fuer einfachen visuellen Vergleich. */
 export function ImageDiffViewer({
   title,
   oldLabel,

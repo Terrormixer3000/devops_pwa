@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Push-Einrichtungs-Wizard: Fuehrt den Nutzer in 5 Schritten durch die Einrichtung
+ * von Web-Push-Benachrichtigungen (VAPID-Schluessel, Service Worker, Webhook-URL).
+ */
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CheckCircle,
@@ -31,12 +36,14 @@ interface TestResult {
   error?: string;
 }
 
+/** Badge fuer einen Wizard-Schritt mit Statusanzeige (pending/active/done/error). */
 function StepBadge({ label, status }: { label: string; status: StepStatus }) {
   if (status === "done") return <Badge variant="success">{label}</Badge>;
   if (status === "active") return <Badge variant="info">{label}</Badge>;
   return <Badge variant="muted">{label}</Badge>;
 }
 
+/** Hinweistext zum Browser-/Geraete-Support fuer Push-Benachrichtigungen. */
 function SupportHint({ status }: { status: PushSupportStatus }) {
   if (status === "supported") {
     return <p className="text-xs text-green-300/90">Browser und Service Worker sind bereit fuer Push.</p>;
@@ -76,6 +83,7 @@ async function readJsonOrFallback(response: Response): Promise<{ error?: string 
   }
 }
 
+/** Karten-Komponente fuer einen einzelnen Wizard-Schritt. */
 function StepCard({
   number,
   title,
@@ -124,6 +132,7 @@ function StepCard({
   );
 }
 
+/** Zeigt die generierte Webhook-URL mit Kopier-Schaltflaeche an. */
 function WebhookUrlBox({ token }: { token: string }) {
   const [copied, setCopied] = useState(false);
   const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -166,6 +175,7 @@ function WebhookUrlBox({ token }: { token: string }) {
   );
 }
 
+/** 5-Schritte-Wizard zur Ersteinrichtung von Push-Benachrichtigungen. */
 export default function PushSetupPage() {
   const { settings } = useSettingsStore();
 

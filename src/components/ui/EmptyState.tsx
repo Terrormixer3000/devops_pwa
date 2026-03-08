@@ -2,6 +2,7 @@
 
 import { LucideIcon } from "lucide-react";
 
+/** Leerzustand-Platzhalter mit Icon, Titel, Beschreibung und optionaler Aktion. */
 interface Props {
   icon: LucideIcon;
   title: string;
@@ -9,6 +10,7 @@ interface Props {
   action?: React.ReactNode;
 }
 
+/** Zeigt einen leeren Zustand mit zentriertem Icon und Text an. */
 export function EmptyState({ icon: Icon, title, description, action }: Props) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-16 px-6 text-center">

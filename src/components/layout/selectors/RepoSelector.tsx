@@ -6,6 +6,10 @@ import { SelectionSheet } from "@/components/ui/SelectionSheet";
 import { useRepositoryStore } from "@/lib/stores/repositoryStore";
 import { usePRRepoStore } from "@/lib/stores/selectionStore";
 
+/**
+ * Repository-Multiselect-Selektor fuer die Pull-Requests-Seite.
+ * Erlaubt Mehrfachauswahl mit Favoriten-Filter.
+ */
 // Repo-Selektor fuer die PR-Seite (Mehrfachauswahl)
 export function PRRepoSelector() {
   const { repositories, favorites, toggleFavorite } = useRepositoryStore();

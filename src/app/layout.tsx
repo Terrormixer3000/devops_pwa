@@ -35,6 +35,7 @@ export const viewport: Viewport = {
   themeColor: "#1b1a19",
 };
 
+/** Root-Layout der App: setzt HTML-Lang, PWA-Meta-Tags und bindet BottomNav sowie Provider ein. */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="de" data-theme="dark">

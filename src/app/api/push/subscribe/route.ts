@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+
+/**
+ * API-Route fuer Push-Abonnement-Verwaltung.
+ * POST: Speichert eine neue PushSubscription inkl. Webhook-Token.
+ * DELETE: Entfernt eine bestehende PushSubscription anhand des Endpoints.
+ */
 import { upsertSubscription, removeSubscription } from "@/lib/server/subscriptionDb";
 import { generateWebhookToken, isSecureSubscriptionEndpoint, normalizeText } from "@/lib/server/pushRouteUtils";
 import type { PushSubscriptionRecord } from "@/types";
 
 export const runtime = "nodejs";
 
+/** Extrahiert und validiert die erforderlichen Push-Felder aus dem Request-Body. */
 function parseSubscription(body: unknown): {
   endpoint: string;
   p256dh: string;

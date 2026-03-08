@@ -3,6 +3,7 @@
 import { AlertCircle } from "lucide-react";
 import { extractErrorMessage } from "@/lib/utils/errorUtils";
 
+/** Props fuer die Fehlerdarstellung. */
 interface Props {
   message: string;
   /** Optionaler Fehler – wird automatisch in eine lesbare Meldung umgewandelt und ersetzt `message`. */
@@ -10,6 +11,7 @@ interface Props {
   onRetry?: () => void;
 }
 
+/** Zeigt eine Fehlermeldung mit optionalem Retry-Button an. */
 export function ErrorMessage({ message, error, onRetry }: Props) {
   const displayMessage = error !== undefined ? extractErrorMessage(error, message) : message;
   return (

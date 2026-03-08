@@ -17,6 +17,10 @@ interface FavoritesState {
   clear: () => void;
 }
 
+/**
+ * Factory fuer Favoriten-Stores mit localStorage-Persistenz.
+ * @param storageKey Schluessel unter dem die Favoriten-IDs gespeichert werden
+ */
 function createFavoritesStore(storageKey: string) {
   return create<FavoritesState>((set, get) => ({
     favoriteIds: [],
@@ -51,7 +55,11 @@ export const usePipelineFavStore = createFavoritesStore("azdevops_fav_pipelines"
 // Favoriten-Store fuer Release-Definitionen
 export const useReleaseFavStore = createFavoritesStore("azdevops_fav_releases");
 
-// Factory: erstellt einen Store mit localStorage-Persistenz pro Domain
+/**
+ * Factory fuer Auswahl-Stores mit localStorage-Persistenz.
+ * Ermoeglicht Mehrfachauswahl fuer PRs, Pipelines, Releases und Dashboard-Repos.
+ * @param storageKey Schluessel unter dem die ausgewaehlten IDs gespeichert werden
+ */
 function createSelectionStore(storageKey: string) {
   return create<SelectionState>((set, get) => ({
     selectedIds: [],

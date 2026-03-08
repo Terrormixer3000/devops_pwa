@@ -1,5 +1,11 @@
 "use client";
 
+/**
+ * Explorer-Seite: Multi-View-Datei-Browser fuer Azure-DevOps-Repositories.
+ * Unterstuetzt Branch-Auswahl, Commit-History, Dateibaum, Dateiinhalt-Anzeige,
+ * Branch-Vergleich und das direkte Bearbeiten/Erstellen von Dateien.
+ */
+
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppBar } from "@/components/layout/AppBar";
@@ -40,10 +46,12 @@ import { de } from "date-fns/locale";
 
 type ActiveView = "branches" | "commits" | "commit-diff" | "files" | "file-content" | "file-history" | "compare";
 
+/** Erstellt einen eindeutigen Schluessel fuer einen Datei-Aenderungseintrag im Diff. */
 function getChangeKey(entry: GitChangeEntry): string {
   return `${entry.changeType}::${entry.originalPath || ""}::${entry.item.path}`;
 }
 
+/** Einstiegspunkt: Laedt alle Repositories und oeffnet den RepoExplorer fuer das erste. */
 export default function ExplorerPage() {
   const { settings } = useSettingsStore();
   const { selectedRepositories } = useRepositoryStore();
@@ -64,6 +72,7 @@ export default function ExplorerPage() {
   );
 }
 
+/** Haupt-Explorer-Komponente fuer ein einzelnes Repository mit View-State-Verwaltung. */
 function RepoExplorer({ repo, settings }: { repo: Repository; settings: AppSettings }) {
   const [view, setView] = useState<ActiveView>("branches");
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
@@ -634,6 +643,7 @@ function RepoExplorer({ repo, settings }: { repo: Repository; settings: AppSetti
 }
 
 // Branch-Liste
+/** Branch- und Tag-Liste mit Aktionen (Auswahl, Vergleich, Neu erstellen). */
 function BranchList({ branches, tags, loading, error, onSelect, onCompare, onRefetch, onCreateBranch }: {
   branches: Branch[];
   tags: Branch[];
@@ -880,6 +890,7 @@ function BranchList({ branches, tags, loading, error, onSelect, onCompare, onRef
 }
 
 // Commit-Liste
+/** Liste der Commits mit Klick-Aktion zum Oeffnen des Commit-Diffs. */
 function CommitList({
   commits,
   loading,
@@ -915,6 +926,7 @@ function CommitList({
   );
 }
 
+/** Diff-Ansicht fuer einen bestimmten Commit mit Dateiliste. */
 function CommitDiffView({
   commit,
   changes,
@@ -1001,6 +1013,7 @@ function CommitDiffView({
 }
 
 // Dateibaum-Ansicht
+/** Dateibaum-Navigation mit Ordner- und Datei-Eintraegen. */
 function FileTree({ items, loading, currentPath, onFolder, onFile, onNewFile }: {
   items: TreeEntry[];
   loading: boolean;
@@ -1061,6 +1074,7 @@ function FileTree({ items, loading, currentPath, onFolder, onFile, onNewFile }: 
 }
 
 // Dateihistorie
+/** Historie einer Datei: Listet alle Commits, die die Datei beeinflusst haben. */
 function FileHistoryView({ filePath, commits, loading, onSelectCommit }: {
   filePath: string;
   commits: Commit[];
@@ -1104,6 +1118,7 @@ function FileHistoryView({ filePath, commits, loading, onSelectCommit }: {
 }
 
 // Branch-Vergleich
+/** Branch-Vergleichs-Ansicht: Zeigt den Diff zwischen zwei Branches. */
 function BranchCompareView({ baseBranch, targetBranch, diff, loading }: {
   baseBranch: string;
   targetBranch: string;
@@ -1156,6 +1171,7 @@ function BranchCompareView({ baseBranch, targetBranch, diff, loading }: {
 }
 
 // Dateiinhalt Anzeige
+/** Dateiinhalt-Anzeige: Rendert Markdown, Bilder oder Plain-Text je nach Dateityp. */
 function FileViewer({
   content,
   imageDataUrl,
@@ -1318,6 +1334,7 @@ function FileViewer({
 }
 
 // Commit-Sheet: Änderungen einer Datei speichern (Edit oder neue Datei)
+/** Sheet zum Anzeigen und Bearbeiten eines Commit-Diffs innerhalb einer PR-Iteration. */
 function CommitSheet({
   open,
   onClose,
@@ -1461,6 +1478,7 @@ function CommitSheet({
 }
 
 // Sheet zum Anlegen einer neuen Datei
+/** Sheet zum Erstellen einer neuen Datei im aktuellen Branch. */
 function NewFileSheet({
   open,
   onClose,
@@ -1644,6 +1662,7 @@ function NewFileSheet({
   );
 }
 
+/** Kleiner Farbpunkt fuer den Git-Aenderungstyp (Add/Edit/Delete/Rename). */
 function ChangeTypeDot({ type }: { type: string }) {
   const map: Record<string, { color: string; label: string }> = {
     add: { color: "text-green-400", label: "A" },

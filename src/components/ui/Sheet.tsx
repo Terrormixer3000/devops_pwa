@@ -3,6 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 
+/**
+ * Touch-faehiges Bottom-Sheet mit Swipe-to-Close und optionalem Titel.
+ * Sperrt Body-Scroll solange es geoeffnet ist.
+ */
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -40,6 +44,7 @@ export function Sheet({
     return () => { document.body.style.overflow = ""; };
   }, [open]);
 
+  /** Setzt alle Drag-Zustaende zurueck (nach Abbruch oder Abschluss). */
   const resetDrag = () => {
     dragStartYRef.current = null;
     dragOffsetRef.current = 0;
@@ -47,12 +52,14 @@ export function Sheet({
     setIsDragging(false);
   };
 
+  /** Merkt sich den Startpunkt der Touch-Geste. */
   const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
     dragStartYRef.current = event.touches[0]?.clientY ?? null;
     dragOffsetRef.current = 0;
     setIsDragging(true);
   };
 
+  /** Aktualisiert den Drag-Offset waehrend der Geste. */
   const handleTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
     if (dragStartYRef.current === null) return;
 
@@ -67,6 +74,7 @@ export function Sheet({
     }
   };
 
+  /** Schliesst das Sheet wenn weit genug gezogen wurde (> 90 px) . */
   const handleTouchEnd = () => {
     const shouldClose = dragOffsetRef.current > 90;
     resetDrag();

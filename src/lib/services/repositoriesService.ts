@@ -4,6 +4,7 @@ import { isDemoClient } from "@/lib/api/client";
 import { demoApi } from "@/lib/mocks/demoData";
 import { getImageMimeType } from "@/lib/utils/fileTypes";
 
+/** Git-Aenderungseintrag wie er von Diffs und Commit-Changes-APIs geliefert wird. */
 export interface GitChangeEntry {
   changeType: string;
   item: {
@@ -13,6 +14,11 @@ export interface GitChangeEntry {
   originalPath?: string;
 }
 
+/**
+ * Konvertiert einen ArrayBuffer in einen Base64-String.
+ * Nutzt den Node.js Buffer wenn verfuegbar, andernfalls eine chunk-basierte
+ * Fallback-Implementierung fuer den Browser.
+ */
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   if (typeof Buffer !== "undefined") {
     return Buffer.from(buffer).toString("base64");
@@ -29,6 +35,7 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 }
 
 export const repositoriesService = {
+  /** Gibt alle Git-Repositories eines Projekts zurueck. */
   async listRepositories(client: AxiosInstance, project: string): Promise<Repository[]> {
     if (isDemoClient(client)) {
       return demoApi.repositories.listRepositories();
@@ -40,6 +47,7 @@ export const repositoriesService = {
     return res.data.value;
   },
 
+  /** Gibt alle Branches eines Repositories zurueck (ohne `refs/heads/` Praefix). */
   async getBranches(client: AxiosInstance, project: string, repoId: string): Promise<Branch[]> {
     if (isDemoClient(client)) {
       return demoApi.repositories.getBranches(repoId);
@@ -54,6 +62,11 @@ export const repositoriesService = {
     }));
   },
 
+  /**
+   * Erstellt einen neuen Branch ausgehend vom angegebenen Commit.
+   * @param newBranchName Name des neuen Branches (ohne `refs/heads/` Praefix)
+   * @param sourceObjectId Commit-ID des Ausgangspunkts
+   */
   async createBranch(
     client: AxiosInstance,
     project: string,
@@ -80,6 +93,7 @@ export const repositoriesService = {
     }
   },
 
+  /** Gibt alle Tags eines Repositories zurueck (ohne `refs/tags/` Praefix). */
   async getTags(client: AxiosInstance, project: string, repoId: string): Promise<Branch[]> {
     if (isDemoClient(client)) {
       return demoApi.repositories.getTags(repoId);
@@ -94,6 +108,10 @@ export const repositoriesService = {
     }));
   },
 
+  /**
+   * Gibt Commits eines Branches zurueck, optional gefiltert nach Dateipfad.
+   * @param top Maximale Anzahl Commits (Standard: 30)
+   */
   async getCommits(
     client: AxiosInstance,
     project: string,
@@ -119,6 +137,10 @@ export const repositoriesService = {
     return res.data.value;
   },
 
+  /**
+   * Gibt den Commit-Diff zwischen zwei Branches zurueck
+   * (gemeinsame Basis, Commits und geaenderte Dateien).
+   */
   async getBranchDiff(
     client: AxiosInstance,
     project: string,
@@ -144,6 +166,10 @@ export const repositoriesService = {
     return res.data;
   },
 
+  /**
+   * Gibt den Inhalt eines Verzeichnisses (eine Ebene tief) zurueck.
+   * @param path Pfad im Repository (Standard: "/")
+   */
   async getTree(
     client: AxiosInstance,
     project: string,
@@ -163,6 +189,7 @@ export const repositoriesService = {
     return res.data.value.filter((item) => item.path !== path);
   },
 
+  /** Laedt den Textinhalt einer Datei fuer einen Branch. Delegates an `getFileContentAtVersion`. */
   async getFileContent(
     client: AxiosInstance,
     project: string,
@@ -173,6 +200,10 @@ export const repositoriesService = {
     return repositoriesService.getFileContentAtVersion(client, project, repoId, path, branch, "branch");
   },
 
+  /**
+   * Laedt den Textinhalt einer Datei fuer einen bestimmten Branch oder Commit.
+   * @param versionOptions "previous" ruft den Zustand vor diesem Commit ab
+   */
   async getFileContentAtVersion(
     client: AxiosInstance,
     project: string,
@@ -209,6 +240,10 @@ export const repositoriesService = {
     return res.data;
   },
 
+  /**
+   * Laedt Binaerdaten (Bild, etc.) als Base64-Data-URL.
+   * Wird fuer die Anzeige von Bildern im Explorer verwendet.
+   */
   async getFileBinaryDataUrlAtVersion(
     client: AxiosInstance,
     project: string,
@@ -248,6 +283,7 @@ export const repositoriesService = {
     return `data:${mimeType};base64,${base64}`;
   },
 
+  /** Gibt alle geaenderten Dateien eines einzelnen Commits zurueck. */
   async getCommitChanges(
     client: AxiosInstance,
     project: string,
@@ -264,6 +300,11 @@ export const repositoriesService = {
     return res.data.changes || [];
   },
 
+  /**
+   * Committet eine Dateiinhalt-Aenderung direkt per Push-API.
+   * Funktioniert fuer bestehende Dateien (edit) und neue Dateien (add).
+   * @param changeType "edit" fuer bestehende, "add" fuer neue Dateien
+   */
   // Dateiinhalt per Push API committen oder neue Datei anlegen
   async pushFileChange(
     client: AxiosInstance,

@@ -4,6 +4,7 @@ import { isDemoClient } from "@/lib/api/client";
 import { demoApi } from "@/lib/mocks/demoData";
 
 export const pipelinesService = {
+  /** Gibt alle Pipeline-Definitionen eines Projekts zurueck. */
   async listPipelines(client: AxiosInstance, project: string): Promise<Pipeline[]> {
     if (isDemoClient(client)) {
       return demoApi.pipelines.listPipelines();
@@ -15,6 +16,10 @@ export const pipelinesService = {
     return res.data.value;
   },
 
+  /**
+   * Gibt die letzten Builds zurueck, optional gefiltert nach Pipeline-Definition und Repository.
+   * @param top Maximale Anzahl Builds (Standard: 20)
+   */
   async listBuilds(
     client: AxiosInstance,
     project: string,
@@ -39,6 +44,7 @@ export const pipelinesService = {
     return res.data.value;
   },
 
+  /** Gibt einen einzelnen Build anhand seiner ID zurueck. */
   async getBuild(client: AxiosInstance, project: string, buildId: number): Promise<Build> {
     if (isDemoClient(client)) {
       return demoApi.pipelines.getBuild(buildId);
@@ -50,6 +56,7 @@ export const pipelinesService = {
     return res.data;
   },
 
+  /** Gibt die Timeline (Stages, Jobs, Steps) eines Builds zurueck. */
   async getBuildTimeline(
     client: AxiosInstance,
     project: string,
@@ -65,6 +72,7 @@ export const pipelinesService = {
     return res.data;
   },
 
+  /** Gibt den rohen Log-Text eines bestimmten Log-Eintrags zurueck. */
   async getBuildLog(
     client: AxiosInstance,
     project: string,
@@ -82,6 +90,7 @@ export const pipelinesService = {
     return res.data;
   },
 
+  /** Gibt alle Artefakte eines Builds zurueck (z.B. Pakete, Testergebnisse). */
   async getArtifacts(
     client: AxiosInstance,
     project: string,
@@ -97,6 +106,11 @@ export const pipelinesService = {
     return res.data.value;
   },
 
+  /**
+   * Stellt einen neuen Build in die Warteschlange.
+   * @param sourceBranch Branch, der gebaut werden soll (z.B. "refs/heads/main")
+   * @param parameters Optionale Build-Parameter als Key-Value-Map
+   */
   async queueBuild(
     client: AxiosInstance,
     project: string,
@@ -120,6 +134,7 @@ export const pipelinesService = {
     return res.data;
   },
 
+  /** Bricht einen laufenden Build ab (setzt Status auf 'cancelling'). */
   async cancelBuild(client: AxiosInstance, project: string, buildId: number): Promise<void> {
     if (isDemoClient(client)) {
       return demoApi.pipelines.cancelBuild(buildId);

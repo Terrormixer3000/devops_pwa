@@ -7,6 +7,12 @@ import { ImageDiffViewer } from "@/components/ui/ImageViewer";
 import { isImagePath, isMarkdownPath } from "@/lib/utils/fileTypes";
 import { buildImageTextRepresentation } from "@/lib/utils/imageText";
 
+/**
+ * Intelligenter Diff-Viewer der je nach Dateityp die passende Darstellung waehlt:
+ * - Bilder: Seite-an-Seite Bildvergleich
+ * - Markdown: Umschalter zwischen Vorschau und Text-Diff
+ * - Sonstige: Unified Text-Diff
+ */
 interface Props {
   path: string;
   title: string;

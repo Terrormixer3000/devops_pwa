@@ -1,3 +1,13 @@
+/**
+ * Demo-Daten fuer den Demo-Modus der App.
+ *
+ * Simuliert eine vollstaendige Azure DevOps Umgebung im Browser ohne echte API-Verbindung.
+ * Der Zustand (PRs, Builds, Threads etc.) wird im localStorage gespeichert und ist
+ * daher sitzungsuebergreifend persistent.
+ *
+ * Alle Service-Methoden pruefen via `isDemoClient()` ob sie hier hinweiterleiten sollen.
+ */
+
 import {
   Branch,
   Build,
@@ -30,6 +40,7 @@ type IterationChanges = {
   changeEntries: Array<{ item: { path: string }; changeType: string }>;
 };
 
+/** Vollstaendiger Demo-Zustand der im localStorage persistiert wird. */
 interface DemoState {
   repositories: Repository[];
   branches: Record<string, Branch[]>;
@@ -59,6 +70,7 @@ interface DemoState {
   };
 }
 
+/** Fiktive Benutzer-Identitaeten fuer die Demo-Umgebung. */
 const identityPool: IdentityRef[] = [
   { id: "user-01", displayName: "Mara Schulz", uniqueName: "mara.schulz@demo.local" },
   { id: "user-02", displayName: "Tobias Lang", uniqueName: "tobias.lang@demo.local" },
@@ -70,6 +82,7 @@ const identityPool: IdentityRef[] = [
   { id: "user-08", displayName: "Sven Maurer", uniqueName: "sven.maurer@demo.local" },
 ];
 
+/** Katalog der Demo-Repositories (30 Eintraege aus verschiedenen Bereichen). */
 const repoCatalog = [
   { namespace: "core", name: "api-gateway", activity: "high" },
   { namespace: "core", name: "identity-service", activity: "high" },
@@ -103,12 +116,15 @@ const repoCatalog = [
   { namespace: "security", name: "audit-trails", activity: "medium" },
 ] as const;
 
+// In-Memory-Cache des Demo-Zustands (wird beim ersten Zugriff befuellt)
 let memoryState: DemoState | null = null;
 
+/** Erstellt eine tiefe Kopie eines Werts via JSON-Runde-Trip. */
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+/** Kodiert einen UTF-8-String zu Base64, kompatibel mit Browser und Node.js. */
 function encodeToBase64(input: string): string {
   const bytes = new TextEncoder().encode(input);
   let binary = "";
@@ -124,10 +140,12 @@ function encodeToBase64(input: string): string {
   return Buffer.from(bytes).toString("base64");
 }
 
+/** Gibt einen minimal beschriebenen Demo-Projekt-Verweis zurueck. */
 function projectRef() {
   return { id: PROJECT_ID, name: PROJECT_NAME };
 }
 
+/** Gibt einen ISO-8601-Timestamp zurueck, der `days` Tage vor dem Demo-Zeitpunkt liegt. */
 function daysAgo(days: number, hour = 9, minute = 0): string {
   const date = new Date(NOW);
   date.setUTCDate(date.getUTCDate() - days);
@@ -135,10 +153,12 @@ function daysAgo(days: number, hour = 9, minute = 0): string {
   return date.toISOString();
 }
 
+/** Waehlt eine Identitaet aus dem Pool deterministisch per Modulo-Selektion aus. */
 function pickIdentity(seed: number): IdentityRef {
   return identityPool[seed % identityPool.length];
 }
 
+/** Erstellt ein Reviewer-Objekt aus einer Identitaet mit vorgegebenem Vote. */
 function toReviewer(seed: number, vote: Reviewer["vote"], isRequired = true): Reviewer {
   const person = pickIdentity(seed);
   return {
@@ -149,30 +169,37 @@ function toReviewer(seed: number, vote: Reviewer["vote"], isRequired = true): Re
   };
 }
 
+/** Erstellt einen zusammengesetzten Schluessel fuer Repository+Branch-Lookups. */
 function repoKey(repoId: string, branch: string) {
   return `${repoId}::${branch}`;
 }
 
+/** Erstellt einen zusammengesetzten Schluessel fuer Baum-Lookups (Repo+Branch+Pfad). */
 function treeKey(repoId: string, branch: string, path: string) {
   return `${repoId}::${branch}::${path}`;
 }
 
+/** Erstellt einen zusammengesetzten Schluessel fuer Dateiinhalt-Lookups. */
 function fileKey(repoId: string, branch: string, path: string) {
   return `${repoId}::${branch}::${path}`;
 }
 
+/** Erstellt einen zusammengesetzten Schluessel fuer PR-Lookups. */
 function prKey(repoId: string, prId: number) {
   return `${repoId}::${prId}`;
 }
 
+/** Erstellt einen zusammengesetzten Schluessel fuer Iterations-Aenderungs-Lookups. */
 function changeKey(repoId: string, prId: number, iterationId: number) {
   return `${repoId}::${prId}::${iterationId}`;
 }
 
+/** Erstellt einen zusammengesetzten Schluessel fuer Build-Log-Lookups. */
 function logKey(buildId: number, logId: number) {
   return `${buildId}::${logId}`;
 }
 
+/** Entfernt das `refs/heads/`-Praefix von Branch-Referenzen. */
 function sanitizeBranchName(name: string) {
   return name.replace(/^refs\/heads\//, "");
 }
@@ -409,6 +436,7 @@ function buildTreeForRepo(repoId: string, branch: string, fullName: string, inde
   };
 }
 
+/** Konvertiert einen kebab-/slash-separierten String in PascalCase. */
 function pascalCase(value: string) {
   return value
     .split(/[-_/]/)
@@ -417,6 +445,7 @@ function pascalCase(value: string) {
     .join("");
 }
 
+/** Generiert einen deterministischen Demo-Commit fuer ein Repository. */
 function makeCommit(repoId: string, branch: string, fullName: string, seed: number, position: number): Commit {
   const author = pickIdentity(seed + position);
   const commitDate = daysAgo(seed + position, 8 + (position % 7), 10 + ((seed + position) % 40));
@@ -443,6 +472,8 @@ function makeCommit(repoId: string, branch: string, fullName: string, seed: numb
   };
 }
 
+/** Erstellt eine Build-Timeline mit Stage, drei Tasks und zugehoerigen Log-Eintraegen.
+ * Jeder fuenfte Build (seed % 5 === 0) schlaegt deterministisch fehl. */
 function createBuildTimeline(buildId: number, seed: number, inProgress = false): { timeline: BuildTimeline; logs: Record<string, string> } {
   const stageId = `stage-${buildId}`;
   const taskInstallId = `task-install-${buildId}`;
@@ -514,6 +545,8 @@ function createBuildTimeline(buildId: number, seed: number, inProgress = false):
   return { timeline: { records }, logs };
 }
 
+/** Erstellt den vollstaendigen Ausgangs-Demo-Zustand mit Repositories, Branches,
+ * Commits, PRs, Pipelines, Releases und Work Items. */
 function seedDemoState(): DemoState {
   const repositories: Repository[] = [];
   const branches: Record<string, Branch[]> = {};
@@ -1045,6 +1078,8 @@ function seedDemoState(): DemoState {
   };
 }
 
+/** Prueft, ob der gespeicherte Demo-Zustand die Beispiel-Markdown- und Bild-Dateien enthaelt.
+ * Wird fuer die Migration aelterer Demo-Datensaetze verwendet. */
 function hasRichExampleFiles(state: DemoState): boolean {
   const repo = state.repositories[0];
   if (!repo) return false;
@@ -1070,6 +1105,8 @@ function hasRichExampleFiles(state: DemoState): boolean {
   return hasRequiredFiles && hasRequiredFolders;
 }
 
+/** Laedt den Demo-Zustand aus localStorage (Browser) oder dem In-Memory-Cache (SSR).
+ * Fuehrt bei veralteten Daten automatisch eine Migration auf den aktuellen Seedstand durch. */
 function loadDemoState(): DemoState {
   if (typeof window === "undefined") {
     if (!memoryState) memoryState = seedDemoState();
@@ -1099,12 +1136,14 @@ function loadDemoState(): DemoState {
   return seeded;
 }
 
+/** Speichert den Demo-Zustand im In-Memory-Cache und (sofern verfuegbar) im localStorage. */
 function saveDemoState(state: DemoState) {
   memoryState = state;
   if (typeof window === "undefined") return;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+/** Laedt den aktuellen Demo-Zustand, fuehrt eine Mutation durch und speichert ihn zurueck. */
 function withDemoState<T>(mutate: (state: DemoState) => T): T {
   const state = loadDemoState();
   const result = mutate(state);
@@ -1113,14 +1152,17 @@ function withDemoState<T>(mutate: (state: DemoState) => T): T {
   return result;
 }
 
+/** Gibt alle PRs fuer ein bestimmtes Repository zurueck. */
 function listPrsForRepo(state: DemoState, repoId: string) {
   return state.pullRequests[repoId] || [];
 }
 
+/** Sucht einen einzelnen PR anhand von Repository-ID und PR-ID. */
 function findPullRequest(state: DemoState, repoId: string, prId: number) {
   return listPrsForRepo(state, repoId).find((pr) => pr.pullRequestId === prId);
 }
 
+/** Findet den Branch-Namen fuer einen bestimmten Commit-Hash. */
 function findBranchForCommit(state: DemoState, repoId: string, commitId: string): string | null {
   for (const [key, commits] of Object.entries(state.commits)) {
     const [candidateRepoId, branch] = key.split("::");
@@ -1273,6 +1315,10 @@ export const demoSettings = {
   project: PROJECT_NAME,
 };
 
+/**
+ * Vollstaendige Demo-API, die alle Azure-DevOps-Serviceaufrufe mit lokalen Daten
+ * simuliert. Wird aktiviert, wenn `isDemoClient(client)` true ergibt.
+ */
 export const demoApi = {
   repositories: {
     listRepositories(): Repository[] {

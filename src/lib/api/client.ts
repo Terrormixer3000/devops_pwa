@@ -90,6 +90,11 @@ export function createVsrmClient(settings: AppSettings): AxiosInstance {
   return vsrmClient;
 }
 
+/**
+ * Prueft ob ein Axios-Client im Demo-Modus laeuft.
+ * Demo-Clients tragen ein privates `__demoMode`-Flag, damit Services
+ * auf Mock-Daten umschalten koennen ohne die Settings erneut zu pruefen.
+ */
 export function isDemoClient(client: AxiosInstance | null | undefined): boolean {
   return !!(client as DemoAxiosInstance | null | undefined)?.__demoMode;
 }

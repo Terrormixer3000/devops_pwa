@@ -1,5 +1,6 @@
 "use client";
 
+/** Props fuer die AppBar. */
 // AppBar: obere Leiste mit Seitentitel und optionalem rechten Slot fuer den Tab-spezifischen Selektor
 interface Props {
   title: React.ReactNode;

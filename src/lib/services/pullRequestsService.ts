@@ -10,6 +10,11 @@ import { isDemoClient } from "@/lib/api/client";
 import { demoApi } from "@/lib/mocks/demoData";
 
 export const pullRequestsService = {
+  /**
+   * Listet Pull Requests in einem Repository auf.
+   * @param status Filtert nach PR-Status (Standard: "active")
+   * @param top Maximale Anzahl (Standard: 50)
+   */
   async listPullRequests(
     client: AxiosInstance,
     project: string,
@@ -27,6 +32,7 @@ export const pullRequestsService = {
     return res.data.value;
   },
 
+  /** Gibt einen einzelnen PR vollstaendig zurueck. */
   async getPullRequest(
     client: AxiosInstance,
     project: string,
@@ -43,6 +49,7 @@ export const pullRequestsService = {
     return res.data;
   },
 
+  /** Gibt alle Kommentar-Threads eines PRs zurueck. */
   async getThreads(
     client: AxiosInstance,
     project: string,
@@ -59,6 +66,7 @@ export const pullRequestsService = {
     return res.data.value;
   },
 
+  /** Erstellt einen neuen Top-Level-Kommentar-Thread im PR. */
   async addComment(
     client: AxiosInstance,
     project: string,
@@ -77,6 +85,10 @@ export const pullRequestsService = {
     return res.data;
   },
 
+  /**
+   * Setzt den Vote des aktuellen Benutzers fuer einen PR.
+   * @param vote Negativer Wert = ablehnen, 0 = neutral, positiver Wert = zustimmen
+   */
   async vote(
     client: AxiosInstance,
     project: string,
@@ -95,6 +107,12 @@ export const pullRequestsService = {
     );
   },
 
+  /**
+   * Schliesst einen PR ab (Merge).
+   * @param lastMergeSourceCommitId Letzter bekannter Commit-Hash des Source-Branches
+   * @param deleteSourceBranch Source-Branch nach dem Merge loeschen
+   * @param mergeStrategy Merge-Strategie (Standard: noFastForward)
+   */
   async complete(
     client: AxiosInstance,
     project: string,
@@ -119,6 +137,7 @@ export const pullRequestsService = {
     return res.data;
   },
 
+  /** Erstellt einen neuen Pull Request. */
   async create(
     client: AxiosInstance,
     project: string,
@@ -143,6 +162,7 @@ export const pullRequestsService = {
     return res.data;
   },
 
+  /** Gibt alle Iterationen (Push-Events) eines PRs zurueck. */
   async getIterations(
     client: AxiosInstance,
     project: string,
@@ -159,6 +179,7 @@ export const pullRequestsService = {
     return res.data.value;
   },
 
+  /** Gibt die geaenderten Dateien einer bestimmten PR-Iteration zurueck. */
   async getIterationChanges(
     client: AxiosInstance,
     project: string,
@@ -176,6 +197,10 @@ export const pullRequestsService = {
     return res.data;
   },
 
+  /**
+   * Aktiviert Auto-Complete fuer einen PR.
+   * Der PR wird automatisch gemergt sobald alle Policies erfuellt sind.
+   */
   async enableAutoComplete(
     client: AxiosInstance,
     project: string,
@@ -203,6 +228,7 @@ export const pullRequestsService = {
     );
   },
 
+  /** Deaktiviert Auto-Complete fuer einen PR. */
   async disableAutoComplete(
     client: AxiosInstance,
     project: string,
@@ -217,6 +243,7 @@ export const pullRequestsService = {
     );
   },
 
+  /** Gibt den aktuellen Policy-Auswertungsstatus aller Branch-Policies fuer den PR zurueck. */
   async getPolicies(
     client: AxiosInstance,
     project: string,
@@ -239,7 +266,7 @@ export const pullRequestsService = {
     }));
   },
 
-  // Thread-Status aendern (z.B. resolve / reopen)
+  /** Thread-Status aendern (z.B. resolve / reopen). */
   async updateThreadStatus(
     client: AxiosInstance,
     project: string,
@@ -255,7 +282,7 @@ export const pullRequestsService = {
     );
   },
 
-  // Eigenen Kommentar bearbeiten
+  /** Eigenen Kommentar bearbeiten. */
   async editComment(
     client: AxiosInstance,
     project: string,
@@ -272,7 +299,7 @@ export const pullRequestsService = {
     );
   },
 
-  // Reviewer hinzufuegen oder aktualisieren (upsert)
+  /** Reviewer hinzufuegen oder aktualisieren (upsert via PUT). */
   async addReviewer(
     client: AxiosInstance,
     project: string,
@@ -288,7 +315,7 @@ export const pullRequestsService = {
     );
   },
 
-  // Reviewer entfernen
+  /** Reviewer aus dem PR entfernen. */
   async removeReviewer(
     client: AxiosInstance,
     project: string,
@@ -302,7 +329,7 @@ export const pullRequestsService = {
     );
   },
 
-  // Auf einen Thread antworten
+  /** Auf einen bestehenden Thread antworten. */
   async replyToThread(
     client: AxiosInstance,
     project: string,
@@ -318,7 +345,7 @@ export const pullRequestsService = {
     );
   },
 
-  // Eigenen Kommentar loeschen
+  /** Eigenen Kommentar loeschen. */
   async deleteComment(
     client: AxiosInstance,
     project: string,

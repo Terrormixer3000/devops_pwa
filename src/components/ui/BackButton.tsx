@@ -4,6 +4,7 @@ import Link, { LinkProps } from "next/link";
 import { ButtonHTMLAttributes, ReactNode } from "react";
 import { ChevronLeft } from "lucide-react";
 
+/** Kompakter oder Standard-Zurueck-Button mit Chevron-Icon. */
 type BackButtonSize = "compact" | "default";
 
 const sizeStyles: Record<BackButtonSize, { button: string; icon: number }> = {
@@ -17,6 +18,7 @@ const sizeStyles: Record<BackButtonSize, { button: string; icon: number }> = {
   },
 };
 
+/** Baut die gemeinsamen CSS-Klassen fuer beide Button-Varianten zusammen. */
 function baseClasses(size: BackButtonSize, iconOnly: boolean) {
   return [
     "inline-flex items-center gap-1.5 rounded-full border border-slate-700/80",
@@ -28,6 +30,7 @@ function baseClasses(size: BackButtonSize, iconOnly: boolean) {
   ].join(" ");
 }
 
+/** Props fuer den Link-basierten Zurueck-Button (navigiert per href). */
 interface BackLinkProps extends Omit<LinkProps, "href"> {
   href: string;
   label?: ReactNode;
@@ -35,6 +38,7 @@ interface BackLinkProps extends Omit<LinkProps, "href"> {
   size?: BackButtonSize;
 }
 
+/** Navigationslink der als Zurueck-Button dargestellt wird. */
 export function BackLink({
   href,
   label = "Zurueck",
@@ -54,6 +58,7 @@ export function BackLink({
   );
 }
 
+/** Props fuer den Click-Handler-basierten Zurueck-Button. */
 interface BackActionButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   label?: ReactNode;
   className?: string;
@@ -61,6 +66,7 @@ interface BackActionButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> 
   size?: BackButtonSize;
 }
 
+/** Klick-Button der als Zurueck-Button dargestellt wird (kein href, kein Router-Push). */
 export function BackActionButton({
   label = "Zurueck",
   className = "",

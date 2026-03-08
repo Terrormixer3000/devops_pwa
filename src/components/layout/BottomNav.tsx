@@ -10,6 +10,11 @@ import {
   Settings,
 } from "lucide-react";
 
+/**
+ * Untere Navigation mit fuenf Haupt-Tabs.
+ * Beide "Delivery"-Unterbereiche (Pipelines + Releases) werden als aktiv markiert
+ * wenn der Pfad mit `/pipelines` oder `/releases` beginnt.
+ */
 // Navigationseintraege fuer die untere Leiste
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },

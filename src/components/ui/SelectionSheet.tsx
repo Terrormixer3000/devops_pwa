@@ -5,6 +5,7 @@ import { Check, Star, ChevronDown, X } from "lucide-react";
 import { Drawer } from "vaul";
 import { LoadingSpinner } from "./LoadingSpinner";
 
+/** Daten fuer einen einzelnen Eintrag im Auswahl-Sheet. */
 // Ein einzelner Auswahl-Eintrag
 export interface SelectionItem {
   id: string;
@@ -12,6 +13,10 @@ export interface SelectionItem {
   sublabel?: string;
 }
 
+/**
+ * Bottom-Sheet fuer Einfach- und Mehrfachauswahl mit optionaler Favoriten-Funktion.
+ * Wird als AppBar-Selektor fuer Repositories, Pipelines und Releases verwendet.
+ */
 interface Props {
   // Angezeigtes Label und Icon im AppBar-Button
   buttonLabel: string;
@@ -75,7 +80,7 @@ export function SelectionSheet({
 
   const handleSelect = (item: SelectionItem) => {
     if (!multiSelect) {
-      // Bei Einfachauswahl: nur dieses Item auswaehlen, Sheet schliessen
+      // Bei Einfachauswahl: Item sofort auswaehlen und Sheet schliessen
       onClear?.();
       onToggle(item.id);
       setOpen(false);

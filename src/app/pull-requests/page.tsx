@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Pull-Request-Listenseite: Zeigt offene, abgeschlossene oder aufgegebene PRs
+ * gefiltert nach Repository und Status.
+ */
+
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -28,6 +33,7 @@ const STATUS_OPTIONS: { label: string; value: PRStatus }[] = [
   { label: "Alle", value: "all" },
 ];
 
+/** Uebersicht aller Pull Requests mit Status- und Repository-Filter. */
 export default function PullRequestsPage() {
   const [status, setStatus] = useState<PRStatus>("active");
   const { settings } = useSettingsStore();

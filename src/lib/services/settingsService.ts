@@ -1,5 +1,10 @@
 import { AppSettings } from "@/types";
 
+/**
+ * Browser-seitiger Service zum Lesen, Schreiben und Loeschen der App-Einstellungen.
+ * Alle Daten werden im localStorage unter dem Schluessel `azdevops_settings` gespeichert.
+ */
+
 // Schluessel fuer den localStorage-Eintrag
 const STORAGE_KEY = "azdevops_settings";
 const DEFAULT_SETTINGS: AppSettings = {

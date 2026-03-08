@@ -6,12 +6,17 @@ import { SelectionSheet, SelectionItem } from "@/components/ui/SelectionSheet";
 import { useReleaseDefStore, useReleaseFavStore } from "@/lib/stores/selectionStore";
 import { ReleaseDefinition } from "@/types";
 
+/** Props fuer den Release-Selektor. */
 interface Props {
   // Release-Definitionen werden von der Releases-Seite uebergeben
   definitions: ReleaseDefinition[];
   loading?: boolean;
 }
 
+/**
+ * Release-Selector im AppBar: erlaubt Mehrfachauswahl von Release-Pipeline-Definitionen
+ * mit Favoriten-Unterstuetzung.
+ */
 // Release-Selektor: Mehrfachauswahl von Release-Pipelines mit Favoriten
 export function ReleaseSelector({ definitions, loading }: Props) {
   const { selectedIds, toggle, clear, load } = useReleaseDefStore();

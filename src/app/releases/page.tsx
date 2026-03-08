@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Release-Seite: Verwaltet Release-Definitionen, listet Releases und ermoeglicht
+ * das Ausloesen neuer Deployments sowie die Freigabe ausstehender Approvals.
+ */
+
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -24,6 +29,7 @@ import { Rocket, ChevronRight, Play, ThumbsUp, ThumbsDown, AlertCircle } from "l
 
 type Tab = "releases" | "definitionen" | "approvals";
 
+/** Haupt-Seite fuer Releases und Release-Definitionen mit Tab-Navigation. */
 export default function ReleasesPage() {
   const [activeTab, setActiveTab] = useState<Tab>("releases");
   const [startModal, setStartModal] = useState<ReleaseDefinition | null>(null);
@@ -295,6 +301,7 @@ export default function ReleasesPage() {
 }
 
 // Umgebungs-Status Badge
+/** Zeigt eine farbige Badge fuer den Status einer Release-Umgebung. */
 function EnvironmentBadge({ env }: { env: ReleaseEnvironment }) {
   const variants: Record<string, "success" | "danger" | "info" | "muted" | "warning"> = {
     succeeded: "success",

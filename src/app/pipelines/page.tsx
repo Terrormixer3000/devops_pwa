@@ -1,5 +1,11 @@
 "use client";
 
+/**
+ * Pipelines-Seite: Listet Pipeline-Definitionen und ausgefuehrte Builds.
+ * Ermoeglicht das Starten neuer Builds mit Branch-Auswahl und optionalen Parametern
+ * sowie das Abbrechen laufender Builds.
+ */
+
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -27,10 +33,12 @@ interface PipelineParam {
   value: string;
 }
 
+/** Normalisiert Branch-Eingaben: entfernt das optionale `refs/heads/`-Praefix. */
 function normalizeBranchInput(branch: string): string {
   return branch.replace(/^refs\/heads\//, "").trim();
 }
 
+/** Validiert einen Branch-Namen und gibt eine Fehlermeldung oder null zurueck. */
 function getBranchValidationError(branch: string): string | null {
   if (!branch) return "Bitte einen Branch-Namen eingeben.";
   if (branch.startsWith("/") || branch.endsWith("/")) return "Branch darf nicht mit / starten oder enden.";
@@ -40,6 +48,7 @@ function getBranchValidationError(branch: string): string | null {
   return null;
 }
 
+/** Haupt-Seite fuer Pipelines und Builds mit Start- und Abbruch-Aktionen. */
 export default function PipelinesPage() {
   const [view, setView] = useState<"pipelines" | "builds">("builds");
   const [startModal, setStartModal] = useState<Pipeline | null>(null);
@@ -394,6 +403,7 @@ export default function PipelinesPage() {
 }
 
 // Build-Status-Icon
+/** Kleines Status-Icon fuer einen Build-Ergebnis-Status (z.B. succeeded/failed). */
 function BuildStatusIcon({ status }: { status: string }) {
   const configs: Record<string, { bg: string; text: string; pulse?: boolean }> = {
     succeeded: { bg: "bg-green-500/20", text: "text-green-400" },

@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Push-Test-Seite: Ermoeglicht das manuelle Testen von Push-Benachrichtigungen
+ * und zeigt den aktuellen Abonnementsstatus an.
+ */
+
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { AppBar } from "@/components/layout/AppBar";
@@ -85,6 +90,7 @@ const EVENTS: EventConfig[] = [
 ];
 
 // Status-Badge fuer eine Subscription
+/** Zeigt den aktuellen Status eines Push-Abonnements (aktiv/inaktiv/Fehler). */
 function SubscriptionStatus({
   isSubscribed,
   permission,
@@ -135,6 +141,7 @@ function SubscriptionStatus({
 }
 
 // Ergebnis-Anzeige nach einem Test-Versand
+/** Banner mit Ergebnis des zuletzt gesendeten Push-Tests (Erfolg/Fehler). */
 function ResultBanner({ result }: { result: TestResult | null }) {
   if (!result) return null;
 
@@ -168,6 +175,7 @@ function ResultBanner({ result }: { result: TestResult | null }) {
 }
 
 // Webhook-URL Anzeige (read-only)
+/** Zeigt die Webhook-URL (schreibgeschuetzt) mit Kopier-Schaltflaeche an. */
 function WebhookUrlReadOnly({ token }: { token: string }) {
   const [copied, setCopied] = useState(false);
   const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -203,6 +211,7 @@ function WebhookUrlReadOnly({ token }: { token: string }) {
   );
 }
 
+/** Testseite fuer Push-Benachrichtigungen mit Abonnement-Verwaltung und Test-Ausloesung. */
 export default function PushTestPage() {
   const { settings } = useSettingsStore();
 

@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Einstellungen-Seite: Verwaltung der Azure-DevOps-Verbindungsparameter
+ * (URL, Token, Organisation, Projekt) sowie App-weiter Optionen wie Demo-Modus.
+ */
+
 import { useState, useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppBar } from "@/components/layout/AppBar";
@@ -20,6 +25,7 @@ const EMPTY_SETTINGS: AppSettings = {
   theme: "dark",
 };
 
+/** Einstellungsformular zum Konfigurieren der Azure-DevOps-Verbindung und App-Optionen. */
 export default function SettingsPage() {
   const { settings, setSettings, clearSettings } = useSettingsStore();
   const queryClient = useQueryClient();
