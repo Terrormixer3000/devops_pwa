@@ -22,6 +22,7 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
   const releaseIdNum = parseInt(releaseId);
   const [approvalModal, setApprovalModal] = useState<ReleaseApproval | null>(null);
   const [approvalComment, setApprovalComment] = useState("");
+  const [approveError, setApproveError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"umgebungen" | "logs">("umgebungen");
   const [selectedEnvId, setSelectedEnvId] = useState<number | null>(null);
 
@@ -48,11 +49,13 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
           : releasesService.rejectApproval(vsrmClient, settings.project, id, approvalComment)
         : Promise.reject("Kein Client"),
     onSuccess: () => {
+      setApproveError(null);
       setApprovalModal(null);
       setApprovalComment("");
       qc.invalidateQueries({ queryKey: ["release", releaseIdNum] });
       qc.invalidateQueries({ queryKey: ["release-approvals"] });
     },
+    onError: (err: Error) => setApproveError(err.message),
   });
 
   // Deployment-Logs laden
@@ -65,7 +68,7 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
   });
 
   if (isLoading) return <div className="min-h-screen"><AppBar title="Release" /><PageLoader /></div>;
-  if (error || !release) return <div className="min-h-screen"><AppBar title="Release" /><ErrorMessage message="Release konnte nicht geladen werden" /></div>;
+  if (error || !release) return <div className="min-h-screen"><AppBar title="Release" /><ErrorMessage message="Release konnte nicht geladen werden" error={error} /></div>;
 
   return (
     <div className="min-h-screen">
@@ -151,7 +154,7 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
       )}
 
       {/* Approval Modal */}
-      <Modal open={!!approvalModal} onClose={() => setApprovalModal(null)} title="Approval erteilen">
+      <Modal open={!!approvalModal} onClose={() => { setApprovalModal(null); setApproveError(null); }} title="Approval erteilen">
         <div className="space-y-4">
           {approvalModal && (
             <p className="text-sm text-slate-300">
@@ -167,6 +170,9 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
               className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-blue-500 resize-none"
             />
           </div>
+          {approveError && (
+            <p className="text-sm text-red-400">{approveError}</p>
+          )}
           <Button
             fullWidth
             loading={approveMutation.isPending}
@@ -182,7 +188,7 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
           >
             <ThumbsDown size={16} /> Ablehnen
           </Button>
-          <Button fullWidth variant="ghost" onClick={() => setApprovalModal(null)}>Abbrechen</Button>
+          <Button fullWidth variant="ghost" onClick={() => { setApprovalModal(null); setApproveError(null); }}>Abbrechen</Button>
         </div>
       </Modal>
     </div>

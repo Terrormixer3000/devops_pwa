@@ -66,6 +66,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
   const [reviewerModalOpen, setReviewerModalOpen] = useState(false);
   const [reviewerSearch, setReviewerSearch] = useState("");
   const [reviewerError, setReviewerError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [pendingReviewer, setPendingReviewer] = useState<{ id: string; displayName: string } | null>(null);
   const [pendingIsRequired, setPendingIsRequired] = useState(false);
 
@@ -228,6 +229,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
       setCommentText("");
       qc.invalidateQueries({ queryKey: ["pr-threads", repoId, prIdNum] });
     },
+    onError: (err: Error) => setActionError(err.message),
   });
 
   // Thread-Status aendern (resolve / reopen)
@@ -237,6 +239,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
       return pullRequestsService.updateThreadStatus(client, settings.project, repoId, prIdNum, threadId, status);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["pr-threads", repoId, prIdNum] }),
+    onError: (err: Error) => setActionError(err.message),
   });
 
   // Eigenen Kommentar bearbeiten
@@ -246,6 +249,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
       return pullRequestsService.editComment(client, settings.project, repoId, prIdNum, threadId, commentId, content);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["pr-threads", repoId, prIdNum] }),
+    onError: (err: Error) => setActionError(err.message),
   });
 
   // Auf Thread antworten
@@ -255,6 +259,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
       return pullRequestsService.replyToThread(client, settings.project, repoId, prIdNum, threadId, content);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["pr-threads", repoId, prIdNum] }),
+    onError: (err: Error) => setActionError(err.message),
   });
 
   // Reviewer hinzufuegen / aktualisieren
@@ -280,6 +285,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
       return pullRequestsService.removeReviewer(client, settings.project, repoId, prIdNum, reviewerId);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["pr", repoId, prIdNum] }),
+    onError: (err: Error) => setActionError(err.message),
   });
 
   // Eigenen Kommentar loeschen
@@ -289,6 +295,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
       return pullRequestsService.deleteComment(client, settings.project, repoId, prIdNum, threadId, commentId);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["pr-threads", repoId, prIdNum] }),
+    onError: (err: Error) => setActionError(err.message),
   });
 
   // Abstimmen (Approve / Reject)
@@ -304,6 +311,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
       setApproveModal(false);
       setAutoCompleteOnApprove(false);
     },
+    onError: (err: Error) => setActionError(err.message),
   });
 
   // Auto-Complete aktivieren
@@ -320,6 +328,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
       );
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["pr", repoId, prIdNum] }),
+    onError: (err: Error) => setActionError(err.message),
   });
 
   // PR abschliessen
@@ -505,7 +514,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
   });
 
   if (isLoading) return <div className="min-h-screen"><AppBar title={<Link href="/pull-requests" className="flex items-center gap-0.5 text-[18px] font-semibold tracking-[-0.01em] text-slate-100 active:opacity-70 transition-opacity"><ChevronLeft size={26} className="-ml-1.5" />Pull Requests</Link>} /><PageLoader /></div>;
-  if (error || !pr) return <div className="min-h-screen"><AppBar title={<Link href="/pull-requests" className="flex items-center gap-0.5 text-[18px] font-semibold tracking-[-0.01em] text-slate-100 active:opacity-70 transition-opacity"><ChevronLeft size={26} className="-ml-1.5" />Pull Requests</Link>} /><ErrorMessage message="PR konnte nicht geladen werden" /></div>;
+  if (error || !pr) return <div className="min-h-screen"><AppBar title={<Link href="/pull-requests" className="flex items-center gap-0.5 text-[18px] font-semibold tracking-[-0.01em] text-slate-100 active:opacity-70 transition-opacity"><ChevronLeft size={26} className="-ml-1.5" />Pull Requests</Link>} /><ErrorMessage message="PR konnte nicht geladen werden" error={error} /></div>;
 
   return (
     <div className="min-h-screen">
@@ -569,6 +578,17 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
           </div>
         )}
       </div>
+
+      {/* Aktions-Fehlermeldung */}
+      {actionError && (
+        <div className="px-4 py-2 bg-red-950/40 border-b border-red-800/50 flex items-center gap-2">
+          <AlertCircle size={14} className="text-red-400 flex-shrink-0" />
+          <p className="text-sm text-red-400 flex-1">{actionError}</p>
+          <button onClick={() => setActionError(null)} className="text-red-400 hover:text-red-300">
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="sticky-below-appbar bg-slate-900/95 backdrop-blur-md border-b border-slate-800">

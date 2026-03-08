@@ -38,6 +38,7 @@ export default function NewPRPage() {
   const [reviewerSearch, setReviewerSearch] = useState("");
   const [showReviewerPicker, setShowReviewerPicker] = useState(false);
   const [autoFilling, setAutoFilling] = useState(false);
+  const [autoFillError, setAutoFillError] = useState<string | null>(null);
 
   // Branches laden (abhaengig vom ausgewaehlten Repo)
   const { data: branches } = useQuery({
@@ -62,6 +63,7 @@ export default function NewPRPage() {
   const handleAutoFill = async () => {
     if (!form.sourceRefName) return;
     setAutoFilling(true);
+    setAutoFillError(null);
     try {
       const result = await fetchLatestCommit();
       const commit = result.data?.[0];
@@ -75,6 +77,8 @@ export default function NewPRPage() {
           description: description || f.description,
         }));
       }
+    } catch (err) {
+      setAutoFillError((err instanceof Error ? err.message : null) || "Commit konnte nicht geladen werden.");
     } finally {
       setAutoFilling(false);
     }
@@ -178,6 +182,9 @@ export default function NewPRPage() {
               </button>
             )}
           </div>
+          {autoFillError && (
+            <p className="text-xs text-red-400">{autoFillError}</p>
+          )}
           <input
             type="text"
             value={form.title}
