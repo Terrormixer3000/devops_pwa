@@ -26,7 +26,6 @@ export function Modal({ open, onClose, title, children }: Props) {
       modal={true}
       noBodyStyles={true}
       handleOnly={true}
-      repositionInputs={false}
       shouldScaleBackground={false}
     >
       <Drawer.Portal>

@@ -129,6 +129,7 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
   const buildIdNum = parseInt(buildId);
   const [activeTab, setActiveTab] = useState<Tab>("uebersicht");
   const [selectedLog, setSelectedLog] = useState<{ logId: number; name: string } | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const { settings } = useSettingsStore();
   const { client } = useAzureClient();
@@ -194,9 +195,11 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
       return pipelinesService.queueBuild(client, settings.project, build.definition.id, build.sourceBranch);
     },
     onSuccess: (newBuild) => {
+      setActionError(null);
       qc.invalidateQueries({ queryKey: ["builds"] });
       router.push(`/pipelines/${newBuild.id}`);
     },
+    onError: (err: Error) => setActionError(err.message),
   });
 
   // Laufenden Build abbrechen
@@ -206,12 +209,14 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
       return pipelinesService.cancelBuild(client, settings.project, buildIdNum);
     },
     onSuccess: () => {
+      setActionError(null);
       qc.invalidateQueries({ queryKey: ["build", buildIdNum] });
     },
+    onError: (err: Error) => setActionError(err.message),
   });
 
   if (isLoading) return <div className="min-h-screen"><AppBar title="Build" /><PageLoader /></div>;
-  if (error || !build) return <div className="min-h-screen"><AppBar title="Build" /><ErrorMessage message="Build konnte nicht geladen werden" /></div>;
+  if (error || !build) return <div className="min-h-screen"><AppBar title="Build" /><ErrorMessage message="Build konnte nicht geladen werden" error={error} /></div>;
 
   const statusVariant = getStatusVariant(build.result || build.status);
 
@@ -268,6 +273,9 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
             </button>
           )}
         </div>
+        {actionError && (
+          <p className="text-xs text-red-400 mt-2">{actionError}</p>
+        )}
       </div>
 
       {/* Tabs */}
