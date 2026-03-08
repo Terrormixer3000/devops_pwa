@@ -238,5 +238,53 @@ export const pullRequestsService = {
       isRequired: e.configuration?.isEnabledAndBlocking || false,
     }));
   },
+
+  // Thread-Status aendern (z.B. resolve / reopen)
+  async updateThreadStatus(
+    client: AxiosInstance,
+    project: string,
+    repoId: string,
+    prId: number,
+    threadId: number,
+    status: PRThread["status"]
+  ): Promise<void> {
+    if (isDemoClient(client)) return;
+    await client.patch(
+      `/${project}/_apis/git/repositories/${repoId}/pullRequests/${prId}/threads/${threadId}?api-version=7.1`,
+      { status }
+    );
+  },
+
+  // Eigenen Kommentar bearbeiten
+  async editComment(
+    client: AxiosInstance,
+    project: string,
+    repoId: string,
+    prId: number,
+    threadId: number,
+    commentId: number,
+    content: string
+  ): Promise<void> {
+    if (isDemoClient(client)) return;
+    await client.patch(
+      `/${project}/_apis/git/repositories/${repoId}/pullRequests/${prId}/threads/${threadId}/comments/${commentId}?api-version=7.1`,
+      { content }
+    );
+  },
+
+  // Eigenen Kommentar loeschen
+  async deleteComment(
+    client: AxiosInstance,
+    project: string,
+    repoId: string,
+    prId: number,
+    threadId: number,
+    commentId: number
+  ): Promise<void> {
+    if (isDemoClient(client)) return;
+    await client.delete(
+      `/${project}/_apis/git/repositories/${repoId}/pullRequests/${prId}/threads/${threadId}/comments/${commentId}?api-version=7.1`
+    );
+  },
 };
 
