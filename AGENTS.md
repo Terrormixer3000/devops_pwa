@@ -161,6 +161,29 @@
 - Webhook auth uses per-user token `?t=<webhookToken>` only. There is no global `WEBHOOK_SECRET`.
 - Changes to push, service worker, or API route code should always be validated with `npm run lint && npm run build`.
 
+## PR Detail Page (`src/app/pull-requests/[repoId]/[prId]/page.tsx`)
+- **Tabs**: Uebersicht, Dateien, Kommentare, Commits — alle in einem `page.tsx`
+- **Aktionsbuttons**: Flaches segmentiertes Bar (Approven / Ablehnen / Complete)
+- **Merge-Blocker**: Berechnet aus PR-Daten (isDraft, mergeStatus, Reviewer-Votes, Policies, Kommentare) — kein Extra-API-Call
+- **Dateien-Tab**: `getIterationChanges` fuer letzte Iteration + `RichDiffViewer` (Branch-Diff)
+- **Commits-Tab**: Iterationsliste klickbar → Dateiliste + Diff per `versionType: "commit"`
+- **Kommentare-Tab**: Threads zuerst mit Antworten-Funktion (`replyToThread`), dann Neuer Kommentar
+- **Reviewer-Verwaltung**: Hinzufuegen (aus `identityService.listTeamMembers`), Entfernen, Required/Optional per `addReviewer` upsert
+
+## pullRequestsService (`src/lib/services/pullRequestsService.ts`)
+Alle Reviewer/Kommentar-Methoden halten das `isDemoClient(client)`-Muster ein:
+- `addReviewer(reviewerId, isRequired)` — PUT reviewers/{id}
+- `removeReviewer(reviewerId)` — DELETE reviewers/{id}
+- `replyToThread(threadId, content)` — POST threads/{threadId}/comments
+- `updateThreadStatus(threadId, status)` — PATCH threads/{threadId}
+- `editComment(threadId, commentId, content)` — PATCH threads/{threadId}/comments/{id}
+- `deleteComment(threadId, commentId)` — DELETE threads/{threadId}/comments/{id}
+- `getIterationChanges(prId, iterationId)` — liefert `{ changeEntries }` (wird fuer Dateien- und Commits-Tab genutzt)
+
+## identityService (`src/lib/services/identityService.ts`)
+- `getCurrentUser(client)` — via `/_apis/connectionData` (stabile GUID fuer Vote/Reviewer-Zuordnung)
+- `listTeamMembers(client, project)` — Default-Team Members (fuer Reviewer-Picker im PR)
+
 ## When Making Changes
 - Check the nearest file in the same folder and follow its local pattern first.
 - Avoid broad refactors unless required by the task.
