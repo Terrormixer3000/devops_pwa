@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, use } from "react";
+import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
@@ -18,8 +19,8 @@ import { identityService } from "@/lib/services/identityService";
 import { PRThread, PRComment } from "@/types";
 import { RichDiffViewer } from "@/components/ui/RichDiffViewer";
 import { isImagePath } from "@/lib/utils/fileTypes";
-import { BackLink } from "@/components/ui/BackButton";
 import {
+  ChevronLeft,
   ThumbsUp,
   ThumbsDown,
   MessageCircle,
@@ -38,6 +39,8 @@ import {
   Check,
   CheckCheck,
   RotateCcw,
+  UserPlus,
+  X,
 } from "lucide-react";
 
 type Tab = "uebersicht" | "dateien" | "kommentare" | "commits";
@@ -58,6 +61,13 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
   const [autoCompleteOnApprove, setAutoCompleteOnApprove] = useState(false);
   const [completeError, setCompleteError] = useState<string | null>(null);
   const [selectedChangeKey, setSelectedChangeKey] = useState<string | null>(null);
+  const [selectedIterationId, setSelectedIterationId] = useState<number | null>(null);
+  const [selectedCommitChangeKey, setSelectedCommitChangeKey] = useState<string | null>(null);
+  const [reviewerModalOpen, setReviewerModalOpen] = useState(false);
+  const [reviewerSearch, setReviewerSearch] = useState("");
+  const [reviewerError, setReviewerError] = useState<string | null>(null);
+  const [pendingReviewer, setPendingReviewer] = useState<{ id: string; displayName: string } | null>(null);
+  const [pendingIsRequired, setPendingIsRequired] = useState(false);
 
   const { settings } = useSettingsStore();
   const { client } = useAzureClient();
@@ -117,6 +127,97 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
     enabled: !!client && !!settings && !!lastIterationId,
   });
 
+  // Team-Mitglieder fuer Reviewer-Picker
+  const { data: teamMembers } = useQuery({
+    queryKey: ["team-members", settings?.project, settings?.demoMode],
+    queryFn: () => client && settings
+      ? identityService.listTeamMembers(client, settings.project)
+      : Promise.resolve([]),
+    enabled: !!client && !!settings,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Dateiliste fuer gewaehlte Iteration (Commits-Tab)
+  const { data: commitChanges } = useQuery({
+    queryKey: ["pr-commit-changes", repoId, prIdNum, selectedIterationId, settings?.project, settings?.demoMode],
+    queryFn: () => client && settings && selectedIterationId
+      ? pullRequestsService.getIterationChanges(client, settings.project, repoId, prIdNum, selectedIterationId)
+      : Promise.resolve({ changeEntries: [] }),
+    enabled: !!client && !!settings && !!selectedIterationId && activeTab === "commits",
+  });
+
+  // Derived values fuer Commit-Diff
+  const selectedCommitChange = commitChanges?.changeEntries.find(
+    (e) => getChangeKey(e) === selectedCommitChangeKey
+  ) || commitChanges?.changeEntries[0] || null;
+  const selectedIterationIndex = iterations?.findIndex((i) => i.id === selectedIterationId) ?? -1;
+  const commitOldCommitId =
+    selectedIterationIndex > 0
+      ? (iterations![selectedIterationIndex - 1].sourceRefCommit?.commitId || "")
+      : (iterations?.[selectedIterationIndex]?.targetRefCommit?.commitId || "");
+  const commitNewCommitId =
+    iterations?.find((i) => i.id === selectedIterationId)?.sourceRefCommit?.commitId || "";
+  const commitSelectedChangeType = selectedCommitChange?.changeType?.toLowerCase();
+  const commitOldPath = selectedCommitChange?.originalPath || selectedCommitChange?.item.path || "";
+  const commitNewPath = selectedCommitChange?.item.path || "";
+  const commitSelectedPath = selectedCommitChange?.item.path || selectedCommitChange?.originalPath || "";
+  const commitSelectedIsImage = isImagePath(commitSelectedPath);
+
+  // Diff fuer gewaehlte Datei in der Iteration
+  const { data: commitFileDiff, isLoading: commitFileDiffLoading } = useQuery({
+    queryKey: [
+      "pr-commit-file-diff",
+      repoId,
+      prIdNum,
+      selectedIterationId,
+      selectedCommitChangeKey,
+      commitOldCommitId,
+      commitNewCommitId,
+      settings?.project,
+      settings?.demoMode,
+    ],
+    queryFn: async () => {
+      if (!client || !settings || !selectedCommitChange || !commitOldCommitId || !commitNewCommitId) {
+        return { oldContent: "", newContent: "", oldImageDataUrl: null as string | null, newImageDataUrl: null as string | null, error: null as string | null };
+      }
+
+      const lowerType = selectedCommitChange.changeType.toLowerCase();
+      const loadOld = lowerType !== "add";
+      const loadNew = lowerType !== "delete";
+      let oldContent = "";
+      let newContent = "";
+      let oldImageDataUrl: string | null = null;
+      let newImageDataUrl: string | null = null;
+
+      try {
+        if (loadOld && commitOldPath) {
+          if (commitSelectedIsImage) {
+            oldImageDataUrl = await repositoriesService.getFileBinaryDataUrlAtVersion(client, settings.project, repoId, commitOldPath, commitOldCommitId, "commit");
+          } else {
+            oldContent = await repositoriesService.getFileContentAtVersion(client, settings.project, repoId, commitOldPath, commitOldCommitId, "commit");
+          }
+        }
+      } catch {
+        if (loadOld) return { oldContent: "", newContent: "", oldImageDataUrl: null as string | null, newImageDataUrl: null as string | null, error: "Basisversion konnte nicht geladen werden." };
+      }
+
+      try {
+        if (loadNew && commitNewPath) {
+          if (commitSelectedIsImage) {
+            newImageDataUrl = await repositoriesService.getFileBinaryDataUrlAtVersion(client, settings.project, repoId, commitNewPath, commitNewCommitId, "commit");
+          } else {
+            newContent = await repositoriesService.getFileContentAtVersion(client, settings.project, repoId, commitNewPath, commitNewCommitId, "commit");
+          }
+        }
+      } catch {
+        if (loadNew) return { oldContent, newContent: "", oldImageDataUrl, newImageDataUrl: null as string | null, error: "Neue Version konnte nicht geladen werden." };
+      }
+
+      return { oldContent, newContent, oldImageDataUrl, newImageDataUrl, error: null as string | null };
+    },
+    enabled: !!client && !!settings && !!selectedCommitChange && !!commitOldCommitId && !!commitNewCommitId && activeTab === "commits",
+  });
+
   // Kommentar hinzufuegen
   const addCommentMutation = useMutation({
     mutationFn: () => {
@@ -145,6 +246,40 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
       return pullRequestsService.editComment(client, settings.project, repoId, prIdNum, threadId, commentId, content);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["pr-threads", repoId, prIdNum] }),
+  });
+
+  // Auf Thread antworten
+  const replyToThreadMutation = useMutation({
+    mutationFn: ({ threadId, content }: { threadId: number; content: string }) => {
+      if (!client || !settings) throw new Error("Kein Client");
+      return pullRequestsService.replyToThread(client, settings.project, repoId, prIdNum, threadId, content);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pr-threads", repoId, prIdNum] }),
+  });
+
+  // Reviewer hinzufuegen / aktualisieren
+  const addReviewerMutation = useMutation({
+    mutationFn: ({ reviewerId, isRequired }: { reviewerId: string; isRequired: boolean }) => {
+      if (!client || !settings) throw new Error("Kein Client");
+      return pullRequestsService.addReviewer(client, settings.project, repoId, prIdNum, reviewerId, isRequired);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pr", repoId, prIdNum] });
+      setReviewerModalOpen(false);
+      setReviewerSearch("");
+      setPendingReviewer(null);
+      setReviewerError(null);
+    },
+    onError: (err: Error) => setReviewerError(err.message || "Reviewer konnte nicht hinzugefügt werden."),
+  });
+
+  // Reviewer entfernen
+  const removeReviewerMutation = useMutation({
+    mutationFn: (reviewerId: string) => {
+      if (!client || !settings) throw new Error("Kein Client");
+      return pullRequestsService.removeReviewer(client, settings.project, repoId, prIdNum, reviewerId);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pr", repoId, prIdNum] }),
   });
 
   // Eigenen Kommentar loeschen
@@ -234,17 +369,26 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
         mergeBlockers.push(`Policy ausstehend: ${p.displayName}`);
     }
   }
-  if (threads) {
-    const unresolved = threads.filter(
-      (t) =>
-        (t.status === "active" || t.status === "pending") &&
-        t.comments.some((c) => c.commentType === "text")
+  const unresolvedCommentCount = threads
+    ? threads.filter(
+        (t) =>
+          (t.status === "active" || t.status === "pending") &&
+          t.comments.some((c) => c.commentType === "text")
+      ).length
+    : 0;
+  if (unresolvedCommentCount > 0)
+    mergeBlockers.push(
+      `${unresolvedCommentCount} ungelöste${unresolvedCommentCount === 1 ? "r" : ""} Kommentar${unresolvedCommentCount === 1 ? "" : "e"}`
     );
-    if (unresolved.length > 0)
-      mergeBlockers.push(
-        `${unresolved.length} ungelöste${unresolved.length === 1 ? "r" : ""} Kommentar${unresolved.length === 1 ? "" : "e"}`
-      );
-  }
+
+  // Verfuegbare Team-Mitglieder fuer Reviewer-Modal (noch kein Reviewer, passend zur Suche)
+  const availableMembers = (teamMembers || [])
+    .filter((m) => !pr?.reviewers.some((r) => r.id === m.id))
+    .filter((m) =>
+      !reviewerSearch ||
+      m.displayName.toLowerCase().includes(reviewerSearch.toLowerCase()) ||
+      (m.uniqueName || "").toLowerCase().includes(reviewerSearch.toLowerCase())
+    );
 
   const sourceBranch = pr?.sourceRefName.replace("refs/heads/", "") || "";
   const targetBranch = pr?.targetRefName.replace("refs/heads/", "") || "";
@@ -360,16 +504,15 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
     enabled: !!client && !!settings && !!selectedChange && activeTab === "dateien",
   });
 
-  if (isLoading) return <div className="min-h-screen"><AppBar title="Pull Request" /><PageLoader /></div>;
-  if (error || !pr) return <div className="min-h-screen"><AppBar title="Pull Request" /><ErrorMessage message="PR konnte nicht geladen werden" /></div>;
+  if (isLoading) return <div className="min-h-screen"><AppBar title={<Link href="/pull-requests" className="flex items-center gap-0.5 text-[18px] font-semibold tracking-[-0.01em] text-slate-100 active:opacity-70 transition-opacity"><ChevronLeft size={26} className="-ml-1.5" />Pull Requests</Link>} /><PageLoader /></div>;
+  if (error || !pr) return <div className="min-h-screen"><AppBar title={<Link href="/pull-requests" className="flex items-center gap-0.5 text-[18px] font-semibold tracking-[-0.01em] text-slate-100 active:opacity-70 transition-opacity"><ChevronLeft size={26} className="-ml-1.5" />Pull Requests</Link>} /><ErrorMessage message="PR konnte nicht geladen werden" /></div>;
 
   return (
     <div className="min-h-screen">
-      <AppBar title="Pull Request" />
+      <AppBar title={<Link href="/pull-requests" className="flex items-center gap-0.5 text-[18px] font-semibold tracking-[-0.01em] text-slate-100 active:opacity-70 transition-opacity"><ChevronLeft size={26} className="-ml-1.5" />Pull Requests</Link>} />
 
       {/* Zurueck-Link */}
       <div className="px-4 pt-4">
-        <BackLink href="/pull-requests" className="mb-3" />
       </div>
 
       {/* PR-Kopfbereich */}
@@ -400,23 +543,72 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
 
         {/* Aktionsknopfe (nur fuer aktive PRs) */}
         {pr.status === "active" && (
-          <>
-            <div className="flex gap-2">
-              <Button size="sm" variant="secondary" onClick={() => setApproveModal(true)}>
-                <ThumbsUp size={14} />
-                Approven
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => voteMutation.mutate(-10)} loading={voteMutation.isPending}>
-                <ThumbsDown size={14} />
-                Ablehnen
-              </Button>
-              <Button size="sm" variant="primary" onClick={() => setCompleteModal(true)} disabled={mergeBlockers.length > 0}>
-                <GitMerge size={14} />
-                Complete
-              </Button>
-            </div>
-            {mergeBlockers.length > 0 && (
-              <div className="mt-3 rounded-xl bg-red-950/40 border border-red-800/50 px-3 py-2.5 space-y-1">
+          <div className="flex rounded-2xl border border-slate-700/50 bg-slate-800/60 overflow-hidden">
+            <button
+              onClick={() => setApproveModal(true)}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-700/50 hover:text-slate-100 transition-colors"
+            >
+              <ThumbsUp size={14} /> Approven
+            </button>
+            <div className="w-px bg-slate-700/50 flex-shrink-0" />
+            <button
+              onClick={() => voteMutation.mutate(-10)}
+              disabled={voteMutation.isPending}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-700/50 hover:text-red-400 transition-colors disabled:opacity-40"
+            >
+              <ThumbsDown size={14} /> Ablehnen
+            </button>
+            <div className="w-px bg-slate-700/50 flex-shrink-0" />
+            <button
+              onClick={() => setCompleteModal(true)}
+              disabled={mergeBlockers.length > 0}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-700/50 hover:text-blue-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <GitMerge size={14} /> Complete
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="sticky-below-appbar bg-slate-900/95 backdrop-blur-md border-b border-slate-800">
+        <div className="flex overflow-x-auto hide-scrollbar px-4">
+          {(([
+            { key: "uebersicht", label: "Uebersicht", icon: FileText },
+            { key: "dateien", label: `Dateien${changes?.changeEntries ? ` (${changes.changeEntries.length})` : ""}`, icon: FileText },
+            { key: "commits", label: "Commits", icon: GitCommit },
+          ]) as Array<{ key: Tab; label: string; icon: typeof FileText }>).map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors flex-shrink-0 ${
+                activeTab === key ? "border-blue-500 text-blue-400" : "border-transparent text-slate-500 hover:text-slate-300"
+              }`}
+            >
+              <Icon size={14} />
+              {label}
+            </button>
+          ))}
+          {/* Kommentare-Tab mit optionalem rotem Badge */}
+          <button
+            onClick={() => setActiveTab("kommentare")}
+            className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors flex-shrink-0 ${
+              activeTab === "kommentare" ? "border-blue-500 text-blue-400" : "border-transparent text-slate-500 hover:text-slate-300"
+            }`}
+          >
+            <MessageCircle size={14} />
+            Kommentare{commentThreads.length ? ` (${commentThreads.length})` : ""}
+          </button>
+        </div>
+      </div>
+
+      {/* Tab-Inhalt */}
+      <div className="px-4 py-4">
+        {activeTab === "uebersicht" && (
+          <div className="space-y-4">
+            {/* Merge-Blocker */}
+            {pr.status === "active" && mergeBlockers.length > 0 && (
+              <div className="rounded-xl bg-red-950/40 border border-red-800/50 px-3 py-2.5 space-y-1">
                 {mergeBlockers.map((msg, i) => (
                   <p key={i} className="text-xs text-red-400 flex items-start gap-1.5">
                     <AlertCircle size={12} className="flex-shrink-0 mt-0.5" />
@@ -425,39 +617,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
                 ))}
               </div>
             )}
-          </>
-        )}
-      </div>
 
-      {/* Tabs */}
-      <div className="sticky-below-appbar bg-slate-900/95 backdrop-blur-md border-b border-slate-800">
-        <div className="flex overflow-x-auto hide-scrollbar px-4">
-          {[
-            { key: "uebersicht", label: "Uebersicht", icon: FileText },
-            { key: "dateien", label: `Dateien${changes?.changeEntries ? ` (${changes.changeEntries.length})` : ""}`, icon: FileText },
-            { key: "kommentare", label: `Kommentare${commentThreads.length ? ` (${commentThreads.length})` : ""}`, icon: MessageCircle },
-            { key: "commits", label: "Commits", icon: GitCommit },
-          ].map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setActiveTab(key as Tab)}
-              className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors flex-shrink-0 ${
-                activeTab === key
-                  ? "border-blue-500 text-blue-400"
-                  : "border-transparent text-slate-500 hover:text-slate-300"
-              }`}
-            >
-              <Icon size={14} />
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Tab-Inhalt */}
-      <div className="px-4 py-4">
-        {activeTab === "uebersicht" && (
-          <div className="space-y-4">
             {/* Beschreibung */}
             {pr.description ? (
               <div>
@@ -469,16 +629,51 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
             )}
 
             {/* Reviewer */}
-            {pr.reviewers.length > 0 && (
+            {(pr.reviewers.length > 0 || pr.status === "active") && (
               <div>
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Reviewer</h3>
-                <div className="space-y-2">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Reviewer</h3>
+                  {pr.status === "active" && (
+                    <button
+                      onClick={() => { setReviewerError(null); setPendingReviewer(null); setReviewerSearch(""); setReviewerModalOpen(true); }}
+                      className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                    >
+                      <UserPlus size={13} /> Hinzufügen
+                    </button>
+                  )}
+                </div>
+                <div className="space-y-1">
                   {pr.reviewers.map((r) => (
-                    <div key={r.id} className="flex items-center justify-between py-2">
-                      <span className="text-sm text-slate-300">{r.displayName}</span>
+                    <div key={r.id} className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-slate-800/40">
+                      <span className="text-sm text-slate-300 flex-1 truncate">{r.displayName}</span>
                       <VoteBadge vote={r.vote} />
+                      {pr.status === "active" && (
+                        <>
+                          <button
+                            onClick={() => addReviewerMutation.mutate({ reviewerId: r.id, isRequired: !r.isRequired })}
+                            title={r.isRequired ? "Als Optional setzen" : "Als Pflicht setzen"}
+                            className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors flex-shrink-0 ${
+                              r.isRequired
+                                ? "border-red-700/60 text-red-400 hover:bg-red-900/30"
+                                : "border-slate-600 text-slate-500 hover:text-slate-300"
+                            }`}
+                          >
+                            {r.isRequired ? "Pflicht" : "Optional"}
+                          </button>
+                          <button
+                            onClick={() => removeReviewerMutation.mutate(r.id)}
+                            className="p-1 text-slate-600 hover:text-red-400 transition-colors flex-shrink-0"
+                            title="Entfernen"
+                          >
+                            <X size={13} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   ))}
+                  {pr.reviewers.length === 0 && (
+                    <p className="text-sm text-slate-500 py-1 px-2">Noch keine Reviewer</p>
+                  )}
                 </div>
               </div>
             )}
@@ -564,8 +759,26 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
 
         {activeTab === "kommentare" && (
           <div className="space-y-4">
-            {/* Kommentar-Eingabe */}
-            <div className="flex flex-col gap-2">
+            {/* Kommentar-Liste */}
+            {commentThreads.length === 0 ? (
+              <p className="text-sm text-slate-500 text-center py-4">Noch keine Kommentare</p>
+            ) : (
+              commentThreads.map((thread) => (
+                <CommentThread
+                  key={thread.id}
+                  thread={thread}
+                  currentUserId={currentUser?.id}
+                  onUpdateStatus={(status) => updateThreadStatusMutation.mutate({ threadId: thread.id, status })}
+                  onEditComment={(commentId, content) => editCommentMutation.mutate({ threadId: thread.id, commentId, content })}
+                  onDeleteComment={(commentId) => deleteCommentMutation.mutate({ threadId: thread.id, commentId })}
+                  onReply={(content) => replyToThreadMutation.mutate({ threadId: thread.id, content })}
+                />
+              ))
+            )}
+
+            {/* Neuer Kommentar */}
+            <div className="flex flex-col gap-2 pt-2 border-t border-slate-800">
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Neuer Kommentar</h3>
               <textarea
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
@@ -584,34 +797,83 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
                 Senden
               </Button>
             </div>
-
-            {/* Kommentar-Liste */}
-            {commentThreads.map((thread) => (
-              <CommentThread
-                key={thread.id}
-                thread={thread}
-                currentUserId={currentUser?.id}
-                onUpdateStatus={(status) => updateThreadStatusMutation.mutate({ threadId: thread.id, status })}
-                onEditComment={(commentId, content) => editCommentMutation.mutate({ threadId: thread.id, commentId, content })}
-                onDeleteComment={(commentId) => deleteCommentMutation.mutate({ threadId: thread.id, commentId })}
-              />
-            ))}
           </div>
         )}
 
         {activeTab === "commits" && (
-          <div className="space-y-2">
-            {iterations?.map((iter) => (
-              <div key={iter.id} className="p-3 bg-slate-800/60 rounded-xl">
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <GitCommit size={14} className="text-blue-400" />
-                  <span className="font-mono truncate">{iter.sourceRefCommit?.commitId?.substring(0, 8)}</span>
-                  <span className="ml-auto">{formatDistanceToNow(new Date(iter.createdDate), { addSuffix: true, locale: de })}</span>
+          selectedIterationId ? (
+            <div className="space-y-3">
+              {/* Zurueck zur Iterationsliste */}
+              <button
+                onClick={() => { setSelectedIterationId(null); setSelectedCommitChangeKey(null); }}
+                className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-200 transition-colors"
+              >
+                <ChevronLeft size={16} /> Alle Commits
+              </button>
+
+              {/* Dateiliste fuer diese Iteration */}
+              {commitChanges?.changeEntries && commitChanges.changeEntries.length > 0 ? (
+                <div className="overflow-hidden rounded-xl border border-slate-700/60">
+                  {commitChanges.changeEntries.map((entry, i) => {
+                    const entryKey = getChangeKey(entry);
+                    const isSelected = selectedCommitChange ? getChangeKey(selectedCommitChange) === entryKey : false;
+                    return (
+                      <button
+                        key={`${entry.item.path}-${entry.changeType}-${i}`}
+                        onClick={() => setSelectedCommitChangeKey(entryKey)}
+                        className={`w-full flex items-center gap-2 px-3 py-2.5 border-b border-slate-800/50 text-left transition-colors last:border-b-0 ${
+                          isSelected ? "bg-slate-800/70" : "hover:bg-slate-800/40"
+                        }`}
+                      >
+                        <ChangeTypeDot type={entry.changeType} />
+                        <span className="text-xs font-mono text-slate-300 truncate flex-1">{entry.item.path}</span>
+                        <ChevronRight size={14} className={`flex-shrink-0 ${isSelected ? "text-blue-400" : "text-slate-600"}`} />
+                      </button>
+                    );
+                  })}
                 </div>
-                {iter.description && <p className="text-sm text-slate-300 mt-1">{iter.description}</p>}
-              </div>
-            ))}
-          </div>
+              ) : (
+                <p className="text-sm text-slate-500 text-center py-4">Keine geaenderten Dateien</p>
+              )}
+
+              {/* Diff-Viewer */}
+              {selectedCommitChange && (
+                <RichDiffViewer
+                  key={`commit:${selectedIterationId}:${selectedCommitChange.item.path}:${selectedCommitChange.changeType}`}
+                  path={selectedCommitChange.item.path}
+                  title={selectedCommitChange.item.path}
+                  oldContent={commitFileDiff?.oldContent || ""}
+                  newContent={commitFileDiff?.newContent || ""}
+                  oldLabel={`${commitOldCommitId.substring(0, 8)}:${commitOldPath}`}
+                  newLabel={`${commitNewCommitId.substring(0, 8)}:${commitNewPath}`}
+                  oldImageSrc={commitFileDiff?.oldImageDataUrl || null}
+                  newImageSrc={commitFileDiff?.newImageDataUrl || null}
+                  loading={commitFileDiffLoading}
+                  error={commitFileDiff?.error}
+                  emptyMessage={commitSelectedChangeType === "rename" ? "Nur Umbenennung ohne Inhaltsaenderung" : "Keine zeilenbasierten Unterschiede"}
+                />
+              )}
+            </div>
+          ) : (
+            // Iterationsliste – klickbar
+            <div className="space-y-2">
+              {iterations?.map((iter) => (
+                <button
+                  key={iter.id}
+                  onClick={() => { setSelectedIterationId(iter.id); setSelectedCommitChangeKey(null); }}
+                  className="w-full p-3 bg-slate-800/60 rounded-xl text-left hover:bg-slate-800 transition-colors active:scale-[0.99]"
+                >
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <GitCommit size={14} className="text-blue-400 flex-shrink-0" />
+                    <span className="font-mono truncate">{iter.sourceRefCommit?.commitId?.substring(0, 8)}</span>
+                    <span className="ml-auto flex-shrink-0">{formatDistanceToNow(new Date(iter.createdDate), { addSuffix: true, locale: de })}</span>
+                    <ChevronRight size={14} className="text-slate-600 flex-shrink-0" />
+                  </div>
+                  {iter.description && <p className="text-sm text-slate-300 mt-1">{iter.description}</p>}
+                </button>
+              ))}
+            </div>
+          )
         )}
       </div>
 
@@ -717,6 +979,71 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
           </Button>
         </div>
       </Modal>
+
+      {/* Reviewer hinzufügen Modal */}
+      <Modal
+        open={reviewerModalOpen}
+        onClose={() => { setReviewerModalOpen(false); setReviewerSearch(""); setPendingReviewer(null); }}
+        title="Reviewer hinzufügen"
+      >
+        <div className="space-y-3">
+          {reviewerError && (
+            <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-red-950/40 border border-red-800/50">
+              <AlertCircle size={14} className="text-red-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-400">{reviewerError}</p>
+            </div>
+          )}
+          <input
+            type="text"
+            value={reviewerSearch}
+            onChange={(e) => { setReviewerSearch(e.target.value); setPendingReviewer(null); }}
+            placeholder="Name suchen..."
+            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-blue-500"
+          />
+          <div className="max-h-56 overflow-y-auto space-y-1">
+            {availableMembers.map((m) => (
+              <div key={m.id}>
+                <button
+                  onClick={() => { setPendingReviewer(pendingReviewer?.id === m.id ? null : { id: m.id, displayName: m.displayName }); setPendingIsRequired(false); }}
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-colors ${pendingReviewer?.id === m.id ? "bg-slate-700" : "hover:bg-slate-800"}`}
+                >
+                  <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-medium text-slate-300">{m.displayName.charAt(0).toUpperCase()}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm text-slate-200 truncate">{m.displayName}</p>
+                    <p className="text-xs text-slate-500 truncate">{m.uniqueName}</p>
+                  </div>
+                </button>
+                {pendingReviewer?.id === m.id && (
+                  <div className="px-3 pb-2 flex items-center gap-3">
+                    <button
+                      onClick={() => setPendingIsRequired((v) => !v)}
+                      className={`text-xs px-2 py-1 rounded-lg border transition-colors ${
+                        pendingIsRequired
+                          ? "border-red-600 text-red-400 bg-red-900/20"
+                          : "border-slate-600 text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      {pendingIsRequired ? "Pflicht" : "Optional"}
+                    </button>
+                    <Button
+                      size="sm"
+                      loading={addReviewerMutation.isPending}
+                      onClick={() => addReviewerMutation.mutate({ reviewerId: m.id, isRequired: pendingIsRequired })}
+                    >
+                      Hinzufügen
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))}
+            {availableMembers.length === 0 && (
+              <p className="text-sm text-slate-500 text-center py-3">Keine Mitglieder gefunden</p>
+            )}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -749,17 +1076,29 @@ function CommentThread({
   onUpdateStatus,
   onEditComment,
   onDeleteComment,
+  onReply,
 }: {
   thread: PRThread;
   currentUserId?: string;
   onUpdateStatus: (status: PRThread["status"]) => void;
   onEditComment: (commentId: number, content: string) => void;
   onDeleteComment: (commentId: number) => void;
+  onReply: (content: string) => void;
 }) {
+  const [showReply, setShowReply] = useState(false);
+  const [replyText, setReplyText] = useState("");
+
   const textComments = thread.comments.filter((c) => c.commentType === "text");
   if (textComments.length === 0) return null;
 
   const isResolved = thread.status !== "active" && thread.status !== "pending";
+
+  const handleSendReply = () => {
+    if (!replyText.trim()) return;
+    onReply(replyText.trim());
+    setReplyText("");
+    setShowReply(false);
+  };
 
   return (
     <div className="border border-slate-700/50 rounded-xl overflow-hidden">
@@ -789,6 +1128,41 @@ function CommentThread({
           onDelete={() => onDeleteComment(comment.id)}
         />
       ))}
+      {/* Antworten-Footer */}
+      {showReply ? (
+        <div className="px-3 pb-3 pt-2 space-y-2 border-t border-slate-800">
+          <textarea
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            rows={2}
+            placeholder="Antworten..."
+            autoFocus
+            className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-blue-500 resize-none"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={handleSendReply}
+              disabled={!replyText.trim()}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-colors disabled:opacity-40"
+            >
+              <Send size={12} /> Senden
+            </button>
+            <button
+              onClick={() => { setShowReply(false); setReplyText(""); }}
+              className="px-2.5 py-1 rounded-lg text-xs text-slate-400 hover:text-slate-200 transition-colors"
+            >
+              Abbrechen
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={() => setShowReply(true)}
+          className="w-full flex items-center justify-center gap-1.5 py-2 text-xs text-slate-500 hover:text-slate-300 border-t border-slate-800 transition-colors"
+        >
+          <MessageCircle size={12} /> Antworten
+        </button>
+      )}
     </div>
   );
 }
