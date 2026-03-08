@@ -159,7 +159,7 @@ export default function ReleasesPage() {
         {activeTab === "releases" && (
           <div>
             {releasesLoading ? <PageLoader /> : releasesError ? (
-              <ErrorMessage message="Releases konnten nicht geladen werden" onRetry={refetch} />
+              <ErrorMessage message="Releases konnten nicht geladen werden" error={releasesError} onRetry={refetch} />
             ) : !filteredReleases.length ? (
               <EmptyState icon={Rocket} title="Keine Releases gefunden" />
             ) : (
@@ -269,6 +269,9 @@ export default function ReleasesPage() {
               className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-blue-500 resize-none"
             />
           </div>
+          {approveMutation.isError && (
+            <p className="text-sm text-red-400">{(approveMutation.error as Error).message}</p>
+          )}
           <Button
             fullWidth
             loading={approveMutation.isPending}

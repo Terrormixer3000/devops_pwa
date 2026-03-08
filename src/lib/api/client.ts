@@ -66,13 +66,28 @@ export function createVsrmClient(settings: AppSettings): AxiosInstance {
   }
 
   const token = btoa(`:${settings.pat}`);
-  return axios.create({
+  const vsrmClient = axios.create({
     baseURL: `https://vsrm.dev.azure.com/${settings.organization}`,
     headers: {
       Authorization: `Basic ${token}`,
       "Content-Type": "application/json",
     },
   });
+
+  // Fehler-Interceptor: gleiche Logik wie beim Azure-Client
+  vsrmClient.interceptors.response.use(
+    (res) => res,
+    (error: AxiosError) => {
+      const status = error.response?.status;
+      if (status === 401) throw new ApiError("Nicht autorisiert: PAT-Token ueberpruefen", 401);
+      if (status === 403) throw new ApiError("Zugriff verweigert: unzureichende Berechtigungen", 403);
+      if (status === 404) throw new ApiError("Nicht gefunden", 404);
+      const message = (error.response?.data as { message?: string })?.message || error.message;
+      throw new ApiError(message, status);
+    }
+  );
+
+  return vsrmClient;
 }
 
 export function isDemoClient(client: AxiosInstance | null | undefined): boolean {

@@ -114,7 +114,7 @@ export default function WorkItemsPage() {
         {isLoading ? (
           <PageLoader />
         ) : error ? (
-          <ErrorMessage message="Work Items konnten nicht geladen werden" onRetry={refetch} />
+          <ErrorMessage message="Work Items konnten nicht geladen werden" error={error} onRetry={refetch} />
         ) : filtered.length === 0 ? (
           <EmptyState icon={ListChecks} title="Keine Work Items" description="Keine Eintraege in diesem Filter" />
         ) : (
