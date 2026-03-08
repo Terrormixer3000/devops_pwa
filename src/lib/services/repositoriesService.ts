@@ -263,4 +263,53 @@ export const repositoriesService = {
     );
     return res.data.changes || [];
   },
+
+  // Dateiinhalt per Push API committen oder neue Datei anlegen
+  async pushFileChange(
+    client: AxiosInstance,
+    project: string,
+    repoId: string,
+    branchName: string,
+    oldObjectId: string,
+    filePath: string,
+    newContent: string,
+    commitMessage: string,
+    parentCommitId?: string,
+    changeType: "edit" | "add" = "edit"
+  ): Promise<void> {
+    if (isDemoClient(client)) return;
+
+    // Inhalt als base64 kodieren (UTF-8-sicher via TextEncoder)
+    const bytes = new TextEncoder().encode(newContent);
+    const binary = Array.from(bytes).map((b) => String.fromCharCode(b)).join("");
+    const base64Content = btoa(binary);
+
+    const commitPayload: {
+      comment: string;
+      parents?: string[];
+      changes: object[];
+    } = {
+      comment: commitMessage,
+      changes: [
+        {
+          changeType,
+          item: { path: filePath },
+          newContent: { content: base64Content, contentType: "base64Encoded" },
+        },
+      ],
+    };
+
+    // Bei neuem Branch muss der Ausgangs-Commit als parent angegeben werden
+    if (parentCommitId) {
+      commitPayload.parents = [parentCommitId];
+    }
+
+    await client.post(
+      `/${project}/_apis/git/repositories/${repoId}/pushes?api-version=7.1`,
+      {
+        refUpdates: [{ name: `refs/heads/${branchName}`, oldObjectId }],
+        commits: [commitPayload],
+      }
+    );
+  },
 };

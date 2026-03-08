@@ -111,7 +111,7 @@ export default function PullRequestsPage() {
         ) : isLoading ? (
           <PageLoader />
         ) : error ? (
-          <ErrorMessage message="Fehler beim Laden der Pull Requests" onRetry={refetch} />
+          <ErrorMessage message="Fehler beim Laden der Pull Requests" error={error} onRetry={refetch} />
         ) : prs.length === 0 ? (
           <EmptyState
             icon={GitPullRequest}

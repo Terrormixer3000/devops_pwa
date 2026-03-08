@@ -201,7 +201,7 @@ export default function PipelinesPage() {
             {buildsLoading ? (
               <PageLoader />
             ) : buildsError ? (
-              <ErrorMessage message="Builds konnten nicht geladen werden" onRetry={refetch} />
+              <ErrorMessage message="Builds konnten nicht geladen werden" error={buildsError} onRetry={refetch} />
             ) : !builds?.length ? (
               <EmptyState icon={PlayCircle} title="Keine Builds gefunden" />
             ) : (
@@ -238,6 +238,11 @@ export default function PipelinesPage() {
                     </div>
                   </Link>
                 ))}
+              </div>
+            )}
+            {cancelMutation.isError && (
+              <div className="px-4 pt-2 pb-1">
+                <p className="text-sm text-red-400">{(cancelMutation.error as Error).message}</p>
               </div>
             )}
           </div>

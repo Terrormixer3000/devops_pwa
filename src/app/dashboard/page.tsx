@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { AppBar } from "@/components/layout/AppBar";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Badge } from "@/components/ui/Badge";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { PullRequest } from "@/types";
@@ -55,7 +56,7 @@ export default function DashboardPage() {
   });
 
   // Letzte Builds laden (global, kein Repo-Filter noetig)
-  const { data: builds, isLoading: buildsLoading } = useQuery({
+  const { data: builds, isLoading: buildsLoading, error: buildsError } = useQuery({
     queryKey: ["dashboard-builds", settings?.project, settings?.demoMode],
     queryFn: () =>
       client && settings
@@ -168,6 +169,8 @@ export default function DashboardPage() {
 
           {buildsLoading ? (
             <PageLoader />
+          ) : buildsError ? (
+            <ErrorMessage message="Builds konnten nicht geladen werden" error={buildsError} />
           ) : builds && builds.length > 0 ? (
             <div className="space-y-2">
               {builds.map((build) => (

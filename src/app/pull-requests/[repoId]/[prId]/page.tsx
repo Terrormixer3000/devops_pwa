@@ -32,6 +32,7 @@ import {
   ChevronRight,
   ShieldCheck,
   Zap,
+  AlertCircle,
 } from "lucide-react";
 
 type Tab = "uebersicht" | "dateien" | "kommentare" | "commits";
@@ -50,6 +51,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
   const [mergeStrategy, setMergeStrategy] = useState<"noFastForward" | "squash" | "rebase" | "rebaseMerge">("noFastForward");
   const [deleteSourceBranch, setDeleteSourceBranch] = useState(false);
   const [autoCompleteOnApprove, setAutoCompleteOnApprove] = useState(false);
+  const [completeError, setCompleteError] = useState<string | null>(null);
   const [selectedChangeKey, setSelectedChangeKey] = useState<string | null>(null);
 
   const { settings } = useSettingsStore();
@@ -170,8 +172,47 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pr", repoId, prIdNum] });
       setCompleteModal(false);
+      setCompleteError(null);
+    },
+    onError: (err: Error) => {
+      setCompleteError(err.message || "Merge fehlgeschlagen.");
     },
   });
+
+  // Merge-Blocker aus vorhandenen Daten ableiten (kein extra API-Aufruf noetig)
+  const mergeBlockers: string[] = [];
+  if (pr) {
+    if (pr.isDraft) mergeBlockers.push("PR ist ein Draft");
+    if (pr.mergeStatus === "conflicts") mergeBlockers.push("Merge-Konflikte vorhanden");
+    if (pr.mergeStatus === "rejectedByPolicy") mergeBlockers.push("PR durch Policy abgelehnt");
+    if (pr.mergeStatus === "failure") mergeBlockers.push("Merge fehlgeschlagen");
+    for (const r of pr.reviewers) {
+      if (r.isRequired && r.vote < 0)
+        mergeBlockers.push(`Reviewer abgelehnt: ${r.displayName}`);
+      else if (r.isRequired && r.vote === 0)
+        mergeBlockers.push(`Reviewer ausstehend: ${r.displayName}`);
+    }
+  }
+  if (policies) {
+    for (const p of policies) {
+      if (!p.isRequired) continue;
+      if (p.status === "rejected")
+        mergeBlockers.push(`Policy fehlgeschlagen: ${p.displayName}`);
+      else if (p.status === "queued" || p.status === "running")
+        mergeBlockers.push(`Policy ausstehend: ${p.displayName}`);
+    }
+  }
+  if (threads) {
+    const unresolved = threads.filter(
+      (t) =>
+        (t.status === "active" || t.status === "pending") &&
+        t.comments.some((c) => c.commentType === "text")
+    );
+    if (unresolved.length > 0)
+      mergeBlockers.push(
+        `${unresolved.length} ungelöste${unresolved.length === 1 ? "r" : ""} Kommentar${unresolved.length === 1 ? "" : "e"}`
+      );
+  }
 
   const sourceBranch = pr?.sourceRefName.replace("refs/heads/", "") || "";
   const targetBranch = pr?.targetRefName.replace("refs/heads/", "") || "";
@@ -327,20 +368,32 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
 
         {/* Aktionsknopfe (nur fuer aktive PRs) */}
         {pr.status === "active" && (
-          <div className="flex gap-2">
-            <Button size="sm" variant="secondary" onClick={() => setApproveModal(true)}>
-              <ThumbsUp size={14} />
-              Approven
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => voteMutation.mutate(-10)} loading={voteMutation.isPending}>
-              <ThumbsDown size={14} />
-              Ablehnen
-            </Button>
-            <Button size="sm" variant="primary" onClick={() => setCompleteModal(true)}>
-              <GitMerge size={14} />
-              Complete
-            </Button>
-          </div>
+          <>
+            <div className="flex gap-2">
+              <Button size="sm" variant="secondary" onClick={() => setApproveModal(true)}>
+                <ThumbsUp size={14} />
+                Approven
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => voteMutation.mutate(-10)} loading={voteMutation.isPending}>
+                <ThumbsDown size={14} />
+                Ablehnen
+              </Button>
+              <Button size="sm" variant="primary" onClick={() => setCompleteModal(true)} disabled={mergeBlockers.length > 0}>
+                <GitMerge size={14} />
+                Complete
+              </Button>
+            </div>
+            {mergeBlockers.length > 0 && (
+              <div className="mt-3 rounded-xl bg-red-950/40 border border-red-800/50 px-3 py-2.5 space-y-1">
+                {mergeBlockers.map((msg, i) => (
+                  <p key={i} className="text-xs text-red-400 flex items-start gap-1.5">
+                    <AlertCircle size={12} className="flex-shrink-0 mt-0.5" />
+                    {msg}
+                  </p>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -564,7 +617,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
       </Modal>
 
       {/* Complete Modal */}
-      <Modal open={completeModal} onClose={() => setCompleteModal(false)} title="PR abschliessen">
+      <Modal open={completeModal} onClose={() => { setCompleteModal(false); setCompleteError(null); }} title="PR abschliessen">
         <div className="space-y-4">
           {/* Merge-Strategie */}
           <div className="space-y-2">
@@ -606,6 +659,12 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
             </button>
           </div>
 
+          {completeError && (
+            <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-red-950/40 border border-red-800/50">
+              <AlertCircle size={14} className="text-red-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-400">{completeError}</p>
+            </div>
+          )}
           <Button
             fullWidth
             onClick={() => completeMutation.mutate()}

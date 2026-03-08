@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppBar } from "@/components/layout/AppBar";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
@@ -10,6 +10,7 @@ import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { useRepositoryStore } from "@/lib/stores/repositoryStore";
 import { useAzureClient } from "@/lib/hooks/useAzureClient";
 import { repositoriesService, GitChangeEntry } from "@/lib/services/repositoriesService";
+import { pullRequestsService } from "@/lib/services/pullRequestsService";
 import { CodeRepoSelector } from "@/components/layout/selectors/CodeRepoSelector";
 import { AppSettings, Branch, Commit, Repository, TreeEntry } from "@/types";
 import { RichDiffViewer } from "@/components/ui/RichDiffViewer";
@@ -29,6 +30,9 @@ import {
   History,
   GitCompare,
   Plus,
+  Pencil,
+  X,
+  FilePlus,
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { formatDistanceToNow } from "date-fns";
@@ -70,7 +74,13 @@ function RepoExplorer({ repo, settings }: { repo: Repository; settings: AppSetti
   const [selectedCommitChangeKey, setSelectedCommitChangeKey] = useState<string | null>(null);
   const [compareBranch, setCompareBranch] = useState<Branch | null>(null);
   const [fileHistoryFile, setFileHistoryFile] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [editedContent, setEditedContent] = useState<string | null>(null);
+  const [commitSheetOpen, setCommitSheetOpen] = useState(false);
+  const [newFileSheetOpen, setNewFileSheetOpen] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const { client } = useAzureClient();
+  const queryClient = useQueryClient();
 
   const { data: tags, isLoading: tagsLoading, error: tagError } = useQuery({
     queryKey: ["tags", repo.id, settings.project, settings.demoMode],
@@ -150,11 +160,11 @@ function RepoExplorer({ repo, settings }: { repo: Repository; settings: AppSetti
           selectedBranch.name
         );
         return { content, imageDataUrl: null as string | null, error: null as string | null };
-      } catch {
+      } catch (err) {
         return {
           content: "",
           imageDataUrl: null as string | null,
-          error: "Datei konnte nicht geladen werden.",
+          error: (err instanceof Error ? err.message : null) || "Datei konnte nicht geladen werden.",
         };
       }
     },
@@ -234,14 +244,14 @@ function RepoExplorer({ repo, settings }: { repo: Repository; settings: AppSetti
             );
           }
         }
-      } catch {
+      } catch (err) {
         if (loadOld) {
           return {
             oldContent: "",
             newContent: "",
             oldImageDataUrl: null as string | null,
             newImageDataUrl: null as string | null,
-            error: "Vorherige Dateiversion konnte nicht geladen werden.",
+            error: (err instanceof Error ? err.message : null) || "Vorherige Dateiversion konnte nicht geladen werden.",
           };
         }
       }
@@ -268,14 +278,14 @@ function RepoExplorer({ repo, settings }: { repo: Repository; settings: AppSetti
             );
           }
         }
-      } catch {
+      } catch (err) {
         if (loadNew) {
           return {
             oldContent,
             newContent: "",
             oldImageDataUrl,
             newImageDataUrl: null as string | null,
-            error: "Aktuelle Dateiversion konnte nicht geladen werden.",
+            error: (err instanceof Error ? err.message : null) || "Aktuelle Dateiversion konnte nicht geladen werden.",
           };
         }
       }
@@ -294,7 +304,123 @@ function RepoExplorer({ repo, settings }: { repo: Repository; settings: AppSetti
     setSelectedCommitChangeKey(null);
     setCompareBranch(null);
     setFileHistoryFile(null);
+    setEditMode(false);
+    setEditedContent(null);
     setView("files");
+  };
+
+  const handleSaveFile = async (
+    content: string,
+    commitMessage: string,
+    targetMode: "current" | "new-branch",
+    newBranchName: string,
+    createPR: boolean,
+    prTitle: string
+  ) => {
+    if (!client || !selectedBranch || !selectedFile) throw new Error("Kein Client oder keine Datei");
+
+    const sourceBranchObjectId = selectedBranch.objectId;
+
+    if (targetMode === "current") {
+      // Direkt auf aktuellen Branch committen
+      await repositoriesService.pushFileChange(
+        client,
+        settings.project,
+        repo.id,
+        selectedBranch.name,
+        sourceBranchObjectId,
+        selectedFile,
+        content,
+        commitMessage
+      );
+    } else {
+      // Neuen Branch mit Commit erstellen (atomisch via Push API)
+      await repositoriesService.pushFileChange(
+        client,
+        settings.project,
+        repo.id,
+        newBranchName,
+        "0000000000000000000000000000000000000000",
+        selectedFile,
+        content,
+        commitMessage,
+        sourceBranchObjectId
+      );
+
+      // Optional PR erstellen
+      if (createPR) {
+        await pullRequestsService.create(client, settings.project, repo.id, {
+          title: prTitle || commitMessage,
+          sourceRefName: `refs/heads/${newBranchName}`,
+          targetRefName: `refs/heads/${selectedBranch.name}`,
+        });
+      }
+    }
+
+    // Dateiinhalt-Query invalidieren damit neu geladen wird
+    await queryClient.invalidateQueries({
+      queryKey: ["file", repo.id, selectedBranch.name, selectedFile],
+    });
+
+    setEditMode(false);
+    setEditedContent(null);
+    setCommitSheetOpen(false);
+    const msg = targetMode === "current"
+      ? `Commit auf "${selectedBranch.name}" erstellt.`
+      : createPR
+      ? `Branch "${newBranchName}" erstellt und PR geöffnet.`
+      : `Branch "${newBranchName}" erstellt.`;
+    setSaveSuccess(msg);
+    setTimeout(() => setSaveSuccess(null), 4000);
+  };
+
+  const handleCreateFile = async (
+    content: string,
+    commitMessage: string,
+    targetMode: "current" | "new-branch",
+    newBranchName: string,
+    createPR: boolean,
+    prTitle: string,
+    filePath: string
+  ) => {
+    if (!client || !selectedBranch) throw new Error("Kein Client oder Branch");
+
+    const sourceBranchObjectId = selectedBranch.objectId;
+
+    if (targetMode === "current") {
+      await repositoriesService.pushFileChange(
+        client, settings.project, repo.id,
+        selectedBranch.name, sourceBranchObjectId,
+        filePath, content, commitMessage, undefined, "add"
+      );
+    } else {
+      await repositoriesService.pushFileChange(
+        client, settings.project, repo.id,
+        newBranchName, "0000000000000000000000000000000000000000",
+        filePath, content, commitMessage, sourceBranchObjectId, "add"
+      );
+      if (createPR) {
+        await pullRequestsService.create(client, settings.project, repo.id, {
+          title: prTitle || commitMessage,
+          sourceRefName: `refs/heads/${newBranchName}`,
+          targetRefName: `refs/heads/${selectedBranch.name}`,
+        });
+      }
+    }
+
+    // Dateibaum neu laden
+    await queryClient.invalidateQueries({
+      queryKey: ["tree", repo.id, selectedBranch.name, currentPath],
+    });
+
+    setNewFileSheetOpen(false);
+    const msg = targetMode === "current"
+      ? `Datei "${filePath}" erstellt.`
+      : createPR
+      ? `Branch "${newBranchName}" mit Datei erstellt und PR geöffnet.`
+      : `Branch "${newBranchName}" mit Datei erstellt.`;
+    setSaveSuccess(msg);
+    setTimeout(() => setSaveSuccess(null), 4000);
   };
 
   const handleOpenFileHistory = (filePath: string) => {
@@ -408,6 +534,12 @@ function RepoExplorer({ repo, settings }: { repo: Repository; settings: AppSetti
         </div>
       )}
 
+      {saveSuccess && (
+        <div className="fixed-below-appbar mt-[3.85rem] px-4 py-2 bg-green-900/40 border-b border-green-800/50 text-sm text-green-400 z-10">
+          {saveSuccess}
+        </div>
+      )}
+
       <div className={selectedBranch ? "pt-[3.85rem]" : ""}>
         {view === "branches" ? (
           <BranchList
@@ -433,7 +565,23 @@ function RepoExplorer({ repo, settings }: { repo: Repository; settings: AppSetti
             diffLoading={commitFileDiffLoading}
           />
         ) : view === "files" ? (
-          <FileTree items={treeItems || []} loading={treeLoading} currentPath={currentPath} onFolder={handleNavigateFolder} onFile={handleOpenFile} />
+          <>
+            <FileTree
+              items={treeItems || []}
+              loading={treeLoading}
+              currentPath={currentPath}
+              onFolder={handleNavigateFolder}
+              onFile={handleOpenFile}
+              onNewFile={() => setNewFileSheetOpen(true)}
+            />
+            <NewFileSheet
+              open={newFileSheetOpen}
+              onClose={() => setNewFileSheetOpen(false)}
+              currentPath={currentPath}
+              currentBranchName={selectedBranch?.name || ""}
+              onSave={handleCreateFile}
+            />
+          </>
         ) : view === "file-history" ? (
           <FileHistoryView
             filePath={fileHistoryFile || ""}
@@ -449,15 +597,36 @@ function RepoExplorer({ repo, settings }: { repo: Repository; settings: AppSetti
             loading={branchDiffLoading}
           />
         ) : (
-          <FileViewer
-            key={selectedFile || "file-viewer"}
-            content={fileContent?.content || ""}
-            imageDataUrl={fileContent?.imageDataUrl || null}
-            error={fileContent?.error}
-            path={selectedFile || ""}
-            loading={fileLoading}
-            onOpenHistory={handleOpenFileHistory}
-          />
+          <>
+            <FileViewer
+              key={selectedFile || "file-viewer"}
+              content={fileContent?.content || ""}
+              imageDataUrl={fileContent?.imageDataUrl || null}
+              error={fileContent?.error}
+              path={selectedFile || ""}
+              loading={fileLoading}
+              onOpenHistory={handleOpenFileHistory}
+              editMode={editMode}
+              editedContent={editedContent}
+              onEditStart={(content) => {
+                setEditedContent(content);
+                setEditMode(true);
+              }}
+              onEditCancel={() => {
+                setEditMode(false);
+                setEditedContent(null);
+              }}
+              onEditChange={setEditedContent}
+              onRequestCommit={() => setCommitSheetOpen(true)}
+            />
+            <CommitSheet
+              open={commitSheetOpen}
+              onClose={() => setCommitSheetOpen(false)}
+              currentBranchName={selectedBranch?.name || ""}
+              onSave={handleSaveFile}
+              pendingContent={editedContent || ""}
+            />
+          </>
         )}
       </div>
     </>
@@ -545,7 +714,7 @@ function BranchList({ branches, tags, loading, error, onSelect, onCompare, onRef
   };
 
   if (loading) return <PageLoader />;
-  if (error) return <ErrorMessage message="Branches konnten nicht geladen werden" onRetry={onRefetch} />;
+  if (error) return <ErrorMessage message="Branches konnten nicht geladen werden" error={error} onRetry={onRefetch} />;
 
   return (
     <div className={mode === "branches" ? "pb-24" : undefined}>
@@ -832,12 +1001,13 @@ function CommitDiffView({
 }
 
 // Dateibaum-Ansicht
-function FileTree({ items, loading, currentPath, onFolder, onFile }: {
+function FileTree({ items, loading, currentPath, onFolder, onFile, onNewFile }: {
   items: TreeEntry[];
   loading: boolean;
   currentPath: string;
   onFolder: (e: TreeEntry) => void;
   onFile: (e: TreeEntry) => void;
+  onNewFile?: () => void;
 }) {
   if (loading) return <PageLoader />;
 
@@ -849,11 +1019,18 @@ function FileTree({ items, loading, currentPath, onFolder, onFile }: {
 
   return (
     <div>
-      {currentPath !== "/" && (
-        <div className="px-4 py-2 text-xs text-slate-500 font-mono border-b border-slate-800">
-          {currentPath}
-        </div>
-      )}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-slate-800">
+        <span className="text-xs text-slate-500 font-mono truncate">{currentPath !== "/" ? currentPath : "/"}</span>
+        {onNewFile && (
+          <button
+            onClick={onNewFile}
+            title="Neue Datei"
+            className="flex items-center gap-1 text-xs text-slate-500 hover:text-blue-400 transition-colors flex-shrink-0"
+          >
+            <FilePlus size={14} />
+          </button>
+        )}
+      </div>
       {sorted.length === 0 ? (
         <EmptyState icon={Folder} title="Leeres Verzeichnis" />
       ) : (
@@ -986,6 +1163,12 @@ function FileViewer({
   path,
   loading,
   onOpenHistory,
+  editMode = false,
+  editedContent,
+  onEditStart,
+  onEditCancel,
+  onEditChange,
+  onRequestCommit,
 }: {
   content: string;
   imageDataUrl?: string | null;
@@ -993,6 +1176,12 @@ function FileViewer({
   path: string;
   loading: boolean;
   onOpenHistory?: (filePath: string) => void;
+  editMode?: boolean;
+  editedContent?: string | null;
+  onEditStart?: (initialContent: string) => void;
+  onEditCancel?: () => void;
+  onEditChange?: (content: string) => void;
+  onRequestCommit?: () => void;
 }) {
   const [mode, setMode] = useState<"preview" | "text">("preview");
   if (loading) return <PageLoader />;
@@ -1003,23 +1192,62 @@ function FileViewer({
   const isMarkdown = isMarkdownPath(path);
   const rawText = isImage ? buildImageTextRepresentation(imageDataUrl, path) : content;
   const rawLines = rawText.split("\n");
+  const canEdit = !isImage;
 
   return (
     <div>
       <div className="px-4 py-2 bg-slate-800/50 border-b border-slate-800 flex items-center justify-between">
         <p className="text-xs font-mono text-slate-400 truncate flex-1 min-w-0">{path}</p>
-        {onOpenHistory && (
-          <button
-            onClick={() => onOpenHistory(path)}
-            title="Dateihistorie"
-            className="ml-2 flex-shrink-0 flex items-center gap-1 text-xs text-slate-500 hover:text-blue-400 transition-colors"
-          >
-            <History size={14} />
-          </button>
-        )}
+        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+          {onOpenHistory && !editMode && (
+            <button
+              onClick={() => onOpenHistory(path)}
+              title="Dateihistorie"
+              className="flex items-center gap-1 text-xs text-slate-500 hover:text-blue-400 transition-colors"
+            >
+              <History size={14} />
+            </button>
+          )}
+          {canEdit && !editMode && onEditStart && (
+            <button
+              onClick={() => onEditStart(content)}
+              title="Bearbeiten"
+              className="flex items-center gap-1 text-xs text-slate-500 hover:text-yellow-400 transition-colors"
+            >
+              <Pencil size={14} />
+            </button>
+          )}
+          {editMode && (
+            <>
+              <button
+                onClick={onRequestCommit}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-colors"
+              >
+                Speichern
+              </button>
+              <button
+                onClick={onEditCancel}
+                title="Abbrechen"
+                className="flex items-center gap-1 text-xs text-slate-500 hover:text-red-400 transition-colors"
+              >
+                <X size={14} />
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
-      {(isImage || isMarkdown) && (
+      {/* Edit-Modus: Textarea statt Leseanzeige */}
+      {editMode ? (
+        <textarea
+          className="w-full min-h-[60vh] bg-slate-950 text-slate-200 text-xs font-mono p-4 resize-none focus:outline-none border-0"
+          value={editedContent ?? content}
+          onChange={(e) => onEditChange?.(e.target.value)}
+          spellCheck={false}
+          autoCapitalize="none"
+          autoCorrect="off"
+        />
+      ) : (isImage || isMarkdown) && (
         <div className="flex items-center justify-end px-3 py-2 border-b border-slate-800/70">
           <div className="inline-flex rounded-lg border border-slate-700/70 bg-slate-900/70 p-1">
             {[
@@ -1042,15 +1270,15 @@ function FileViewer({
         </div>
       )}
 
-      {mode === "preview" && isImage ? (
+      {!editMode && mode === "preview" && isImage ? (
         <div className="p-3">
           <ImageViewer src={imageDataUrl} emptyMessage="Bild konnte nicht geladen werden" />
         </div>
-      ) : mode === "preview" && isMarkdown ? (
+      ) : !editMode && mode === "preview" && isMarkdown ? (
         <div className="px-4 py-4">
           <MarkdownViewer content={content} />
         </div>
-      ) : !isImage && !isMarkdown ? (
+      ) : !editMode && !isImage && !isMarkdown ? (
         <div className="overflow-x-auto">
           <table className="w-full text-xs font-mono">
             <tbody>
@@ -1067,7 +1295,7 @@ function FileViewer({
             </tbody>
           </table>
         </div>
-      ) : (
+      ) : !editMode ? (
         <div className="overflow-x-auto">
           <table className="w-full text-xs font-mono">
             <tbody>
@@ -1084,8 +1312,335 @@ function FileViewer({
             </tbody>
           </table>
         </div>
-      )}
+      ) : null}
     </div>
+  );
+}
+
+// Commit-Sheet: Änderungen einer Datei speichern (Edit oder neue Datei)
+function CommitSheet({
+  open,
+  onClose,
+  currentBranchName,
+  onSave,
+  pendingContent,
+}: {
+  open: boolean;
+  onClose: () => void;
+  currentBranchName: string;
+  onSave: (
+    content: string,
+    commitMessage: string,
+    targetMode: "current" | "new-branch",
+    newBranchName: string,
+    createPR: boolean,
+    prTitle: string
+  ) => Promise<void>;
+  pendingContent: string;
+}) {
+  const [commitMessage, setCommitMessage] = useState("");
+  const [targetMode, setTargetMode] = useState<"current" | "new-branch">("current");
+  const [newBranchName, setNewBranchName] = useState("");
+  const [createPR, setCreatePR] = useState(false);
+  const [prTitle, setPrTitle] = useState("");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const reset = () => {
+    setCommitMessage("");
+    setTargetMode("current");
+    setNewBranchName("");
+    setCreatePR(false);
+    setPrTitle("");
+    setError(null);
+  };
+
+  const handleClose = () => { reset(); onClose(); };
+
+  const isDisabled =
+    pending ||
+    !commitMessage.trim() ||
+    (targetMode === "new-branch" && !newBranchName.trim()) ||
+    (createPR && !prTitle.trim());
+
+  const handleSubmit = async () => {
+    setPending(true);
+    setError(null);
+    try {
+      await onSave(pendingContent, commitMessage.trim(), targetMode, newBranchName.trim(), createPR, prTitle.trim());
+      reset();
+    } catch (err) {
+      setError((err as Error).message || "Fehler beim Speichern.");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={handleClose} title="Änderungen speichern">
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-slate-300">Commit-Nachricht *</label>
+          <input
+            type="text"
+            value={commitMessage}
+            onChange={(e) => setCommitMessage(e.target.value)}
+            placeholder="z.B. Fix: Tippfehler korrigiert"
+            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-300">Ziel</label>
+          <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-800/90 p-1">
+            {(["current", "new-branch"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setTargetMode(m)}
+                className={`rounded-[0.9rem] py-2.5 text-xs font-medium transition-colors ${
+                  targetMode === m ? "bg-slate-700 text-slate-100 shadow-sm" : "text-slate-400"
+                }`}
+              >
+                {m === "current" ? `Branch: ${currentBranchName}` : "Neuer Branch"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {targetMode === "new-branch" && (
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-300">Branch-Name *</label>
+              <input
+                type="text"
+                value={newBranchName}
+                onChange={(e) => setNewBranchName(e.target.value.replace(/\s+/g, "-"))}
+                placeholder="z.B. feature/meine-aenderung"
+                autoCapitalize="none"
+                autoCorrect="off"
+                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm"
+              />
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={createPR}
+                onChange={(e) => setCreatePR(e.target.checked)}
+                className="rounded border-slate-600 bg-slate-800 text-blue-500"
+              />
+              <span className="text-sm text-slate-300">Pull Request erstellen</span>
+            </label>
+            {createPR && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-slate-300">PR-Titel *</label>
+                <input
+                  type="text"
+                  value={prTitle}
+                  onChange={(e) => setPrTitle(e.target.value)}
+                  placeholder="z.B. Feature: Neue Datei hinzugefügt"
+                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm"
+                />
+                <p className="text-xs text-slate-500">Ziel-Branch: {currentBranchName}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {error && <p className="text-sm text-red-400">{error}</p>}
+
+        <button
+          onClick={handleSubmit}
+          disabled={isDisabled}
+          className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors"
+        >
+          {pending ? "Wird gespeichert…" : "Speichern"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+// Sheet zum Anlegen einer neuen Datei
+function NewFileSheet({
+  open,
+  onClose,
+  currentPath,
+  currentBranchName,
+  onSave,
+}: {
+  open: boolean;
+  onClose: () => void;
+  currentPath: string;
+  currentBranchName: string;
+  onSave: (
+    content: string,
+    commitMessage: string,
+    targetMode: "current" | "new-branch",
+    newBranchName: string,
+    createPR: boolean,
+    prTitle: string,
+    filePath: string
+  ) => Promise<void>;
+}) {
+  const [fileName, setFileName] = useState("");
+  const [fileContent, setFileContent] = useState("");
+  const [commitMessage, setCommitMessage] = useState("");
+  const [targetMode, setTargetMode] = useState<"current" | "new-branch">("current");
+  const [newBranchName, setNewBranchName] = useState("");
+  const [createPR, setCreatePR] = useState(false);
+  const [prTitle, setPrTitle] = useState("");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const reset = () => {
+    setFileName("");
+    setFileContent("");
+    setCommitMessage("");
+    setTargetMode("current");
+    setNewBranchName("");
+    setCreatePR(false);
+    setPrTitle("");
+    setError(null);
+  };
+
+  const handleClose = () => { reset(); onClose(); };
+
+  // Vollständigen Pfad berechnen
+  const fullPath = currentPath === "/"
+    ? `/${fileName.trim()}`
+    : `${currentPath}/${fileName.trim()}`;
+
+  const isDisabled =
+    pending ||
+    !fileName.trim() ||
+    !commitMessage.trim() ||
+    (targetMode === "new-branch" && !newBranchName.trim()) ||
+    (createPR && !prTitle.trim());
+
+  const handleSubmit = async () => {
+    setPending(true);
+    setError(null);
+    try {
+      await onSave(fileContent, commitMessage.trim(), targetMode, newBranchName.trim(), createPR, prTitle.trim(), fullPath);
+      reset();
+    } catch (err) {
+      setError((err as Error).message || "Fehler beim Erstellen der Datei.");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={handleClose} title="Neue Datei anlegen">
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-slate-300">Dateiname *</label>
+          <input
+            type="text"
+            value={fileName}
+            onChange={(e) => setFileName(e.target.value)}
+            placeholder="z.B. README.md"
+            autoCapitalize="none"
+            autoCorrect="off"
+            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm font-mono"
+          />
+          {fileName.trim() && (
+            <p className="text-xs text-slate-500 font-mono">{fullPath}</p>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-slate-300">Inhalt</label>
+          <textarea
+            value={fileContent}
+            onChange={(e) => setFileContent(e.target.value)}
+            placeholder="Dateiinhalt (optional)"
+            rows={6}
+            spellCheck={false}
+            autoCapitalize="none"
+            autoCorrect="off"
+            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-xs font-mono resize-none"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-slate-300">Commit-Nachricht *</label>
+          <input
+            type="text"
+            value={commitMessage}
+            onChange={(e) => setCommitMessage(e.target.value)}
+            placeholder="z.B. Neue Datei hinzugefügt"
+            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-300">Ziel</label>
+          <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-800/90 p-1">
+            {(["current", "new-branch"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setTargetMode(m)}
+                className={`rounded-[0.9rem] py-2.5 text-xs font-medium transition-colors ${
+                  targetMode === m ? "bg-slate-700 text-slate-100 shadow-sm" : "text-slate-400"
+                }`}
+              >
+                {m === "current" ? `Branch: ${currentBranchName}` : "Neuer Branch"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {targetMode === "new-branch" && (
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-300">Branch-Name *</label>
+              <input
+                type="text"
+                value={newBranchName}
+                onChange={(e) => setNewBranchName(e.target.value.replace(/\s+/g, "-"))}
+                placeholder="z.B. feature/neue-datei"
+                autoCapitalize="none"
+                autoCorrect="off"
+                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm"
+              />
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={createPR}
+                onChange={(e) => setCreatePR(e.target.checked)}
+                className="rounded border-slate-600 bg-slate-800 text-blue-500"
+              />
+              <span className="text-sm text-slate-300">Pull Request erstellen</span>
+            </label>
+            {createPR && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-slate-300">PR-Titel *</label>
+                <input
+                  type="text"
+                  value={prTitle}
+                  onChange={(e) => setPrTitle(e.target.value)}
+                  placeholder="z.B. Feature: Neue Datei"
+                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm"
+                />
+                <p className="text-xs text-slate-500">Ziel-Branch: {currentBranchName}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {error && <p className="text-sm text-red-400">{error}</p>}
+
+        <button
+          onClick={handleSubmit}
+          disabled={isDisabled}
+          className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors"
+        >
+          {pending ? "Wird erstellt…" : "Datei erstellen"}
+        </button>
+      </div>
+    </Modal>
   );
 }
 
