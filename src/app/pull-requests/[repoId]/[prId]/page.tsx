@@ -33,6 +33,11 @@ import {
   ShieldCheck,
   Zap,
   AlertCircle,
+  Pencil,
+  Trash2,
+  Check,
+  CheckCheck,
+  RotateCcw,
 } from "lucide-react";
 
 type Tab = "uebersicht" | "dateien" | "kommentare" | "commits";
@@ -122,6 +127,33 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
       setCommentText("");
       qc.invalidateQueries({ queryKey: ["pr-threads", repoId, prIdNum] });
     },
+  });
+
+  // Thread-Status aendern (resolve / reopen)
+  const updateThreadStatusMutation = useMutation({
+    mutationFn: ({ threadId, status }: { threadId: number; status: PRThread["status"] }) => {
+      if (!client || !settings) throw new Error("Kein Client");
+      return pullRequestsService.updateThreadStatus(client, settings.project, repoId, prIdNum, threadId, status);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pr-threads", repoId, prIdNum] }),
+  });
+
+  // Eigenen Kommentar bearbeiten
+  const editCommentMutation = useMutation({
+    mutationFn: ({ threadId, commentId, content }: { threadId: number; commentId: number; content: string }) => {
+      if (!client || !settings) throw new Error("Kein Client");
+      return pullRequestsService.editComment(client, settings.project, repoId, prIdNum, threadId, commentId, content);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pr-threads", repoId, prIdNum] }),
+  });
+
+  // Eigenen Kommentar loeschen
+  const deleteCommentMutation = useMutation({
+    mutationFn: ({ threadId, commentId }: { threadId: number; commentId: number }) => {
+      if (!client || !settings) throw new Error("Kein Client");
+      return pullRequestsService.deleteComment(client, settings.project, repoId, prIdNum, threadId, commentId);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pr-threads", repoId, prIdNum] }),
   });
 
   // Abstimmen (Approve / Reject)
@@ -555,7 +587,14 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
 
             {/* Kommentar-Liste */}
             {commentThreads.map((thread) => (
-              <CommentThread key={thread.id} thread={thread} />
+              <CommentThread
+                key={thread.id}
+                thread={thread}
+                currentUserId={currentUser?.id}
+                onUpdateStatus={(status) => updateThreadStatusMutation.mutate({ threadId: thread.id, status })}
+                onEditComment={(commentId, content) => editCommentMutation.mutate({ threadId: thread.id, commentId, content })}
+                onDeleteComment={(commentId) => deleteCommentMutation.mutate({ threadId: thread.id, commentId })}
+              />
             ))}
           </div>
         )}
@@ -704,20 +743,85 @@ function ChangeTypeDot({ type }: { type: string }) {
 }
 
 // Kommentar-Thread Anzeige
-function CommentThread({ thread }: { thread: PRThread }) {
+function CommentThread({
+  thread,
+  currentUserId,
+  onUpdateStatus,
+  onEditComment,
+  onDeleteComment,
+}: {
+  thread: PRThread;
+  currentUserId?: string;
+  onUpdateStatus: (status: PRThread["status"]) => void;
+  onEditComment: (commentId: number, content: string) => void;
+  onDeleteComment: (commentId: number) => void;
+}) {
   const textComments = thread.comments.filter((c) => c.commentType === "text");
   if (textComments.length === 0) return null;
 
+  const isResolved = thread.status !== "active" && thread.status !== "pending";
+
   return (
     <div className="border border-slate-700/50 rounded-xl overflow-hidden">
+      {/* Thread-Header: Status + Resolve/Reopen-Button */}
+      <div className="flex items-center justify-between px-3 py-1.5 bg-slate-800/60 border-b border-slate-700/50">
+        <span className={`text-[10px] font-semibold uppercase tracking-wider ${isResolved ? "text-green-400" : "text-yellow-400"}`}>
+          {isResolved ? "Gelöst" : "Offen"}
+        </span>
+        <button
+          onClick={() => onUpdateStatus(isResolved ? "active" : "fixed")}
+          className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-200 transition-colors"
+        >
+          {isResolved ? (
+            <><RotateCcw size={11} /> Öffnen</>
+          ) : (
+            <><CheckCheck size={11} /> Lösen</>
+          )}
+        </button>
+      </div>
       {textComments.map((comment, i) => (
-        <CommentItem key={comment.id} comment={comment} isFirst={i === 0} />
+        <CommentItem
+          key={comment.id}
+          comment={comment}
+          isFirst={i === 0}
+          currentUserId={currentUserId}
+          onEdit={(content) => onEditComment(comment.id, content)}
+          onDelete={() => onDeleteComment(comment.id)}
+        />
       ))}
     </div>
   );
 }
 
-function CommentItem({ comment, isFirst }: { comment: PRComment; isFirst: boolean }) {
+function CommentItem({
+  comment,
+  isFirst,
+  currentUserId,
+  onEdit,
+  onDelete,
+}: {
+  comment: PRComment;
+  isFirst: boolean;
+  currentUserId?: string;
+  onEdit: (content: string) => void;
+  onDelete: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(comment.content);
+  const [deleting, setDeleting] = useState(false);
+  const isOwn = !!currentUserId && comment.author.id === currentUserId;
+
+  const handleSaveEdit = async () => {
+    if (!editText.trim() || editText === comment.content) { setEditing(false); return; }
+    onEdit(editText.trim());
+    setEditing(false);
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    onDelete();
+  };
+
   return (
     <div className={`p-3 ${isFirst ? "" : "border-t border-slate-800"}`}>
       <div className="flex items-center gap-2 mb-1.5">
@@ -730,8 +834,52 @@ function CommentItem({ comment, isFirst }: { comment: PRComment; isFirst: boolea
         <span className="text-xs text-slate-600 ml-auto">
           {formatDistanceToNow(new Date(comment.publishedDate), { addSuffix: true, locale: de })}
         </span>
+        {isOwn && !editing && (
+          <div className="flex items-center gap-1 ml-1">
+            <button
+              onClick={() => { setEditText(comment.content); setEditing(true); }}
+              className="p-1 text-slate-600 hover:text-blue-400 transition-colors"
+              title="Bearbeiten"
+            >
+              <Pencil size={12} />
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="p-1 text-slate-600 hover:text-red-400 transition-colors disabled:opacity-40"
+              title="Löschen"
+            >
+              <Trash2 size={12} />
+            </button>
+          </div>
+        )}
       </div>
-      <p className="text-sm text-slate-200 whitespace-pre-wrap pl-8">{comment.content}</p>
+      {editing ? (
+        <div className="pl-8 space-y-2">
+          <textarea
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            rows={3}
+            className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-blue-500 resize-none"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={handleSaveEdit}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-colors"
+            >
+              <Check size={12} /> Speichern
+            </button>
+            <button
+              onClick={() => setEditing(false)}
+              className="px-2.5 py-1 rounded-lg text-xs text-slate-400 hover:text-slate-200 transition-colors"
+            >
+              Abbrechen
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p className="text-sm text-slate-200 whitespace-pre-wrap pl-8">{comment.content}</p>
+      )}
     </div>
   );
 }
