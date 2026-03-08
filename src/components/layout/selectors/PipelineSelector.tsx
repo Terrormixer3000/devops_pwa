@@ -6,12 +6,17 @@ import { SelectionSheet, SelectionItem } from "@/components/ui/SelectionSheet";
 import { usePipelineDefStore, usePipelineFavStore } from "@/lib/stores/selectionStore";
 import { Pipeline } from "@/types";
 
+/** Props fuer den Pipeline-Selektor. */
 interface Props {
   // Pipeline-Definitionen werden von der Pipelines-Seite uebergeben
   pipelines: Pipeline[];
   loading?: boolean;
 }
 
+/**
+ * Pipeline-Selector im AppBar: erlaubt Mehrfachauswahl von Pipeline-Definitionen mit Favoriten.
+ * Die Auswahl wird im selectionStore persistiert und von der Pipelines-Seite genutzt.
+ */
 // Pipeline-Selektor: Mehrfachauswahl von Pipeline-Definitionen mit Favoriten
 export function PipelineSelector({ pipelines, loading }: Props) {
   const { selectedIds, toggle, clear, load } = usePipelineDefStore();

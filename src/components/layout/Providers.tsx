@@ -20,6 +20,11 @@ const queryClient = new QueryClient({
   },
 });
 
+/**
+ * Initialisierungskomponente ohne visuellen Output.
+ * Laedt beim App-Start gespeicherte Einstellungen, Favoriten, Repository-Auswahl
+ * und bootstrapped das Theme sowie den Standalone-Status.
+ */
 function AppInit() {
   const { loadSettings, settings, isConfigured } = useSettingsStore();
   const { loadFavorites, loadPersistedSelection, setRepositories } = useRepositoryStore();
@@ -71,6 +76,10 @@ function AppInit() {
   return null;
 }
 
+/**
+ * Root-Provider-Wrapper: bindet React Query ein und fuehrt die App-Initialisierung durch.
+ * Muss moeglichst weit oben im Komponent-Baum (in layout.tsx) verwendet werden.
+ */
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>

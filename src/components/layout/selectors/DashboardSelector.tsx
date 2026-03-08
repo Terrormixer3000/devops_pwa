@@ -6,6 +6,10 @@ import { SelectionSheet } from "@/components/ui/SelectionSheet";
 import { useRepositoryStore } from "@/lib/stores/repositoryStore";
 import { useDashboardRepoStore } from "@/lib/stores/selectionStore";
 
+/**
+ * Repository-Selektor fuer das Dashboard.
+ * Die Auswahl filtert gleichzeitig PRs und Builds auf der Dashboard-Seite.
+ */
 // Repo-Selektor fuer das Dashboard (Mehrfachauswahl, gilt fuer PRs + Builds)
 export function DashboardSelector() {
   const { repositories, favorites, toggleFavorite } = useRepositoryStore();

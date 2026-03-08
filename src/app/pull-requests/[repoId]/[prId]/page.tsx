@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * PR-Detailseite: Mehrspaltiges Tab-Layout (Uebersicht, Dateien, Kommentare, Commits)
+ * fuer einen einzelnen Pull Request mit Reviewer-Verwaltung, Voting und Merge-Aktion.
+ */
+
 import { useState, use } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -45,10 +50,12 @@ import {
 
 type Tab = "uebersicht" | "dateien" | "kommentare" | "commits";
 
+/** Erstellt einen eindeutigen Schluessel fuer einen Datei-Aenderungseintrag. */
 function getChangeKey(entry: GitChangeEntry): string {
   return `${entry.changeType}::${entry.originalPath || ""}::${entry.item.path}`;
 }
 
+/** PR-Detailseite mit Uebersicht-, Dateien-, Kommentar- und Commit-Tab. */
 export default function PRDetailPage({ params }: { params: Promise<{ repoId: string; prId: string }> }) {
   const { repoId, prId } = use(params);
   const prIdNum = parseInt(prId);
@@ -1069,6 +1076,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
 }
 
 // Vote-Badge Komponente
+/** Badge mit farbigem Hintergrund fuer den Vote-Status eines Reviewers. */
 function VoteBadge({ vote }: { vote: number }) {
   if (vote === 10) return <Badge variant="success">Approved</Badge>;
   if (vote === 5) return <Badge variant="warning">Mit Vorbehalten</Badge>;
@@ -1078,6 +1086,7 @@ function VoteBadge({ vote }: { vote: number }) {
 }
 
 // Aenderungstyp Indikator
+/** Kleiner Farbpunkt fuer den Aenderungstyp einer Datei (Add/Edit/Delete). */
 function ChangeTypeDot({ type }: { type: string }) {
   const map: Record<string, { color: string; label: string }> = {
     add: { color: "text-green-400", label: "A" },
@@ -1090,6 +1099,7 @@ function ChangeTypeDot({ type }: { type: string }) {
 }
 
 // Kommentar-Thread Anzeige
+/** Darstellung eines vollstaendigen Kommentar-Threads mit Antwortfunktion. */
 function CommentThread({
   thread,
   currentUserId,
@@ -1187,6 +1197,7 @@ function CommentThread({
   );
 }
 
+/** Einzelner Kommentar mit Bearbeiten- und Loeschen-Optionen. */
 function CommentItem({
   comment,
   isFirst,

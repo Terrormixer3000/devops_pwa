@@ -4,6 +4,10 @@ import { useEffect } from "react";
 import { X } from "lucide-react";
 import { Drawer } from "vaul";
 
+/**
+ * Bottom-Sheet-Variante ohne Swipe-Handle im Header — gedacht fuer Bestaetigungs-Dialoge
+ * und Aktions-Sheets. Sperrt Body-Scroll solange es geoeffnet ist.
+ */
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -11,6 +15,7 @@ interface Props {
   children: React.ReactNode;
 }
 
+/** Rendert das Modal als vaul-Drawer-Sheet. */
 export function Modal({ open, onClose, title, children }: Props) {
   useEffect(() => {
     if (open) document.body.style.overflow = "hidden";

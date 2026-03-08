@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Neuer-PR-Seite: Formular zum Erstellen eines neuen Pull Requests
+ * mit Repository-, Quell- und Ziel-Branch-Auswahl sowie Titel und Beschreibung.
+ */
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -15,6 +20,7 @@ import { BackLink } from "@/components/ui/BackButton";
 import { IdentityRef } from "@/types";
 import { X, UserPlus, Wand2, GitBranch } from "lucide-react";
 
+/** Formular zum Erstellen eines neuen Pull Requests. */
 export default function NewPRPage() {
   const router = useRouter();
   const { settings } = useSettingsStore();

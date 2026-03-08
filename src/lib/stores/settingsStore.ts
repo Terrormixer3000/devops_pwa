@@ -11,11 +11,15 @@ import {
   useReleaseFavStore,
 } from "@/lib/stores/selectionStore";
 
+/** Zustandsform des Settings-Stores mit Einstellungen und CRUD-Aktionen. */
 interface SettingsState {
   settings: AppSettings | null;
   isConfigured: boolean;
+  /** Setzt neue Einstellungen und persistiert sie im localStorage. */
   setSettings: (settings: AppSettings) => void;
+  /** Setzt alle Einstellungen zurueck und raeumt abhaengige Stores auf. */
   clearSettings: () => void;
+  /** Laedt gespeicherte Einstellungen beim App-Start aus dem localStorage. */
   loadSettings: () => void;
 }
 

@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Work-Items-Seite: Zeigt dem angemeldeten Benutzer zugewiesene Azure Boards Work Items
+ * mit Status-Filter, Typ-Icons und Prioritaets-Labels.
+ */
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
@@ -23,6 +28,7 @@ const STATE_FILTERS: { label: string; values: WorkItemState[] | null }[] = [
   { label: "Alle", values: null },
 ];
 
+/** Gibt das passende Typ-Icon fuer einen Work-Item-Typ zurueck. */
 function workItemTypeIcon(type: string) {
   const t = type?.toLowerCase();
   if (t === "bug") return <Bug size={14} className="text-red-400 flex-shrink-0" />;
@@ -32,6 +38,7 @@ function workItemTypeIcon(type: string) {
   return <CheckSquare size={14} className="text-slate-400 flex-shrink-0" />;
 }
 
+/** Gibt ein farb-codiertes Status-Badge fuer einen Work-Item-Status zurueck. */
 function workItemStateBadge(state: string) {
   if (state === "Active") return <Badge variant="info" size="sm">Aktiv</Badge>;
   if (state === "New") return <Badge variant="muted" size="sm">Neu</Badge>;
@@ -40,6 +47,7 @@ function workItemStateBadge(state: string) {
   return <Badge variant="muted" size="sm">{state}</Badge>;
 }
 
+/** Zeigt ein kurzes Prioritaets-Label (P1/P2/P3) an, wenn ein Prioritaetswert vorhanden ist. */
 function priorityLabel(priority?: number) {
   if (priority === 1) return <span className="text-[10px] text-red-400 font-medium">P1</span>;
   if (priority === 2) return <span className="text-[10px] text-yellow-400 font-medium">P2</span>;
@@ -47,6 +55,7 @@ function priorityLabel(priority?: number) {
   return null;
 }
 
+/** Haupt-Seite fuer Work Items mit Status-Filter-Tabs. */
 export default function WorkItemsPage() {
   const [filterIdx, setFilterIdx] = useState(0);
   const { settings } = useSettingsStore();
@@ -129,6 +138,7 @@ export default function WorkItemsPage() {
   );
 }
 
+/** Einzelne Work-Item-Zeile mit Typ, Titel, Status und Prioritaet. */
 function WorkItemRow({ item }: { item: WorkItem }) {
   const title = item.fields["System.Title"];
   const state = item.fields["System.State"];

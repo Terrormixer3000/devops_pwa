@@ -4,6 +4,10 @@ import { GitBranch } from "lucide-react";
 import { SelectionSheet } from "@/components/ui/SelectionSheet";
 import { useRepositoryStore } from "@/lib/stores/repositoryStore";
 
+/**
+ * Repository-Selektor fuer den Code-Explorer.
+ * Im Gegensatz zu anderen Selektoren erlaubt er nur Einfachauswahl.
+ */
 // Repo-Selektor fuer den Code Explorer (Einfachauswahl)
 export function CodeRepoSelector() {
   const { repositories, favorites, toggleFavorite, setSingleRepo, clearSelection, selectedRepositories } =

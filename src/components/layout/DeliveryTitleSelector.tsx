@@ -4,15 +4,21 @@ import { useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { SelectionSheet, type SelectionItem } from "@/components/ui/SelectionSheet";
 
+/** Props fuer den Delivery-Titelschalter. */
 interface Props {
   current: "pipelines" | "releases";
 }
 
+/** Moegl. Delivery-Bereiche mit Ziel-URL. */
 const OPTIONS = [
   { key: "pipelines", label: "Pipelines", href: "/pipelines" },
   { key: "releases", label: "Releases", href: "/releases" },
 ] as const;
 
+/**
+ * Dropdown-Schalter im AppBar-Titel der zwischen Pipelines und Releases wechselt.
+ * Nutzt das SelectionSheet als Auswahl-Overlay.
+ */
 export function DeliveryTitleSelector({ current }: Props) {
   const router = useRouter();
   const currentOption = OPTIONS.find((option) => option.key === current) ?? OPTIONS[0];

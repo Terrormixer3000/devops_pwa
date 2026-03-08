@@ -2,10 +2,12 @@
 
 import { ReactNode } from "react";
 
+/** Props fuer den Markdown-Viewer. */
 interface Props {
   content: string;
 }
 
+/** Prueft ob eine Zeile den Beginn eines Block-Level-Elements darstellt. */
 function isBlockStart(line: string): boolean {
   const trimmed = line.trim();
   return (
@@ -18,6 +20,10 @@ function isBlockStart(line: string): boolean {
   );
 }
 
+/**
+ * Parst Inline-Markdown (Links, Fettdruck, Kursiv, Inline-Code) und gibt
+ * eine Liste von React-Nodes zurueck.
+ */
 function renderInline(text: string, keyPrefix: string): ReactNode[] {
   const tokenRegex = /(\[[^\]]+\]\([^)]+\)|`[^`]+`|\*\*[^*]+\*\*|__[^_]+__|\*[^*\n]+\*|_[^_\n]+_)/g;
   const nodes: ReactNode[] = [];

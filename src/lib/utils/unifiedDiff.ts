@@ -1,5 +1,7 @@
+/** Herkunft einer Zeile im Unified-Diff. */
 export type UnifiedDiffOrigin = "context" | "add" | "delete";
 
+/** Einzelne Zeile im berechneten Diff mit Zeilennummern. */
 export interface UnifiedDiffLine {
   origin: UnifiedDiffOrigin;
   line: string;
@@ -7,8 +9,10 @@ export interface UnifiedDiffLine {
   newLineNumber?: number;
 }
 
+// Schwellenwert: LCS-Matrix ueberschreitet diese Zellen-Anzahl → Fallback-Diff
 const MAX_MATRIX_CELLS = 120_000;
 
+/** Normalisiert einen Textinhalt zu einer Zeilenliste ohne abschliessende Leerzeile. */
 function toLines(text: string): string[] {
   if (!text) return [];
   const normalized = text.replace(/\r/g, "");
@@ -19,6 +23,10 @@ function toLines(text: string): string[] {
   return split;
 }
 
+/**
+ * Einfacher Fallback-Diff fuer sehr grosse Dateien (zeilenweiser Vergleich ohne LCS).
+ * Wird verwendet wenn die LCS-Matrix {@link MAX_MATRIX_CELLS} Eintraege ueberschreiten wuerde.
+ */
 function buildFallbackDiff(oldLines: string[], newLines: string[]): UnifiedDiffLine[] {
   const rows: UnifiedDiffLine[] = [];
   let oldLineNumber = 1;
@@ -45,6 +53,15 @@ function buildFallbackDiff(oldLines: string[], newLines: string[]): UnifiedDiffL
   return rows;
 }
 
+/**
+ * Berechnet einen Unified-Diff zwischen zwei Textinhalten mithilfe des
+ * Longest-Common-Subsequence (LCS)-Algorithmus.
+ *
+ * - Bei leeren Inhalten wird ein leeres Array zurueckgegeben.
+ * - Bei sehr grossen Dateien greift ein vereinfachter Fallback-Diff.
+ * - Gibt eine flache Liste aller Zeilen mit Origin (context/add/delete)
+ *   und Zeilennummern zurueck.
+ */
 export function buildUnifiedDiff(oldContent: string, newContent: string): UnifiedDiffLine[] {
   const oldLines = toLines(oldContent);
   const newLines = toLines(newContent);

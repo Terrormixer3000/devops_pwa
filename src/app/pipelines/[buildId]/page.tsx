@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Build-Detail-Seite: Zeigt den vollstaendigen Build-Verlauf (Timeline) mit Stages,
+ * Tasks, Logs und Artefakten. The Timeline-Hierarchie wird per DFS-Traversal aufgebaut.
+ */
+
 import { use, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -124,6 +129,7 @@ const STATUS_META: Record<TimelineStatus, StatusMeta> = {
   },
 };
 
+/** Detailseite fuer einen einzelnen Build mit Abbruch-Option und Log-Darstellung. */
 export default function BuildDetailPage({ params }: { params: Promise<{ buildId: string }> }) {
   const { buildId } = use(params);
   const buildIdNum = parseInt(buildId);
@@ -398,6 +404,7 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
   );
 }
 
+/** Zusammenfassungskarten pro Stage/Status der Build-Timeline. */
 function JobsSummaryCards({ summary }: { summary: TimelineSummary }) {
   return (
     <div className="grid grid-cols-2 gap-2">
@@ -418,6 +425,7 @@ function JobsSummaryCards({ summary }: { summary: TimelineSummary }) {
   );
 }
 
+/** Abschnitt einer einzelnen Stage mit aufklappbaren Aufgaben. */
 function TimelineNodeSection({
   node,
   depth,
@@ -434,6 +442,7 @@ function TimelineNodeSection({
   return <TimelineGroupNode node={node} depth={depth} onOpenLog={onOpenLog} />;
 }
 
+/** Gruppenknoten (Stage oder Job) in der Timeline-Hierarchie. */
 function TimelineGroupNode({
   node,
   depth,
@@ -511,6 +520,7 @@ function TimelineGroupNode({
   );
 }
 
+/** Einzelne Task-Zeile in der Timeline mit Status-Icon und Log-Link. */
 function TimelineTaskRow({
   node,
   depth,
@@ -557,6 +567,7 @@ function TimelineTaskRow({
   );
 }
 
+/** Baut die hierarchische Timeline-Ansicht aus den flachen `TimelineRecord`-Eintraegen auf. */
 function buildTimelineView(records: TimelineRecord[]): TimelineView {
   if (records.length === 0) {
     return {
@@ -592,6 +603,7 @@ function buildTimelineView(records: TimelineRecord[]): TimelineView {
   };
 }
 
+/** Gruppiert Timeline-Records nach ihrer `parentId`. */
 function groupChildren(records: TimelineRecord[]): Map<string, TimelineRecord[]> {
   const map = new Map<string, TimelineRecord[]>();
   records.forEach((record) => {
@@ -608,6 +620,7 @@ function groupChildren(records: TimelineRecord[]): Map<string, TimelineRecord[]>
   return map;
 }
 
+/** Gibt die Root-Records (ohne Parent) aus einem Record-Set zurueck. */
 function pickRootRecords(records: TimelineRecord[]): TimelineRecord[] {
   const stageRoots = sortRecords(records.filter((record) => record.type === "Stage"));
   if (stageRoots.length > 0) return stageRoots;
@@ -625,10 +638,12 @@ function pickRootRecords(records: TimelineRecord[]): TimelineRecord[] {
   return sortRecords(records.filter((record) => !record.parentId));
 }
 
+/** Sortiert Records nach ihrer `order`-Eigenschaft. */
 function sortRecords(records: TimelineRecord[]): TimelineRecord[] {
   return [...records].sort((left, right) => (left.order || 0) - (right.order || 0));
 }
 
+/** Transformiert einen einzelnen Record rekursiv in einen `TimelineViewNode`. */
 function buildNode(record: TimelineRecord, childrenMap: Map<string, TimelineRecord[]>): TimelineViewNode {
   const children = (childrenMap.get(record.id) || []).map((child) => buildNode(child, childrenMap));
   const stats = computeStats(record, children);
@@ -645,6 +660,7 @@ function buildNode(record: TimelineRecord, childrenMap: Map<string, TimelineReco
   };
 }
 
+/** Berechnet aggregierte Statistiken (Counts, Dauer) fuer einen Node und seine Kinder. */
 function computeStats(record: TimelineRecord, children: TimelineViewNode[]): TimelineStats {
   if (record.type === "Task") {
     const status = getRecordStatus(record);
@@ -662,6 +678,7 @@ function computeStats(record: TimelineRecord, children: TimelineViewNode[]): Tim
   return children.reduce((stats, child) => mergeStats(stats, child.stats), EMPTY_STATS);
 }
 
+/** Kombiniert zwei `TimelineStats`-Objekte zu einem. */
 function mergeStats(left: TimelineStats, right: TimelineStats): TimelineStats {
   return {
     totalTasks: left.totalTasks + right.totalTasks,
@@ -674,6 +691,7 @@ function mergeStats(left: TimelineStats, right: TimelineStats): TimelineStats {
   };
 }
 
+/** Berechnet den aggregierten Status eines Nodes aus seinen Kindern. */
 function resolveStatus(
   record: TimelineRecord,
   children: TimelineViewNode[],
@@ -693,6 +711,7 @@ function resolveStatus(
   return ownStatus;
 }
 
+/** Berechnet den Fortschrittsprozentsatz eines Nodes anhand der Kind-Statistiken. */
 function resolveProgress(
   record: TimelineRecord,
   status: TimelineStatus,
@@ -713,6 +732,7 @@ function resolveProgress(
   return 100;
 }
 
+/** Leitet den `TimelineStatus` direkt aus einem einzelnen Record ab. */
 function getRecordStatus(record: TimelineRecord): TimelineStatus {
   const state = normalizeState(record.state);
   const result = normalizeState(record.result);
@@ -726,10 +746,12 @@ function getRecordStatus(record: TimelineRecord): TimelineStatus {
   return "pending";
 }
 
+/** Normalisiert einen State-String (lowercase trim). */
 function normalizeState(input?: string): string {
   return (input || "").replace(/\s+/g, "").toLowerCase();
 }
 
+/** Extrahiert die numerische Log-ID aus der Log-URL eines Records. */
 function parseLogId(record: TimelineRecord): number | null {
   const token = record.log?.url?.split("/").pop();
   if (!token) return null;
@@ -737,6 +759,7 @@ function parseLogId(record: TimelineRecord): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+/** Berechnet die Ausfuehrungs-Dauer eines Records in Sekunden. */
 function getDurationSeconds(record: TimelineRecord): number | null {
   if (!record.startTime || !record.finishTime) return null;
   const seconds =
@@ -745,10 +768,12 @@ function getDurationSeconds(record: TimelineRecord): number | null {
   return Math.max(0, Math.round(seconds));
 }
 
+/** Gibt alle Leaf-Nodes aus einer Timeline-Hierarchie als flache Liste zurueck. */
 function flattenNodes(nodes: TimelineViewNode[]): TimelineViewNode[] {
   return nodes.flatMap((node) => [node, ...flattenNodes(node.children)]);
 }
 
+/** Formatiert Sekunden als lesbare Dauer (z.B. `1m 23s`). */
 function formatDuration(durationSeconds: number): string {
   if (durationSeconds < 60) return `${durationSeconds}s`;
   const minutes = Math.floor(durationSeconds / 60);

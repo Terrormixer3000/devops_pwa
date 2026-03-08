@@ -4,6 +4,7 @@ import { isDemoClient } from "@/lib/api/client";
 import { demoApi } from "@/lib/mocks/demoData";
 
 export const releasesService = {
+  /** Gibt alle Release-Pipeline-Definitionen eines Projekts zurueck. */
   async listDefinitions(
     vsrmClient: AxiosInstance,
     project: string
@@ -18,6 +19,7 @@ export const releasesService = {
     return res.data.value;
   },
 
+  /** Gibt eine einzelne Release-Pipeline-Definition inkl. Umgebungsstufen zurueck. */
   async getDefinition(
     vsrmClient: AxiosInstance,
     project: string,
@@ -33,6 +35,11 @@ export const releasesService = {
     return res.data;
   },
 
+  /**
+   * Gibt die letzten Release-Instanzen zurueck.
+   * @param definitionId Optionaler Filter nach Pipeline-Definition
+   * @param top Maximale Anzahl (Standard: 20)
+   */
   async listReleases(
     vsrmClient: AxiosInstance,
     project: string,
@@ -51,6 +58,7 @@ export const releasesService = {
     return res.data.value;
   },
 
+  /** Gibt einen einzelnen Release inkl. aller Umgebungsstatus zurueck. */
   async getRelease(
     vsrmClient: AxiosInstance,
     project: string,
@@ -66,6 +74,7 @@ export const releasesService = {
     return res.data;
   },
 
+  /** Erstellt einen neuen Release aus einer Pipeline-Definition. */
   async createRelease(
     vsrmClient: AxiosInstance,
     project: string,
@@ -88,6 +97,10 @@ export const releasesService = {
     return res.data;
   },
 
+  /**
+   * Gibt ausstehende Release-Approvals zurueck.
+   * @param assignedToFilter Optional: nur Approvals fuer diesen Benutzer
+   */
   async getPendingApprovals(
     vsrmClient: AxiosInstance,
     project: string,
@@ -105,6 +118,7 @@ export const releasesService = {
     return res.data.value;
   },
 
+  /** Genehmigt eine ausstehende Release-Approval. */
   async approveRelease(
     vsrmClient: AxiosInstance,
     project: string,
@@ -122,6 +136,7 @@ export const releasesService = {
     return res.data;
   },
 
+  /** Lehnt eine ausstehende Release-Approval ab. */
   async rejectApproval(
     vsrmClient: AxiosInstance,
     project: string,
@@ -139,6 +154,7 @@ export const releasesService = {
     return res.data;
   },
 
+  /** Gibt den kombinierten Deploy-Log einer Umgebungsstufe als Text zurueck. */
   async getEnvironmentLogs(
     vsrmClient: AxiosInstance,
     project: string,

@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * Release-Detailseite: Zeigt alle Umgebungen eines Releases mit Status,
+ * Artefakten und Genehmigungsaktionen.
+ */
+
+/**
+ * Release-Detailseite: Zeigt alle Umgebungen eines Releases mit Status,
+ * Artefakten und Genehmigungsaktionen.
+ */
+
 import { use, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
@@ -17,6 +27,7 @@ import { releasesService } from "@/lib/services/releasesService";
 import { ReleaseEnvironment, ReleaseApproval } from "@/types";
 import { CheckCircle, XCircle, Clock, Loader, ThumbsUp, ThumbsDown, ScrollText } from "lucide-react";
 
+/** Detailseite fuer ein einzelnes Release mit Umgebungs-Karten und Approval-Dialog. */
 export default function ReleaseDetailPage({ params }: { params: Promise<{ releaseId: string }> }) {
   const { releaseId } = use(params);
   const releaseIdNum = parseInt(releaseId);
@@ -196,6 +207,7 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
 }
 
 // Umgebungskarte mit Status und Deploy-Schritten
+/** Karte fuer eine einzelne Release-Umgebung mit Status und Genehmigungsschaltflaeche. */
 function EnvironmentCard({ env, onApprove }: { env: ReleaseEnvironment; onApprove: (approval: ReleaseApproval) => void }) {
   const variants: Record<string, "success" | "danger" | "info" | "muted" | "warning"> = {
     succeeded: "success",
@@ -270,6 +282,7 @@ function EnvironmentCard({ env, onApprove }: { env: ReleaseEnvironment; onApprov
 }
 
 // Deploy-Status-Icon
+/** Status-Icon fuer den Deployment-Status einer Umgebung. */
 function DeployStatusIcon({ status }: { status: string }) {
   if (status === "inProgress") return <Loader size={12} className="text-blue-400 animate-spin" />;
   if (status === "succeeded") return <CheckCircle size={12} className="text-green-400" />;

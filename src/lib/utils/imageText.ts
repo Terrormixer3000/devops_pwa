@@ -1,3 +1,8 @@
+/**
+ * Erzeugt eine lesbare Text-Darstellung eines Base64-Bildes fuer
+ * KI-Kontexte oder Debug-Ausgaben.
+ * Gibt Header, base64_length und einen gekuerzten Datei-Vorschau-Block zurueck.
+ */
 export function buildImageTextRepresentation(
   dataUrl: string | null | undefined,
   label?: string

@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Dashboard-Seite: Zeigt eine kompakte Zusammenfassung aller aktiven PRs,
+ * laufenden Pipelines und Highlights aus den konfigurierten Repositories.
+ */
+
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { AppBar } from "@/components/layout/AppBar";
@@ -25,6 +30,7 @@ import {
   FolderGit2,
 } from "lucide-react";
 
+/** Startseite der App mit PR-, Pipeline- und Repository-Zusammenfassung. */
 export default function DashboardPage() {
   const { isConfigured } = useSettingsStore();
   const { repositories } = useRepositoryStore();
@@ -198,6 +204,7 @@ export default function DashboardPage() {
 }
 
 // Schnelllink-Kachel Komponente
+/** Navigationskarte zu einem Bereich mit optionalem Badge-Counter. */
 function QuickLink({ href, icon, label, count }: { href: string; icon: React.ReactNode; label: string; count?: number }) {
   return (
     <Link
@@ -218,6 +225,7 @@ function QuickLink({ href, icon, label, count }: { href: string; icon: React.Rea
 }
 
 // Build-Status Indikator
+/** Farbiger Indikator-Punkt fuer den Build-Status. */
 function BuildStatusDot({ status }: { status: string }) {
   const colorMap: Record<string, string> = {
     succeeded: "bg-green-400",

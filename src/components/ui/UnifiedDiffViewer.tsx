@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { buildUnifiedDiff } from "@/lib/utils/unifiedDiff";
 
+/** Props fuer den Unified-Diff-Viewer. */
 interface Props {
   title: string;
   oldContent: string;
@@ -15,6 +16,11 @@ interface Props {
   emptyMessage?: string;
 }
 
+/**
+ * Stellt einen Unified-Diff zweier Texte als Zeilen-Tabelle dar.
+ * Hinzugefuegte Zeilen werden gruen, geloeschte rot markiert.
+ * Zaehlt Hinzufuegungen und Loeschungen und zeigt sie im Header an.
+ */
 export function UnifiedDiffViewer({
   title,
   oldContent,

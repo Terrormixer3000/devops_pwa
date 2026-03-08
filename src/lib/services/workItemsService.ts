@@ -3,6 +3,7 @@ import { WorkItem, AzureListResponse } from "@/types";
 import { isDemoClient } from "@/lib/api/client";
 import { demoApi } from "@/lib/mocks/demoData";
 
+/** Typdefinition fuer das Ergebnis einer WIQL-Abfrage (nur IDs und URLs). */
 interface WiqlResult {
   workItems: Array<{ id: number; url: string }>;
 }
@@ -38,6 +39,10 @@ export const workItemsService = {
     return workItemsService.getWorkItemsBatch(client, project, ids);
   },
 
+  /**
+   * Laedt mehrere Work Items anhand ihrer IDs in einem Batch-Request.
+   * Effizienter als einzelne Get-Aufrufe bei mehr als einem Work Item.
+   */
   async getWorkItemsBatch(
     client: AxiosInstance,
     project: string,
@@ -66,6 +71,7 @@ export const workItemsService = {
     return res.data.value;
   },
 
+  /** Gibt ein einzelnes Work Item vollstaendig (inkl. Relations) zurueck. */
   async getWorkItem(
     client: AxiosInstance,
     project: string,

@@ -1,4 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+
+/**
+ * Webhook-Route fuer Azure DevOps Service Hooks.
+ * Empfaengt Events (Build, PR, Release), uebersetzt sie in Push-Benachrichtigungen
+ * und sendet sie an alle berechtigten Abonnenten.
+ * Auth: Query-Parameter `?t=<webhookToken>` (pro Nutzer, 256-Bit-Entropie).
+ */
 import { dedupeSubscriptionsByEndpoint, normalizeText } from "@/lib/server/pushRouteUtils";
 import { getSubscriptionByToken, getSubscriptionsForUsers, removeSubscription } from "@/lib/server/subscriptionDb";
 import {
@@ -11,6 +18,7 @@ import type { AzureServiceHookPayload, WebhookNotificationPayload } from "@/type
 
 export const runtime = "nodejs";
 
+/** Extrahiert den Organisations-Namen aus einer Azure-DevOps-Basis-URL. */
 function extractOrgFromBaseUrl(baseUrl: string): string {
   try {
     const parsed = new URL(baseUrl);
@@ -27,6 +35,7 @@ function extractOrgFromBaseUrl(baseUrl: string): string {
   return "";
 }
 
+/** Extrahiert den Projekt-Namen aus einer Azure-DevOps-Basis-URL. */
 function extractProjectFromBaseUrl(baseUrl: string): string {
   try {
     const parsed = new URL(baseUrl);
@@ -150,11 +159,13 @@ function buildNotification(payload: AzureServiceHookPayload): WebhookNotificatio
   }
 }
 
+/** Gibt eindeutige, nicht-leere IDs aus einem Array von optionalen Strings zurueck. */
 function uniqueIds(values: Array<string | undefined>): string[] {
   const normalized = values.map((value) => normalizeText(value)).filter(Boolean);
   return [...new Set(normalized)];
 }
 
+/** Leitet anhand des Event-Typs die Ziel-Benutzer-IDs ab, die benachrichtigt werden sollen. */
 function getTargetAzureUserIds(payload: AzureServiceHookPayload): string[] {
   const { eventType, resource } = payload;
 
