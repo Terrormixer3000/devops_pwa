@@ -11,6 +11,7 @@ import { AppBar } from "@/components/layout/AppBar";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Badge } from "@/components/ui/Badge";
+import { BuildStatusDot } from "@/components/ui/BuildStatusIndicator";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { PullRequest } from "@/types";
 import { useRepositoryStore } from "@/lib/stores/repositoryStore";
@@ -224,17 +225,4 @@ function QuickLink({ href, icon, label, count }: { href: string; icon: React.Rea
   );
 }
 
-// Build-Status Indikator
-/** Farbiger Indikator-Punkt fuer den Build-Status. */
-function BuildStatusDot({ status }: { status: string }) {
-  const colorMap: Record<string, string> = {
-    succeeded: "bg-green-400",
-    failed: "bg-red-400",
-    canceled: "bg-slate-500",
-    inProgress: "bg-blue-400 animate-pulse",
-    partiallySucceeded: "bg-yellow-400",
-    none: "bg-slate-600",
-  };
-  const color = colorMap[status] || "bg-slate-600";
-  return <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${color}`} />;
-}
+// BuildStatusDot is now imported from @/components/ui/BuildStatusIndicator

@@ -38,10 +38,10 @@ interface BackLinkProps extends Omit<LinkProps, "href"> {
   size?: BackButtonSize;
 }
 
-/** Navigationslink der als Zurueck-Button dargestellt wird. */
+/** Navigationslink der als Zurück-Button dargestellt wird. */
 export function BackLink({
   href,
-  label = "Zurueck",
+  label = "Zurück",
   className = "",
   size = "default",
   ...props
@@ -66,9 +66,9 @@ interface BackActionButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> 
   size?: BackButtonSize;
 }
 
-/** Klick-Button der als Zurueck-Button dargestellt wird (kein href, kein Router-Push). */
+/** Klick-Button der als Zurück-Button dargestellt wird (kein href, kein Router-Push). */
 export function BackActionButton({
-  label = "Zurueck",
+  label = "Zurück",
   className = "",
   iconOnly = false,
   size = "default",
@@ -78,7 +78,7 @@ export function BackActionButton({
     <button
       type="button"
       className={`${baseClasses(size, iconOnly)} ${className}`}
-      aria-label={iconOnly ? "Zurueck" : undefined}
+      aria-label={iconOnly ? "Zurück" : undefined}
       {...props}
     >
       <ChevronLeft size={sizeStyles[size].icon} />

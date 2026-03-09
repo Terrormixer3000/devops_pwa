@@ -5,6 +5,7 @@ import { Rocket } from "lucide-react";
 import { SelectionSheet, SelectionItem } from "@/components/ui/SelectionSheet";
 import { useReleaseDefStore, useReleaseFavStore } from "@/lib/stores/selectionStore";
 import { ReleaseDefinition } from "@/types";
+import { selectionLabel } from "@/lib/utils/selectionLabel";
 
 /** Props fuer den Release-Selektor. */
 interface Props {
@@ -32,12 +33,12 @@ export function ReleaseSelector({ definitions, loading }: Props) {
   }));
 
   // Label: Zusammenfassung der ausgewaehlten Release-Pipelines
-  const buttonLabel =
-    selectedIds.length === 0
-      ? "Alle Releases"
-      : selectedIds.length === 1
-      ? (definitions.find((d) => String(d.id) === selectedIds[0])?.name ?? "1 Pipeline")
-      : `${selectedIds.length} Pipelines`;
+  const buttonLabel = selectionLabel(
+    selectedIds,
+    "Alle Releases",
+    definitions.find((d) => String(d.id) === selectedIds[0])?.name,
+    `${selectedIds.length} Pipelines`,
+  );
 
   return (
     <SelectionSheet

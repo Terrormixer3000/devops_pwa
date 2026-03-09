@@ -12,27 +12,26 @@
 
 import { use, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { formatDistanceToNow } from "date-fns";
-import { de } from "date-fns/locale";
 import { AppBar } from "@/components/layout/AppBar";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Modal } from "@/components/ui/Modal";
+import { TabBar } from "@/components/ui/TabBar";
+import { ApprovalModal } from "@/components/ui/ApprovalModal";
 import { BackLink } from "@/components/ui/BackButton";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { useAzureClient } from "@/lib/hooks/useAzureClient";
 import { releasesService } from "@/lib/services/releasesService";
 import { ReleaseEnvironment, ReleaseApproval } from "@/types";
-import { CheckCircle, XCircle, Clock, Loader, ThumbsUp, ThumbsDown, ScrollText } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Loader, ThumbsUp, ScrollText } from "lucide-react";
+import { timeAgo } from "@/lib/utils/timeAgo";
 
 /** Detailseite fuer ein einzelnes Release mit Umgebungs-Karten und Approval-Dialog. */
 export default function ReleaseDetailPage({ params }: { params: Promise<{ releaseId: string }> }) {
   const { releaseId } = use(params);
   const releaseIdNum = parseInt(releaseId);
   const [approvalModal, setApprovalModal] = useState<ReleaseApproval | null>(null);
-  const [approvalComment, setApprovalComment] = useState("");
   const [approveError, setApproveError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"umgebungen" | "logs">("umgebungen");
   const [selectedEnvId, setSelectedEnvId] = useState<number | null>(null);
@@ -53,16 +52,15 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
 
   // Approval erteilen
   const approveMutation = useMutation({
-    mutationFn: ({ id, approve }: { id: number; approve: boolean }) =>
+    mutationFn: ({ id, approve, comment }: { id: number; approve: boolean; comment: string }) =>
       vsrmClient && settings
         ? approve
-          ? releasesService.approveRelease(vsrmClient, settings.project, id, approvalComment)
-          : releasesService.rejectApproval(vsrmClient, settings.project, id, approvalComment)
+          ? releasesService.approveRelease(vsrmClient, settings.project, id, comment)
+          : releasesService.rejectApproval(vsrmClient, settings.project, id, comment)
         : Promise.reject("Kein Client"),
     onSuccess: () => {
       setApproveError(null);
       setApprovalModal(null);
-      setApprovalComment("");
       qc.invalidateQueries({ queryKey: ["release", releaseIdNum] });
       qc.invalidateQueries({ queryKey: ["release-approvals"] });
     },
@@ -95,7 +93,7 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
         <h1 className="text-base font-semibold text-slate-100 mb-1">{release.name}</h1>
         <p className="text-xs text-slate-500">{release.releaseDefinition.name}</p>
         <p className="text-xs text-slate-600 mt-1">
-          {release.createdBy.displayName} · {formatDistanceToNow(new Date(release.createdOn), { addSuffix: true, locale: de })}
+          {release.createdBy.displayName} · {timeAgo(release.createdOn)}
         </p>
         {release.description && (
           <p className="text-sm text-slate-300 mt-2">{release.description}</p>
@@ -103,22 +101,16 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
       </div>
 
       {/* Tab-Leiste */}
-      <div className="sticky-below-appbar bg-slate-900/95 backdrop-blur-md border-b border-slate-800">
-        <div className="flex px-4">
-          {(["umgebungen", "logs"] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab ? "border-blue-500 text-blue-400" : "border-transparent text-slate-500 hover:text-slate-300"
-              }`}
-            >
-              {tab === "umgebungen" ? <CheckCircle size={14} /> : <ScrollText size={14} />}
-              {tab === "umgebungen" ? "Umgebungen" : "Logs"}
-            </button>
-          ))}
-        </div>
-      </div>
+      <TabBar
+        tabs={[
+          { key: "umgebungen", label: "Umgebungen", icon: <CheckCircle size={14} /> },
+          { key: "logs", label: "Logs", icon: <ScrollText size={14} /> },
+        ]}
+        activeKey={activeTab}
+        onChange={(key) => setActiveTab(key as "umgebungen" | "logs")}
+        variant="underline"
+        className="sticky-below-appbar"
+      />
 
       {/* Tab-Inhalt: Umgebungen */}
       {activeTab === "umgebungen" && (
@@ -157,7 +149,7 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
           {selectedEnvId && !logsLoading && deployLogs && (
             <div className="bg-slate-900 rounded-xl border border-slate-700/60 overflow-auto">
               <pre className="p-3 text-xs font-mono text-slate-300 leading-relaxed whitespace-pre-wrap">
-                {deployLogs || "Keine Logs verfuegbar"}
+                {deployLogs || "Keine Logs verfügbar"}
               </pre>
             </div>
           )}
@@ -165,43 +157,19 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
       )}
 
       {/* Approval Modal */}
-      <Modal open={!!approvalModal} onClose={() => { setApprovalModal(null); setApproveError(null); }} title="Approval erteilen">
-        <div className="space-y-4">
-          {approvalModal && (
-            <p className="text-sm text-slate-300">
-              {release.name} → {approvalModal.releaseEnvironmentReference?.name || "Environment"}
-            </p>
-          )}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-400">Kommentar (optional)</label>
-            <textarea
-              value={approvalComment}
-              onChange={(e) => setApprovalComment(e.target.value)}
-              rows={2}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-blue-500 resize-none"
-            />
-          </div>
-          {approveError && (
-            <p className="text-sm text-red-400">{approveError}</p>
-          )}
-          <Button
-            fullWidth
-            loading={approveMutation.isPending}
-            onClick={() => approvalModal && approveMutation.mutate({ id: approvalModal.id, approve: true })}
-          >
-            <ThumbsUp size={16} /> Approven
-          </Button>
-          <Button
-            fullWidth
-            variant="danger"
-            loading={approveMutation.isPending}
-            onClick={() => approvalModal && approveMutation.mutate({ id: approvalModal.id, approve: false })}
-          >
-            <ThumbsDown size={16} /> Ablehnen
-          </Button>
-          <Button fullWidth variant="ghost" onClick={() => { setApprovalModal(null); setApproveError(null); }}>Abbrechen</Button>
-        </div>
-      </Modal>
+      <ApprovalModal
+        open={!!approvalModal}
+        approval={approvalModal ? {
+          id: approvalModal.id,
+          releaseName: release.name,
+          environmentName: approvalModal.releaseEnvironmentReference?.name || "Environment",
+        } : null}
+        isPending={approveMutation.isPending}
+        error={approveError}
+        onApprove={(id, comment) => approveMutation.mutate({ id, approve: true, comment })}
+        onReject={(id, comment) => approveMutation.mutate({ id, approve: false, comment })}
+        onClose={() => { setApprovalModal(null); setApproveError(null); }}
+      />
     </div>
   );
 }
@@ -270,7 +238,7 @@ function EnvironmentCard({ env, onApprove }: { env: ReleaseEnvironment; onApprov
               <span>{step.status}</span>
               {step.completedOn && (
                 <span className="ml-auto text-slate-600">
-                  {formatDistanceToNow(new Date(step.completedOn), { addSuffix: true, locale: de })}
+                  {timeAgo(step.completedOn)}
                 </span>
               )}
             </div>

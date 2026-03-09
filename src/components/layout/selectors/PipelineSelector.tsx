@@ -5,6 +5,7 @@ import { PlayCircle } from "lucide-react";
 import { SelectionSheet, SelectionItem } from "@/components/ui/SelectionSheet";
 import { usePipelineDefStore, usePipelineFavStore } from "@/lib/stores/selectionStore";
 import { Pipeline } from "@/types";
+import { selectionLabel } from "@/lib/utils/selectionLabel";
 
 /** Props fuer den Pipeline-Selektor. */
 interface Props {
@@ -32,12 +33,12 @@ export function PipelineSelector({ pipelines, loading }: Props) {
   }));
 
   // Label: Zusammenfassung der ausgewaehlten Pipelines
-  const buttonLabel =
-    selectedIds.length === 0
-      ? "Alle Pipelines"
-      : selectedIds.length === 1
-      ? (pipelines.find((p) => String(p.id) === selectedIds[0])?.name ?? "1 Pipeline")
-      : `${selectedIds.length} Pipelines`;
+  const buttonLabel = selectionLabel(
+    selectedIds,
+    "Alle Pipelines",
+    pipelines.find((p) => String(p.id) === selectedIds[0])?.name,
+    `${selectedIds.length} Pipelines`,
+  );
 
   return (
     <SelectionSheet
