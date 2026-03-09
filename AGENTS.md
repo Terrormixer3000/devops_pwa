@@ -23,7 +23,8 @@
 - Shared domain and API types live in `src/types/index.ts`.
 - Demo/mock state lives in `src/lib/mocks/demoData.ts`.
 - Static files and PWA assets live in `public/`.
-- Note: `src/components/pipelines`, `src/components/pr`, `src/components/releases`, `src/components/explorer`, `src/components/repos` and `src/app/repositories` do not exist; do not recreate them unless adding actual files.
+- Domain-specific sub-components live in `src/components/pipelines`, `src/components/pr`, `src/components/explorer`, and `src/components/settings`.
+- Note: `src/components/releases`, `src/components/repos` and `src/app/repositories` do not exist; do not recreate them unless adding actual files.
 
 ## Tooling Snapshot
 - Package manager: `npm`.
@@ -142,7 +143,7 @@
 ## Text, Language, And Comments
 - Existing user-facing copy is primarily German.
 - Keep new UI text consistent with the surrounding screen language.
-- Prefer ASCII in edited files; the repo often uses transliterations such as `ae`, `oe`, and `ue`.
+- Use real umlauts (ö, ä, ü, Ö, Ä, Ü) in all user-facing display strings. Transliterations (`oe`, `ae`, `ue`) may still appear in code identifiers, comments, and older files — do not change those unless the task explicitly targets them.
 - Add comments only when behavior is non-obvious, platform-specific, or easy to break.
 
 ## Services And API Calls
@@ -161,14 +162,57 @@
 - Webhook auth uses per-user token `?t=<webhookToken>` only. There is no global `WEBHOOK_SECRET`.
 - Changes to push, service worker, or API route code should always be validated with `npm run lint && npm run build`.
 
+## Shared Utilities (`src/lib/utils/`)
+- `timeAgo.ts` — relative time formatting ("vor 3 Min.")
+- `gitUtils.ts` — branch display helpers (shortBranchName, branchIcon)
+- `selectionLabel.ts` — summary label for multi-select states
+- `buildStatus.ts` — `getBuildStatusVariant` / `getBuildStatusLabel` helpers
+- `timelineUtils.ts` — all pipeline timeline types, constants, and pure functions (`buildTimelineView`, `formatDuration`, etc.)
+- `fileTypes.ts`, `imageText.ts`, `unifiedDiff.ts`, `errorUtils.ts` — existing utilities, unchanged
+
+## Shared Hooks (`src/lib/hooks/`)
+- `useCurrentUser.ts` — loads the Azure DevOps current user once; used on pages that need the GUID
+- `usePushState.ts` — bundles push support/permission/subscription state + `refresh()`; replaces manual push `useEffect` blocks on settings, push-setup, and push-test pages
+- `useRepoExplorer.ts` — all state, queries, and handlers for the explorer page
+- `usePRDetail.ts` — all state, queries, mutations, and computed values for the PR detail page; returns an `h` object consumed by the page and its sub-components
+- `useAzureClient.ts`, `usePullToRefresh.ts` — existing hooks, unchanged
+
+## Shared UI Components (`src/components/ui/`)
+New additions (existing primitives unchanged):
+- `TabBar.tsx` — generic tab bar used across detail pages
+- `ApprovalModal.tsx` — reusable confirmation modal
+- `BuildStatusIndicator.tsx` — coloured status dot + label
+- `WebhookUrlBox.tsx` — read-only webhook URL display with copy button
+- `PushSupportHint.tsx` — push-support status hint block (maps `PushSupportStatus` to user messages)
+- `PullToRefreshIndicator.tsx` — spinner shown during pull-to-refresh
+
+## Explorer (`src/app/explorer/page.tsx` + `src/components/explorer/`)
+- Page is ~33 lines; all logic lives in `useRepoExplorer` hook.
+- Sub-components: `RepoExplorer`, `FileTree`, `FileViewer`, `FileHistoryView`, `BranchCompareView`, `CommitDiffView`, `CommitList`, `CommitSheet`, `NewFileSheet`, `BranchList`, `ChangeTypeDot`.
+
 ## PR Detail Page (`src/app/pull-requests/[repoId]/[prId]/page.tsx`)
-- **Tabs**: Uebersicht, Dateien, Kommentare, Commits — alle in einem `page.tsx`
-- **Aktionsbuttons**: Flaches segmentiertes Bar (Approven / Ablehnen / Complete)
+- Page is ~256 lines; all state/queries/mutations live in `usePRDetail` hook (result stored as `h`).
+- **Tabs**: `uebersicht` | `dateien` | `kommentare` | `commits` — rendered by dedicated tab components
+- **Tab components** in `src/components/pr/`: `PRTabOverview`, `PRTabFiles`, `PRTabComments`, `PRTabCommits`
+- **Modal components** in `src/components/pr/`: `PRVoteModal`, `PRCompleteModal`, `PRReviewerModal`
+- **Primitives** in `src/components/pr/`: `VoteBadge`, `ChangeTypeDot`, `CommentItem`, `CommentThread`
 - **Merge-Blocker**: Berechnet aus PR-Daten (isDraft, mergeStatus, Reviewer-Votes, Policies, Kommentare) — kein Extra-API-Call
 - **Dateien-Tab**: `getIterationChanges` fuer letzte Iteration + `RichDiffViewer` (Branch-Diff)
 - **Commits-Tab**: Iterationsliste klickbar → Dateiliste + Diff per `versionType: "commit"`
-- **Kommentare-Tab**: Threads zuerst mit Antworten-Funktion (`replyToThread`), dann Neuer Kommentar
+- **Kommentare-Tab**: Threads mit Antworten-Funktion (`replyToThread`), dann Neuer Kommentar
 - **Reviewer-Verwaltung**: Hinzufuegen (aus `identityService.listTeamMembers`), Entfernen, Required/Optional per `addReviewer` upsert
+
+## Pipelines (`src/app/pipelines/page.tsx` + `src/app/pipelines/[buildId]/page.tsx`)
+- List page is ~198 lines; modals extracted to `src/components/pipelines/`.
+- `StartPipelineModal.tsx` — self-contained; manages own branch/params state; props: `open, pipeline, isPending, error, onClose, onStart(branchRef, params)`
+- `CreatePipelineModal.tsx` — self-contained; manages own name/repo/yamlPath/folder picker state; props: `open, isPending, error, repositories, pipelineFolders, onClose, onSubmit(data)`
+- Detail page is ~214 lines; timeline logic extracted to `timelineUtils.ts` and `TimelineView.tsx`.
+- `TimelineView.tsx` exports: `getStatusIcon`, `JobsSummaryCards`, `TimelineNodeSection`, `LogSelector`
+
+## Settings (`src/app/settings/page.tsx` + `src/components/settings/`)
+- Page is ~210 lines; JSX split into two section components.
+- `ConnectionSettings.tsx` — Darstellung (theme) + Azure DevOps config form + PAT link + test result + action buttons
+- `PushNotificationsSection.tsx` — push toggle/status section; uses `PushSupportStatus` / `PushPermissionState` from `pushService`
 
 ## pullRequestsService (`src/lib/services/pullRequestsService.ts`)
 Alle Reviewer/Kommentar-Methoden halten das `isDemoClient(client)`-Muster ein:
