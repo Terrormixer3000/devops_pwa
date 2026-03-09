@@ -70,6 +70,7 @@
 - Global bootstrapping happens in `src/components/layout/Providers.tsx`.
 - UI data fetching is primarily handled with React Query.
 - Cross-page client state and persistence are handled with Zustand stores.
+- Pull Request creation opens as a drawer on `/pull-requests`; `/pull-requests/new` is a redirect-only compatibility route.
 - Push notifications use API routes under `src/app/api/push/*`, a local JSON subscription store in `data/subscriptions.json`, and `public/sw-custom.js`.
 - Each push subscription has a `webhookToken` (64 hex chars, 256-bit entropy) generated at registration time and stored in `data/subscriptions.json`.
 - The webhook endpoint `POST /api/push/webhook` requires `?t=<webhookToken>` — no `WEBHOOK_SECRET` env var.

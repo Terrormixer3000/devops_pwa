@@ -7,7 +7,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppBar } from "@/components/layout/AppBar";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
@@ -15,6 +16,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Badge } from "@/components/ui/Badge";
 import { TabBar } from "@/components/ui/TabBar";
 import { PullToRefreshIndicator } from "@/components/ui/PullToRefreshIndicator";
+import { CreatePullRequestModal, type CreatePullRequestPayload } from "@/components/pr/CreatePullRequestModal";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { useRepositoryStore } from "@/lib/stores/repositoryStore";
 import { useAzureClient } from "@/lib/hooks/useAzureClient";
@@ -38,9 +40,12 @@ const STATUS_OPTIONS: { label: string; value: PRStatus }[] = [
 /** Uebersicht aller Pull Requests mit Status- und Repository-Filter. */
 export default function PullRequestsPage() {
   const [status, setStatus] = useState<PRStatus>("active");
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const { settings } = useSettingsStore();
   const { repositories } = useRepositoryStore();
   const { client } = useAzureClient();
+  const router = useRouter();
+  const qc = useQueryClient();
   // Tab-spezifische Repo-Auswahl (leer = alle Repos laden)
   const { selectedIds: selectedRepoIds } = usePRRepoStore();
 
@@ -73,6 +78,19 @@ export default function PullRequestsPage() {
   const { pullProgress, isPulling } = usePullToRefresh({
     onRefresh: () => { void refetch(); },
     isRefreshing: isLoading,
+  });
+
+  const createPullRequestMutation = useMutation({
+    mutationFn: (payload: CreatePullRequestPayload) => {
+      if (!client || !settings) throw new Error("Kein Client");
+      const { repoId, ...request } = payload;
+      return pullRequestsService.create(client, settings.project, repoId, request);
+    },
+    onSuccess: async (pr, variables) => {
+      setCreateModalOpen(false);
+      await qc.invalidateQueries({ queryKey: ["pull-requests"] });
+      router.push(`/pull-requests/${variables.repoId}/${pr.pullRequestId}`);
+    },
   });
 
   return (
@@ -117,14 +135,31 @@ export default function PullRequestsPage() {
       </div>
 
       {/* FAB: Neuer PR erstellen */}
-      <Link
-        href="/pull-requests/new"
-        className="fixed right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/30 hover:bg-blue-500 active:scale-95 transition-all"
+      <button
+        type="button"
+        onClick={() => {
+          createPullRequestMutation.reset();
+          setCreateModalOpen(true);
+        }}
+        className="fixed right-4 z-50 flex items-center gap-2 rounded-full bg-blue-600 px-4 py-3 text-sm font-medium text-white shadow-lg shadow-blue-900/40 transition-colors hover:bg-blue-500"
         style={{ bottom: "var(--fab-bottom-offset)" }}
         aria-label="Neuen Pull Request erstellen"
       >
-        <Plus size={24} />
-      </Link>
+        <Plus size={18} />
+        Neuer Pull Request
+      </button>
+
+      <CreatePullRequestModal
+        open={createModalOpen}
+        isPending={createPullRequestMutation.isPending}
+        error={createPullRequestMutation.error ? (createPullRequestMutation.error as Error).message : null}
+        onClose={() => {
+          if (createPullRequestMutation.isPending) return;
+          createPullRequestMutation.reset();
+          setCreateModalOpen(false);
+        }}
+        onSubmit={(payload) => createPullRequestMutation.mutate(payload)}
+      />
     </div>
   );
 }
