@@ -5,7 +5,7 @@
  * von Web-Push-Benachrichtigungen (VAPID-Schluessel, Service Worker, Webhook-URL).
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   CheckCircle,
   AlertCircle,
@@ -15,16 +15,16 @@ import {
   Send,
   ShieldCheck,
   Link2,
-  Copy,
-  Check,
 } from "lucide-react";
 import { AppBar } from "@/components/layout/AppBar";
 import { BackLink } from "@/components/ui/BackButton";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { createAzureClient } from "@/lib/api/client";
-import { identityService, type AzureCurrentUser } from "@/lib/services/identityService";
-import { pushService, type PushPermissionState, type PushSupportStatus } from "@/lib/services/pushService";
+import { PushSupportHint } from "@/components/ui/PushSupportHint";
+import { WebhookUrlBox } from "@/components/ui/WebhookUrlBox";
+import { usePushState } from "@/lib/hooks/usePushState";
+import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
+import { pushService } from "@/lib/services/pushService";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 
 type StepStatus = "done" | "active" | "blocked";
@@ -44,36 +44,7 @@ function StepBadge({ label, status }: { label: string; status: StepStatus }) {
 }
 
 /** Hinweistext zum Browser-/Geraete-Support fuer Push-Benachrichtigungen. */
-function SupportHint({ status }: { status: PushSupportStatus }) {
-  if (status === "supported") {
-    return <p className="text-xs text-green-300/90">Browser und Service Worker sind bereit fuer Push.</p>;
-  }
-  if (status === "needs-https") {
-    return (
-      <p className="text-xs text-amber-300/90">
-        HTTPS erforderlich. Bitte ueber{" "}
-        <span className="font-mono">https://localhost:3000</span> oeffnen.
-      </p>
-    );
-  }
-  if (status === "needs-pwa-install") {
-    return (
-      <p className="text-xs text-amber-300/90">
-        Auf iOS sind Push-Nachrichten nur in der installierten PWA verfuegbar
-        (&quot;Zum Home-Bildschirm hinzufuegen&quot;).
-      </p>
-    );
-  }
-  if (status === "needs-service-worker") {
-    return (
-      <p className="text-xs text-amber-300/90">
-        Kein aktiver Service Worker. Bitte{" "}
-        <span className="font-mono">/sw.js</span> pruefen und Seite hart neu laden.
-      </p>
-    );
-  }
-  return <p className="text-xs text-slate-400">Dieser Browser unterstuetzt Push nicht.</p>;
-}
+// Moved to shared PushSupportHint component
 
 async function readJsonOrFallback(response: Response): Promise<{ error?: string }> {
   try {
@@ -133,63 +104,17 @@ function StepCard({
 }
 
 /** Zeigt die generierte Webhook-URL mit Kopier-Schaltflaeche an. */
-function WebhookUrlBox({ token }: { token: string }) {
-  const [copied, setCopied] = useState(false);
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const webhookUrl = `${origin}/api/push/webhook?t=${token}`;
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(webhookUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback: ignorieren
-    }
-  };
-
-  return (
-    <div className="space-y-2">
-      <p className="text-xs text-slate-400">
-        Trage diese URL in Azure DevOps unter{" "}
-        <span className="text-slate-300">Projekteinstellungen → Service Hooks → Web Hooks</span>{" "}
-        ein. Die URL authentifiziert Webhooks fuer deinen Account.
-      </p>
-      <div className="flex items-center gap-2 rounded-xl border border-slate-600/60 bg-slate-900/60 p-3">
-        <span className="min-w-0 flex-1 truncate font-mono text-xs text-slate-300">{webhookUrl}</span>
-        <button
-          onClick={handleCopy}
-          className="flex flex-shrink-0 items-center gap-1.5 rounded-lg bg-slate-700 px-2.5 py-1.5 text-xs text-slate-300 transition-colors hover:bg-slate-600 active:scale-95"
-        >
-          {copied ? <Check size={13} className="text-green-400" /> : <Copy size={13} />}
-          {copied ? "Kopiert" : "Kopieren"}
-        </button>
-      </div>
-      <p className="text-xs text-slate-500">
-        Konfiguriere in Azure DevOps folgende Event-Typen:{" "}
-        <span className="text-slate-400">
-          Build completed · Pull request reviewer(s) updated · Pull request commented on · Release deployment approval pending
-        </span>
-      </p>
-    </div>
-  );
-}
+// Moved to shared WebhookUrlBox component
 
 /** 5-Schritte-Wizard zur Ersteinrichtung von Push-Benachrichtigungen. */
 export default function PushSetupPage() {
   const { settings } = useSettingsStore();
 
-  const [supportStatus, setSupportStatus] = useState<PushSupportStatus>("unsupported");
-  const [permissionState, setPermissionState] = useState<PushPermissionState>("default");
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [webhookToken, setWebhookToken] = useState<string | null>(null);
+  const { supportStatus, permissionState, isSubscribed, webhookToken, isLoading: statusLoading, refresh: refreshPushState } = usePushState();
+  const { currentUser, isLoading: identityLoading, refetch: loadCurrentUser } = useCurrentUser();
 
-  const [currentUser, setCurrentUser] = useState<AzureCurrentUser | null>(null);
-  const [statusLoading, setStatusLoading] = useState(false);
-  const [identityLoading, setIdentityLoading] = useState(false);
   const [subscribeLoading, setSubscribeLoading] = useState(false);
   const [testLoading, setTestLoading] = useState(false);
-
   const [errorMessage, setErrorMessage] = useState("");
   const [testResult, setTestResult] = useState<TestResult | null>(null);
 
@@ -197,63 +122,6 @@ export default function PushSetupPage() {
   const project = settings?.project ?? "";
   const hasProjectScope = !!organization && !!project;
   const hasCredentials = !!settings?.demoMode || !!settings?.pat;
-
-  const refreshPushState = useCallback(async () => {
-    setStatusLoading(true);
-    try {
-      const status = pushService.getSupportStatus();
-      setSupportStatus(status);
-      setPermissionState(pushService.getPermissionState());
-
-      if (status !== "supported") {
-        setIsSubscribed(false);
-        return;
-      }
-
-      try {
-        const existing = await pushService.getExistingSubscription();
-        setIsSubscribed(!!existing);
-      } catch {
-        setIsSubscribed(false);
-      }
-    } finally {
-      setStatusLoading(false);
-    }
-  }, []);
-
-  const loadCurrentUser = useCallback(async () => {
-    if (!settings || !hasProjectScope || !hasCredentials) {
-      setCurrentUser(null);
-      return;
-    }
-
-    setIdentityLoading(true);
-    try {
-      const client = createAzureClient(settings);
-      const user = await identityService.getCurrentUser(client);
-      setCurrentUser(user);
-    } catch {
-      setCurrentUser(null);
-    } finally {
-      setIdentityLoading(false);
-    }
-  }, [hasCredentials, hasProjectScope, settings]);
-
-  // Push-Status laden
-  useEffect(() => {
-    refreshPushState();
-  }, [refreshPushState]);
-
-  // Azure User laden
-  useEffect(() => {
-    loadCurrentUser();
-  }, [loadCurrentUser]);
-
-  // Gespeicherten Token aus localStorage lesen
-  useEffect(() => {
-    const stored = pushService.getStoredToken();
-    if (stored) setWebhookToken(stored);
-  }, []);
 
   const canResolveIdentity = hasProjectScope && hasCredentials;
   const canSubscribe =
@@ -299,7 +167,6 @@ export default function PushSetupPage() {
       );
 
       pushService.storeToken(token);
-      setWebhookToken(token);
       await refreshPushState();
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Aktivierung fehlgeschlagen");
@@ -315,7 +182,6 @@ export default function PushSetupPage() {
 
     try {
       await pushService.unsubscribe();
-      setWebhookToken(null);
       await refreshPushState();
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Deaktivierung fehlgeschlagen");
@@ -388,7 +254,7 @@ export default function PushSetupPage() {
         </div>
 
         {/* Schritt 1 — Voraussetzungen */}
-        <StepCard number={1} title="Voraussetzungen pruefen" status={stepStatuses[0]}>
+        <StepCard number={1} title="Voraussetzungen prüfen" status={stepStatuses[0]}>
           <div className="space-y-1 text-xs text-slate-500">
             <div className="flex items-center justify-between">
               <span>Organisation</span>
@@ -407,7 +273,7 @@ export default function PushSetupPage() {
               )}
             </div>
           </div>
-          <SupportHint status={supportStatus} />
+          <PushSupportHint status={supportStatus} compact />
           {!hasProjectScope && (
             <p className="text-xs text-slate-500">
               Bitte Organisation und Projekt in den{" "}
@@ -415,7 +281,7 @@ export default function PushSetupPage() {
             </p>
           )}
           <Button variant="secondary" onClick={refreshPushState} loading={statusLoading}>
-            Status neu pruefen
+            Status neu prüfen
           </Button>
         </StepCard>
 
