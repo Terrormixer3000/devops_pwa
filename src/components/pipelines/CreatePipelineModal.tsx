@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { ChevronLeft, ChevronRight, FolderOpen, Plus } from "lucide-react";
@@ -31,6 +31,19 @@ function folderDisplayName(path: string): string {
   return path.split("\\").filter(Boolean).pop() ?? path;
 }
 
+/** Erzeugt einen Kindpfad unterhalb des aktuellen Ordners. */
+function buildChildFolderPath(parentPath: string, childName: string): string {
+  return parentPath === "\\" ? `\\${childName}` : `${parentPath}\\${childName}`;
+}
+
+/** Validiert den Namen eines neuen Unterordners. */
+function getNewFolderError(name: string): string | null {
+  if (!name.trim()) return "Bitte einen Ordnernamen eingeben.";
+  if (name === "." || name === "..") return "Dieser Ordnername ist nicht erlaubt.";
+  if (/[\\/:*?"<>|]/.test(name)) return "Der Ordnername enthaelt ungueltige Zeichen.";
+  return null;
+}
+
 interface CreatePipelineModalProps {
   open: boolean;
   isPending: boolean;
@@ -50,6 +63,19 @@ export function CreatePipelineModal({ open, isPending, error, repositories, pipe
   const [folderPickerOpen, setFolderPickerOpen] = useState(false);
   const [folderPickerPath, setFolderPickerPath] = useState("\\");
   const [folderHistory, setFolderHistory] = useState<string[]>([]);
+  const [createdFolders, setCreatedFolders] = useState<string[]>([]);
+  const [creatingFolder, setCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [newFolderError, setNewFolderError] = useState<string | null>(null);
+
+  const availableFolders = useMemo(
+    () => Array.from(new Set([...pipelineFolders, ...createdFolders])),
+    [createdFolders, pipelineFolders]
+  );
+  const currentFolderChildren = useMemo(
+    () => getFolderChildren(availableFolders, folderPickerPath),
+    [availableFolders, folderPickerPath]
+  );
 
   const handleClose = () => {
     if (isPending) return;
@@ -58,12 +84,40 @@ export function CreatePipelineModal({ open, isPending, error, repositories, pipe
     setYamlPath("/azure-pipelines.yml");
     setFolder("\\");
     setFolderPickerOpen(false);
+    setFolderPickerPath("\\");
+    setFolderHistory([]);
+    setCreatedFolders([]);
+    setCreatingFolder(false);
+    setNewFolderName("");
+    setNewFolderError(null);
     onClose();
   };
 
   const handleSubmit = () => {
     if (!name.trim() || !repo) return;
     onSubmit({ name: name.trim(), folder: folder || "\\", yamlPath: yamlPath.trim() || "/azure-pipelines.yml", repositoryId: repo.id, repositoryName: repo.name });
+  };
+
+  const handleCreateFolder = () => {
+    const trimmedName = newFolderName.trim();
+    const validationError = getNewFolderError(trimmedName);
+    if (validationError) {
+      setNewFolderError(validationError);
+      return;
+    }
+
+    const nextFolderPath = buildChildFolderPath(folderPickerPath, trimmedName);
+    if (availableFolders.includes(nextFolderPath)) {
+      setNewFolderError("Der Ordner existiert bereits.");
+      return;
+    }
+
+    setCreatedFolders((current) => [...current, nextFolderPath]);
+    setFolderHistory((current) => [...current, folderPickerPath]);
+    setFolderPickerPath(nextFolderPath);
+    setNewFolderName("");
+    setNewFolderError(null);
+    setCreatingFolder(false);
   };
 
   return (
@@ -98,8 +152,69 @@ export function CreatePipelineModal({ open, isPending, error, repositories, pipe
             <span className="ml-auto text-xs text-blue-400/70 font-mono truncate max-w-[45%]">{folderPickerPath}</span>
           </button>
 
+          <div className="rounded-xl border border-slate-700/50 overflow-hidden bg-slate-800/40">
+            <div className="flex items-center justify-between gap-3 px-3 py-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <Plus size={14} className="text-blue-400 flex-shrink-0" />
+                <span className="text-sm text-slate-200 truncate">Neuen Unterordner erstellen</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setCreatingFolder((current) => !current);
+                  setNewFolderName("");
+                  setNewFolderError(null);
+                }}
+                className="text-xs text-blue-400 hover:text-blue-300 transition-colors flex-shrink-0"
+              >
+                {creatingFolder ? "Abbrechen" : "Neu"}
+              </button>
+            </div>
+            {creatingFolder && (
+              <div className="border-t border-slate-700/50 px-3 py-3 space-y-2.5">
+                <input
+                  type="text"
+                  value={newFolderName}
+                  onChange={(e) => {
+                    setNewFolderName(e.target.value);
+                    if (newFolderError) setNewFolderError(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleCreateFolder();
+                    }
+                  }}
+                  placeholder="z.B. delivery"
+                  autoFocus
+                  className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                />
+                {newFolderError && (
+                  <p className="text-xs text-red-400">{newFolderError}</p>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    className="flex-1"
+                    onClick={() => {
+                      setCreatingFolder(false);
+                      setNewFolderName("");
+                      setNewFolderError(null);
+                    }}
+                  >
+                    Abbrechen
+                  </Button>
+                  <Button className="flex-1" onClick={handleCreateFolder}>
+                    <Plus size={15} />
+                    Ordner erstellen
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="divide-y divide-slate-800/50 rounded-xl border border-slate-700/50 overflow-hidden">
-            {getFolderChildren(pipelineFolders, folderPickerPath).map((f) => (
+            {currentFolderChildren.map((f) => (
               <button
                 key={f}
                 onClick={() => { setFolderHistory((h) => [...h, folderPickerPath]); setFolderPickerPath(f); }}
@@ -110,7 +225,7 @@ export function CreatePipelineModal({ open, isPending, error, repositories, pipe
                 <ChevronRight size={15} className="text-slate-600 flex-shrink-0" />
               </button>
             ))}
-            {getFolderChildren(pipelineFolders, folderPickerPath).length === 0 && (
+            {currentFolderChildren.length === 0 && (
               <p className="px-3 py-4 text-sm text-slate-500 bg-slate-800/40">Keine Unterordner vorhanden</p>
             )}
           </div>
