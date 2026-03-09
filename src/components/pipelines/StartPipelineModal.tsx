@@ -11,10 +11,12 @@ const QUICK_BRANCHES = ["main", "develop", "release/2026.03", "hotfix/urgent-fix
 
 interface PipelineParam { key: string; value: string; }
 
+/** Normalisiert eine Branch-Eingabe: entfernt `refs/heads/`-Präfix und überflüssige Leerzeichen. */
 function normalizeBranch(branch: string): string {
   return stripRefPrefix(branch).trim();
 }
 
+/** Validiert einen Branch-Namen und gibt eine Fehlermeldung oder `null` zurück. */
 function getBranchError(branch: string): string | null {
   if (!branch) return "Bitte einen Branch-Namen eingeben.";
   if (branch.startsWith("/") || branch.endsWith("/")) return "Branch darf nicht mit / starten oder enden.";

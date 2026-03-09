@@ -9,6 +9,10 @@ import { getChangeKey } from "@/lib/utils/gitUtils";
 import { isImagePath } from "@/lib/utils/fileTypes";
 import type { AppSettings, Branch, Commit, Repository, TreeEntry } from "@/types";
 
+/**
+ * Aktive Ansicht im Repo-Explorer.
+ * Steuert, welches Sub-Panel sichtbar ist.
+ */
 export type ActiveView =
   | "branches"
   | "commits"

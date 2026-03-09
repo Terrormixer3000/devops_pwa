@@ -4,8 +4,10 @@ import { AlertCircle, UserPlus, X, ShieldCheck } from "lucide-react";
 import { VoteBadge } from "./VoteBadge";
 import type { PullRequest } from "@/types";
 
+/** Minimal-Typ für eine Pipeline-Policy auf einem Pull Request. */
 type PRPolicy = { id: string; status: string; displayName: string; isRequired: boolean };
 
+/** Übersichts-Tab: Zeigt PR-Details, Reviewer-Liste, Policies und Merge-Blocker. */
 export function PRTabOverview({
   pr,
   policies,

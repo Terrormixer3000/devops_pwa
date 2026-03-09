@@ -25,6 +25,7 @@ function getFolderChildren(folders: string[], parentPath: string): string[] {
   });
 }
 
+/** Gibt den lesbaren Anzeigenamen für einen Ordner-Pfad zurück (letztes Segment oder "Stammordner"). */
 function folderDisplayName(path: string): string {
   if (path === "\\") return "Stammordner";
   return path.split("\\").filter(Boolean).pop() ?? path;

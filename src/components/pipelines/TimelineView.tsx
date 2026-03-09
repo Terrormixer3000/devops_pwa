@@ -7,6 +7,7 @@ import { STATUS_META, formatDuration, parseLogId, getRecordStatus } from "@/lib/
 import type { TimelineViewNode, TimelineSummary, TimelineStatus } from "@/lib/utils/timelineUtils";
 import type { TimelineRecord } from "@/types";
 
+/** Gibt das passende Status-Icon als React-Element für einen `TimelineStatus` zurück. */
 export function getStatusIcon(status: TimelineStatus) {
   if (status === "running") return <Loader size={16} className="animate-spin flex-shrink-0" />;
   if (status === "succeeded") return <CheckCircle size={16} className="flex-shrink-0" />;

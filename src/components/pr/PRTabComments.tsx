@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { CommentThread } from "./CommentThread";
 import type { PRThread } from "@/types";
 
+/** Kommentare-Tab: Zeigt alle Threads mit Antwortfunktion und Eingabefeld für neue Kommentare. */
 export function PRTabComments({
   commentThreads,
   commentText,
