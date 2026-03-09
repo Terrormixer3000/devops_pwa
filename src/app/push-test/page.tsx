@@ -5,13 +5,15 @@
  * und zeigt den aktuellen Abonnementsstatus an.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { AppBar } from "@/components/layout/AppBar";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
-import { createAzureClient } from "@/lib/api/client";
-import { identityService, type AzureCurrentUser } from "@/lib/services/identityService";
-import { pushService, type PushPermissionState, type PushSupportStatus } from "@/lib/services/pushService";
+import { usePushState } from "@/lib/hooks/usePushState";
+import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
+import { PushSupportHint } from "@/components/ui/PushSupportHint";
+import { WebhookUrlBox } from "@/components/ui/WebhookUrlBox";
+import { type PushPermissionState, type PushSupportStatus } from "@/lib/services/pushService";
 import {
   BellOff,
   CheckCircle,
@@ -23,9 +25,6 @@ import {
   Play,
   ChevronRight,
   Loader2,
-  Link2,
-  Copy,
-  Check,
 } from "lucide-react";
 
 type TestEventType =
@@ -104,7 +103,7 @@ function SubscriptionStatus({
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-700/60 text-slate-400">
         <BellOff size={12} />
-        Nicht unterstuetzt
+        Nicht unterstützt
       </span>
     );
   }
@@ -112,7 +111,7 @@ function SubscriptionStatus({
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-900/40 text-amber-400">
         <AlertCircle size={12} />
-        Einrichtung noetig
+        Einrichtung nötig
       </span>
     );
   }
@@ -174,94 +173,19 @@ function ResultBanner({ result }: { result: TestResult | null }) {
   );
 }
 
-// Webhook-URL Anzeige (read-only)
-/** Zeigt die Webhook-URL (schreibgeschuetzt) mit Kopier-Schaltflaeche an. */
-function WebhookUrlReadOnly({ token }: { token: string }) {
-  const [copied, setCopied] = useState(false);
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const webhookUrl = `${origin}/api/push/webhook?t=${token}`;
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(webhookUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // ignorieren
-    }
-  };
-
-  return (
-    <div className="space-y-2 rounded-xl border border-slate-700/60 bg-slate-800/40 p-3">
-      <div className="flex items-center gap-2 text-xs text-slate-400">
-        <Link2 size={13} className="flex-shrink-0" />
-        <span className="font-medium">Deine Webhook-URL</span>
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="min-w-0 flex-1 truncate font-mono text-xs text-slate-400">{webhookUrl}</span>
-        <button
-          onClick={handleCopy}
-          className="flex flex-shrink-0 items-center gap-1 rounded-lg bg-slate-700 px-2 py-1 text-xs text-slate-300 transition-colors hover:bg-slate-600"
-        >
-          {copied ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
-          {copied ? "OK" : "Kopieren"}
-        </button>
-      </div>
-    </div>
-  );
-}
+// Webhook-URL Anzeige — moved to shared WebhookUrlBox component
 
 /** Testseite fuer Push-Benachrichtigungen mit Abonnement-Verwaltung und Test-Ausloesung. */
 export default function PushTestPage() {
   const { settings } = useSettingsStore();
 
-  // Push-State
-  const [supportStatus, setSupportStatus] = useState<PushSupportStatus>("unsupported");
-  const [permission, setPermission] = useState<PushPermissionState>("default");
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [webhookToken, setWebhookToken] = useState<string | null>(null);
-  const [currentUser, setCurrentUser] = useState<AzureCurrentUser | null>(null);
+  const { supportStatus, permissionState: permission, isSubscribed, webhookToken } = usePushState();
+  const { currentUser } = useCurrentUser();
 
   // Test-State
   const [loadingEvent, setLoadingEvent] = useState<TestEventType | null>(null);
   const [lastResult, setLastResult] = useState<TestResult | null>(null);
   const [lastTestedEvent, setLastTestedEvent] = useState<TestEventType | null>(null);
-
-  const refreshState = useCallback(async () => {
-    const status = pushService.getSupportStatus();
-    setSupportStatus(status);
-    if (status === "supported") {
-      setPermission(pushService.getPermissionState());
-      try {
-        const sub = await pushService.getExistingSubscription();
-        setIsSubscribed(!!sub);
-      } catch {
-        setIsSubscribed(false);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    refreshState();
-  }, [refreshState]);
-
-  useEffect(() => {
-    const stored = pushService.getStoredToken();
-    if (stored) setWebhookToken(stored);
-  }, []);
-
-  useEffect(() => {
-    if (!settings?.organization || !settings?.project || (!settings?.pat && !settings?.demoMode)) {
-      setCurrentUser(null);
-      return;
-    }
-
-    const client = createAzureClient(settings);
-    identityService
-      .getCurrentUser(client)
-      .then(setCurrentUser)
-      .catch(() => setCurrentUser(null));
-  }, [settings]);
 
   // Test-Notification senden
   const handleTest = async (eventType: TestEventType) => {
@@ -368,55 +292,7 @@ export default function PushTestPage() {
           </div>
 
           {/* Kontext-Banner je nach Support-Status */}
-          {supportStatus === "unsupported" && (
-            <div className="flex items-start gap-2.5 p-3 bg-slate-800/60 border border-slate-700/60 rounded-xl">
-              <BellOff size={16} className="text-slate-500 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-slate-400">
-                Dieser Browser unterstuetzt Web Push nicht. Bitte Chrome, Edge, Firefox oder Safari (als installierte PWA auf iOS 16.4+) verwenden.
-              </p>
-            </div>
-          )}
-
-          {supportStatus === "needs-https" && (
-            <div className="flex items-start gap-2.5 p-3 bg-amber-900/20 border border-amber-700/40 rounded-xl">
-              <AlertCircle size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-amber-300">HTTPS erforderlich</p>
-                <p className="text-xs text-amber-400/80">
-                  Web Push erfordert HTTPS. Dev-Server mit{" "}
-                  <span className="font-mono text-amber-300">npm run dev</span>{" "}
-                  starten (beinhaltet <span className="font-mono text-amber-300">--experimental-https</span>),
-                  dann das Zertifikat auf dem iPhone unter Einstellungen → Allgemein → VPN &amp; Geraeteverwaltung vertrauen.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {supportStatus === "needs-pwa-install" && (
-            <div className="flex items-start gap-2.5 p-3 bg-amber-900/20 border border-amber-700/40 rounded-xl">
-              <AlertCircle size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-amber-300">PWA-Installation erforderlich</p>
-                <p className="text-xs text-amber-400/80">
-                  Auf iOS funktioniert Web Push nur in der installierten App. Safari-Menü → &quot;Zum Home-Bildschirm hinzufuegen&quot; (iOS 16.4+).
-                </p>
-              </div>
-            </div>
-          )}
-
-          {supportStatus === "needs-service-worker" && (
-            <div className="flex items-start gap-2.5 p-3 bg-amber-900/20 border border-amber-700/40 rounded-xl">
-              <AlertCircle size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-amber-300">Service Worker nicht aktiv</p>
-                <p className="text-xs text-amber-400/80">
-                  In dieser Umgebung ist kein Push-faehiger Service Worker aktiv.
-                  Bitte <span className="font-mono text-amber-300">/sw.js</span> pruefen, Hard-Reload ausfuehren
-                  und bei Bedarf alte Service Worker im Browser entfernen.
-                </p>
-              </div>
-            </div>
-          )}
+          {supportStatus !== "supported" && <PushSupportHint status={supportStatus} />}
 
           {/* Kein Settings-Hinweis */}
           {supportStatus === "supported" && (!settings?.organization || !settings?.project) && (
@@ -444,7 +320,7 @@ export default function PushTestPage() {
 
           {/* Webhook-URL (read-only) */}
           {isSubscribed && webhookToken && (
-            <WebhookUrlReadOnly token={webhookToken} />
+            <WebhookUrlBox token={webhookToken} compact />
           )}
 
           {permission === "denied" && (
