@@ -4,8 +4,10 @@ import { GitMerge, AlertCircle } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 
+/** Merge-Strategie-Optionen beim Abschließen eines Pull Requests. */
 type MergeStrategy = "noFastForward" | "squash" | "rebase" | "rebaseMerge";
 
+/** Modal zum Abschließen (Mergen) eines Pull Requests mit Merge-Strategie-Auswahl. */
 export function PRCompleteModal({
   open,
   sourceBranch,

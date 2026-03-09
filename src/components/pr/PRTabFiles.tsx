@@ -6,6 +6,7 @@ import { ChangeTypeDot } from "./ChangeTypeDot";
 import type { GitChangeEntry } from "@/lib/services/repositoriesService";
 import { getChangeKey } from "@/lib/utils/gitUtils";
 
+/** Geladener Diff-Inhalt einer Datei (Texte oder Bild-Data-URLs). */
 type FileDiffData = {
   oldContent: string;
   newContent: string;
@@ -14,6 +15,7 @@ type FileDiffData = {
   error: string | null;
 };
 
+/** Dateien-Tab: Listet Änderungen der letzten Iteration und zeigt einen Branch-Diff. */
 export function PRTabFiles({
   changeEntries,
   selectedChange,

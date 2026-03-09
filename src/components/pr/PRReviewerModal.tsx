@@ -4,8 +4,10 @@ import { AlertCircle } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 
+/** Minimal-Typ für ein Team-Mitglied im Reviewer-Picker. */
 type Member = { id: string; displayName: string; uniqueName?: string };
 
+/** Modal zum Hinzufügen eines Reviewers mit Suchfeld und Required/Optional-Toggle. */
 export function PRReviewerModal({
   open,
   availableMembers,

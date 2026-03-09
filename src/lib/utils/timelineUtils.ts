@@ -1,8 +1,11 @@
 import type { TimelineRecord } from "@/types";
 
+/** Mögliche Zustände eines Timeline-Eintrags (Task, Job oder Stage). */
 export type TimelineStatus = "running" | "failed" | "succeeded" | "canceled" | "partial" | "pending";
+/** Badge-Variante für die farbliche Darstellung eines Timeline-Status. */
 export type TimelineBadgeVariant = "success" | "danger" | "warning" | "info" | "muted";
 
+/** Aggregierte Aufgaben-Zähler für einen Knoten der Timeline-Hierarchie. */
 export interface TimelineStats {
   totalTasks: number;
   running: number;
@@ -13,6 +16,7 @@ export interface TimelineStats {
   partial: number;
 }
 
+/** Einzelner Knoten in der aufbereiteten Timeline-Hierarchie (Stage, Job oder Task). */
 export interface TimelineViewNode {
   record: TimelineRecord;
   children: TimelineViewNode[];
@@ -22,6 +26,7 @@ export interface TimelineViewNode {
   stats: TimelineStats;
 }
 
+/** Zusammenfassung aller Jobs und Tasks eines Builds für die Übersichtskarten. */
 export interface TimelineSummary {
   totalJobs: number;
   runningJobs: number;
@@ -31,11 +36,13 @@ export interface TimelineSummary {
   pendingTasks: number;
 }
 
+/** Aufbereitete Timeline-Ansicht mit Root-Knoten und Summary. */
 export interface TimelineView {
   roots: TimelineViewNode[];
   summary: TimelineSummary;
 }
 
+/** Darstellungsmetadaten für einen einzelnen Timeline-Status (Farbe, Label, CSS-Klassen). */
 export interface StatusMeta {
   label: string;
   badge: TimelineBadgeVariant;
@@ -43,6 +50,7 @@ export interface StatusMeta {
   progressClass: string;
 }
 
+/** Nullwert-Konstante für `TimelineStats` — vermeidet wiederholte Objekt-Literale. */
 export const EMPTY_STATS: TimelineStats = {
   totalTasks: 0,
   running: 0,
@@ -53,8 +61,10 @@ export const EMPTY_STATS: TimelineStats = {
   partial: 0,
 };
 
+/** Leeres Timeline-Array — stabiler Referenzwert für Query-Defaults. */
 export const EMPTY_TIMELINE_RECORDS: TimelineRecord[] = [];
 
+/** Status-Metadaten-Zuordnung für alle bekannten `TimelineStatus`-Werte. */
 export const STATUS_META: Record<TimelineStatus, StatusMeta> = {
   running: { label: "Läuft", badge: "info", textClass: "text-blue-400", progressClass: "bg-blue-500" },
   failed: { label: "Fehler", badge: "danger", textClass: "text-red-400", progressClass: "bg-red-500" },
@@ -158,6 +168,7 @@ function resolveProgress(record: TimelineRecord, status: TimelineStatus, stats: 
   return 100;
 }
 
+/** Leitet den sichtbaren Status eines Records aus `state` und `result` ab. */
 export function getRecordStatus(record: TimelineRecord): TimelineStatus {
   const state = normalizeState(record.state);
   const result = normalizeState(record.result);
@@ -174,6 +185,7 @@ function normalizeState(input?: string): string {
   return (input || "").replace(/\s+/g, "").toLowerCase();
 }
 
+/** Extrahiert die numerische Log-ID aus der Log-URL eines Timeline-Records. */
 export function parseLogId(record: TimelineRecord): number | null {
   const token = record.log?.url?.split("/").pop();
   if (!token) return null;
@@ -192,6 +204,7 @@ function flattenNodes(nodes: TimelineViewNode[]): TimelineViewNode[] {
   return nodes.flatMap((n) => [n, ...flattenNodes(n.children)]);
 }
 
+/** Formatiert eine Anzahl Sekunden als menschenlesbaren Zeitstring (z.B. "2m 15s"). */
 export function formatDuration(durationSeconds: number): string {
   if (durationSeconds < 60) return `${durationSeconds}s`;
   const minutes = Math.floor(durationSeconds / 60);
@@ -199,6 +212,7 @@ export function formatDuration(durationSeconds: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
+/** Bildet einen Build-Status-String auf eine Badge-Variante ab. */
 export function getBuildStatusVariant(status: string): "success" | "danger" | "warning" | "info" | "muted" {
   const map: Record<string, "success" | "danger" | "warning" | "info" | "muted"> = {
     succeeded: "success", failed: "danger", canceled: "muted", inProgress: "info", partiallySucceeded: "warning",
@@ -206,6 +220,7 @@ export function getBuildStatusVariant(status: string): "success" | "danger" | "w
   return map[status] || "muted";
 }
 
+/** Übersetzt einen Build-Status-String in ein deutsches Anzeigelabel. */
 export function getBuildStatusLabel(status: string): string {
   const labels: Record<string, string> = {
     succeeded: "Erfolgreich", failed: "Fehlgeschlagen", canceled: "Abgebrochen",

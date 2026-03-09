@@ -9,6 +9,7 @@ import { stripRefPrefix, getChangeKey } from "@/lib/utils/gitUtils";
 import { isImagePath } from "@/lib/utils/fileTypes";
 import type { PRThread } from "@/types";
 
+/** Merge-Strategie-Optionen beim Abschließen eines Pull Requests. */
 export type MergeStrategy = "noFastForward" | "squash" | "rebase" | "rebaseMerge";
 
 /** Alle State, Queries, Mutations und berechneten Werte fuer die PR-Detailseite. */

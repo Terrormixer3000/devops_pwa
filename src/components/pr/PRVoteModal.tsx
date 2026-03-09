@@ -4,6 +4,7 @@ import { ThumbsUp, ThumbsDown, Zap } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 
+/** Modal zum Abgeben eines Reviewer-Votes (Approve / Ablehnen / Zurücksetzen). */
 export function PRVoteModal({
   open,
   votePending,

@@ -2,12 +2,14 @@
 
 import { type ReactNode } from "react";
 
+/** Einzelner Tab-Eintrag für die `TabBar`-Komponente. */
 export interface TabItem {
   key: string;
   label: string | ReactNode;
   icon?: ReactNode;
 }
 
+/** Props der `TabBar`-Komponente. */
 interface TabBarProps {
   tabs: TabItem[];
   activeKey: string;

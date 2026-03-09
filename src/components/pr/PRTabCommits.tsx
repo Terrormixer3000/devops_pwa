@@ -8,6 +8,7 @@ import { getChangeKey } from "@/lib/utils/gitUtils";
 import type { PRIteration } from "@/types";
 import type { GitChangeEntry } from "@/lib/services/repositoriesService";
 
+/** Geladener Diff-Inhalt einer Datei innerhalb einer Iteration. */
 type FileDiffData = {
   oldContent: string;
   newContent: string;
@@ -16,8 +17,10 @@ type FileDiffData = {
   error: string | null;
 };
 
+/** Geladene Dateiliste einer PR-Iteration. */
 type IterationChanges = { changeEntries: GitChangeEntry[] };
 
+/** Commits-Tab: Zeigt Iterationsliste, Dateiänderungen je Iteration und Commit-Diffs. */
 export function PRTabCommits({
   iterations,
   selectedIterationId,
