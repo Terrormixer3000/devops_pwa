@@ -5,6 +5,7 @@ import { GitBranch } from "lucide-react";
 import { SelectionSheet } from "@/components/ui/SelectionSheet";
 import { useRepositoryStore } from "@/lib/stores/repositoryStore";
 import { usePRRepoStore } from "@/lib/stores/selectionStore";
+import { selectionLabel } from "@/lib/utils/selectionLabel";
 
 /**
  * Repository-Multiselect-Selektor fuer die Pull-Requests-Seite.
@@ -25,12 +26,12 @@ export function PRRepoSelector() {
   }));
 
   // Label: zeigt Auswahl-Zusammenfassung
-  const buttonLabel =
-    selectedIds.length === 0
-      ? "Alle Repos"
-      : selectedIds.length === 1
-      ? (repositories.find((r) => r.id === selectedIds[0])?.name ?? "1 Repo")
-      : `${selectedIds.length} Repos`;
+  const buttonLabel = selectionLabel(
+    selectedIds,
+    "Alle Repos",
+    repositories.find((r) => r.id === selectedIds[0])?.name,
+    `${selectedIds.length} Repos`,
+  );
 
   return (
     <SelectionSheet

@@ -9,8 +9,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { formatDistanceToNow } from "date-fns";
-import { de } from "date-fns/locale";
 import { AppBar } from "@/components/layout/AppBar";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
@@ -18,6 +16,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
+import { TabBar } from "@/components/ui/TabBar";
+import { ApprovalModal } from "@/components/ui/ApprovalModal";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { useAzureClient } from "@/lib/hooks/useAzureClient";
 import { releasesService } from "@/lib/services/releasesService";
@@ -26,6 +26,7 @@ import { ReleaseSelector } from "@/components/layout/selectors/ReleaseSelector";
 import { DeliveryTitleSelector } from "@/components/layout/DeliveryTitleSelector";
 import { ReleaseDefinition, ReleaseApproval, ReleaseEnvironment } from "@/types";
 import { Rocket, ChevronRight, Play, ThumbsUp, ThumbsDown, AlertCircle } from "lucide-react";
+import { timeAgo } from "@/lib/utils/timeAgo";
 
 type Tab = "releases" | "definitionen" | "approvals";
 
@@ -34,7 +35,7 @@ export default function ReleasesPage() {
   const [activeTab, setActiveTab] = useState<Tab>("releases");
   const [startModal, setStartModal] = useState<ReleaseDefinition | null>(null);
   const [approvalModal, setApprovalModal] = useState<ReleaseApproval | null>(null);
-  const [approvalComment, setApprovalComment] = useState("");
+  const [approvalError, setApprovalError] = useState<string | null>(null);
   const router = useRouter();
 
   const { settings } = useSettingsStore();
@@ -93,17 +94,18 @@ export default function ReleasesPage() {
 
   // Approval erteilen
   const approveMutation = useMutation({
-    mutationFn: ({ id, approve }: { id: number; approve: boolean }) =>
+    mutationFn: ({ id, approve, comment }: { id: number; approve: boolean; comment: string }) =>
       vsrmClient && settings
         ? approve
-          ? releasesService.approveRelease(vsrmClient, settings.project, id, approvalComment)
-          : releasesService.rejectApproval(vsrmClient, settings.project, id, approvalComment)
+          ? releasesService.approveRelease(vsrmClient, settings.project, id, comment)
+          : releasesService.rejectApproval(vsrmClient, settings.project, id, comment)
         : Promise.reject("Kein Client"),
     onSuccess: () => {
       setApprovalModal(null);
-      setApprovalComment("");
+      setApprovalError(null);
       qc.invalidateQueries({ queryKey: ["release-approvals"] });
     },
+    onError: (err: Error) => setApprovalError(err.message),
   });
 
   const pendingCount = approvals?.length || 0;
@@ -113,25 +115,15 @@ export default function ReleasesPage() {
       <AppBar title={<DeliveryTitleSelector current="releases" />} rightSlot={<ReleaseSelector definitions={definitions || []} loading={defsLoading} />} />
 
       {/* Tabs */}
-      <div className="fixed-below-appbar bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-2">
-        <div className="flex gap-1 overflow-x-auto hide-scrollbar">
-          {[
-            { key: "releases", label: "Releases" },
-            { key: "definitionen", label: "Pipelines" },
-            { key: "approvals", label: `Approvals${pendingCount > 0 ? ` (${pendingCount})` : ""}` },
-          ].map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setActiveTab(key as Tab)}
-              className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                activeTab === key ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <TabBar
+        tabs={[
+          { key: "releases", label: "Releases" },
+          { key: "definitionen", label: "Pipelines" },
+          { key: "approvals", label: `Approvals${pendingCount > 0 ? ` (${pendingCount})` : ""}` },
+        ]}
+        activeKey={activeTab}
+        onChange={(key) => setActiveTab(key as Tab)}
+      />
 
       <div className="pt-[3.85rem]">
         {/* Definitionen */}
@@ -187,7 +179,7 @@ export default function ReleasesPage() {
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <span className="text-xs text-slate-600">
-                        {release.createdOn ? formatDistanceToNow(new Date(release.createdOn), { addSuffix: true, locale: de }) : ""}
+                        {release.createdOn ? timeAgo(release.createdOn) : ""}
                       </span>
                       <ChevronRight size={16} className="text-slate-600" />
                     </div>
@@ -215,7 +207,7 @@ export default function ReleasesPage() {
                       <AlertCircle size={16} className="text-yellow-400 flex-shrink-0 mt-0.5" />
                     </div>
                     <p className="text-xs text-slate-500 mb-3">
-                      {formatDistanceToNow(new Date(approval.createdOn), { addSuffix: true, locale: de })}
+                      {timeAgo(approval.createdOn)}
                     </p>
                     <div className="flex gap-2">
                       {approval.releaseReference?.id ? (
@@ -230,9 +222,7 @@ export default function ReleasesPage() {
                       <Button size="sm" variant="primary" onClick={() => setApprovalModal(approval)}>
                         <ThumbsUp size={14} /> Approven
                       </Button>
-                      <Button size="sm" variant="danger" onClick={() => {
-                        setApprovalModal(approval);
-                      }}>
+                      <Button size="sm" variant="danger" onClick={() => setApprovalModal(approval)}>
                         <ThumbsDown size={14} /> Ablehnen
                       </Button>
                     </div>
@@ -259,43 +249,19 @@ export default function ReleasesPage() {
       </Modal>
 
       {/* Approval Modal */}
-      <Modal open={!!approvalModal} onClose={() => setApprovalModal(null)} title="Approval erteilen">
-        <div className="space-y-4">
-          {approvalModal && (
-            <p className="text-sm text-slate-300">
-              {approvalModal.releaseReference?.name} → {approvalModal.releaseEnvironmentReference?.name}
-            </p>
-          )}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-400">Kommentar (optional)</label>
-            <textarea
-              value={approvalComment}
-              onChange={(e) => setApprovalComment(e.target.value)}
-              rows={2}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-blue-500 resize-none"
-            />
-          </div>
-          {approveMutation.isError && (
-            <p className="text-sm text-red-400">{(approveMutation.error as Error).message}</p>
-          )}
-          <Button
-            fullWidth
-            loading={approveMutation.isPending}
-            onClick={() => approvalModal && approveMutation.mutate({ id: approvalModal.id, approve: true })}
-          >
-            <ThumbsUp size={16} /> Approven
-          </Button>
-          <Button
-            fullWidth
-            variant="danger"
-            loading={approveMutation.isPending}
-            onClick={() => approvalModal && approveMutation.mutate({ id: approvalModal.id, approve: false })}
-          >
-            <ThumbsDown size={16} /> Ablehnen
-          </Button>
-          <Button fullWidth variant="ghost" onClick={() => setApprovalModal(null)}>Abbrechen</Button>
-        </div>
-      </Modal>
+      <ApprovalModal
+        open={!!approvalModal}
+        approval={approvalModal ? {
+          id: approvalModal.id,
+          releaseName: approvalModal.releaseReference?.name,
+          environmentName: approvalModal.releaseEnvironmentReference?.name,
+        } : null}
+        isPending={approveMutation.isPending}
+        error={approvalError}
+        onApprove={(id, comment) => approveMutation.mutate({ id, approve: true, comment })}
+        onReject={(id, comment) => approveMutation.mutate({ id, approve: false, comment })}
+        onClose={() => { setApprovalModal(null); setApprovalError(null); }}
+      />
     </div>
   );
 }

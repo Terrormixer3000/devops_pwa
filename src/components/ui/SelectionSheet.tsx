@@ -56,7 +56,7 @@ export function SelectionSheet({
   multiSelect = true,
   favoriteIds,
   onToggleFavorite,
-  emptyMessage = "Keine Eintraege gefunden",
+  emptyMessage = "Keine Einträge gefunden",
 }: Props) {
   const [open, setOpen] = useState(false);
   // Filtermodus: Favoriten oder alle anzeigen
@@ -232,7 +232,7 @@ export function SelectionSheet({
               onClick={() => setOpen(false)}
               className="w-full rounded-2xl border border-blue-400/30 bg-blue-600 py-3.5 text-sm font-medium text-white shadow-[0_10px_24px_rgba(0,120,212,0.28)] transition-colors hover:bg-blue-500"
             >
-              {selectedIds.length} {selectedIds.length === 1 ? "Eintrag" : "Eintraege"} ausgewaehlt
+              {selectedIds.length} {selectedIds.length === 1 ? "Eintrag" : "Einträge"} ausgewählt
             </button>
           </div>
         )}

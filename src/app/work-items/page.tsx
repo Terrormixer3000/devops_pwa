@@ -7,19 +7,20 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { formatDistanceToNow } from "date-fns";
-import { de } from "date-fns/locale";
 import { AppBar } from "@/components/layout/AppBar";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Badge } from "@/components/ui/Badge";
+import { TabBar } from "@/components/ui/TabBar";
+import { PullToRefreshIndicator } from "@/components/ui/PullToRefreshIndicator";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { useAzureClient } from "@/lib/hooks/useAzureClient";
 import { workItemsService } from "@/lib/services/workItemsService";
 import { usePullToRefresh } from "@/lib/hooks/usePullToRefresh";
+import { timeAgo } from "@/lib/utils/timeAgo";
 import type { WorkItem, WorkItemState } from "@/types";
-import { CheckSquare, Bug, BookOpen, Zap, Layers, RotateCw, ListChecks } from "lucide-react";
+import { CheckSquare, Bug, BookOpen, Zap, Layers, ListChecks } from "lucide-react";
 
 // Status-Filter-Tabs
 const STATE_FILTERS: { label: string; values: WorkItemState[] | null }[] = [
@@ -85,38 +86,19 @@ export default function WorkItemsPage() {
       <AppBar title="Work Items" />
 
       {/* Status-Filter Tabs */}
-      <div className="fixed-below-appbar bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-2">
-        <div className="flex gap-1 overflow-x-auto hide-scrollbar">
-          {STATE_FILTERS.map((f, i) => (
-            <button
-              key={f.label}
-              onClick={() => setFilterIdx(i)}
-              className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                filterIdx === i
-                  ? "bg-blue-600 text-white"
-                  : "bg-slate-800 text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              {f.label}
-              {i === 0 && items && (
-                <span className="ml-1.5 text-xs opacity-70">
-                  {items.filter((w) => ["Active", "New"].includes(w.fields["System.State"])).length}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
+      <TabBar
+        tabs={STATE_FILTERS.map((f, i) => ({
+          key: String(i),
+          label: i === 0 && items
+            ? <>{f.label}<span className="ml-1.5 text-xs opacity-70">{items.filter((w) => ["Active", "New"].includes(w.fields["System.State"])).length}</span></>
+            : f.label,
+        }))}
+        activeKey={String(filterIdx)}
+        onChange={(key) => setFilterIdx(Number(key))}
+      />
 
       {/* Pull-to-Refresh Indikator */}
-      {isPulling && (
-        <div
-          className="fixed top-[7rem] left-1/2 -translate-x-1/2 z-40 flex items-center justify-center w-9 h-9 rounded-full bg-slate-800 border border-slate-700 shadow-lg transition-all"
-          style={{ opacity: pullProgress, transform: `translateX(-50%) scale(${0.6 + pullProgress * 0.4})` }}
-        >
-          <RotateCw size={16} className="text-blue-400" style={{ transform: `rotate(${pullProgress * 360}deg)` }} />
-        </div>
-      )}
+      <PullToRefreshIndicator isPulling={isPulling} pullProgress={pullProgress} />
 
       {/* Inhalt */}
       <div className="pt-[3.85rem]">
@@ -125,7 +107,7 @@ export default function WorkItemsPage() {
         ) : error ? (
           <ErrorMessage message="Work Items konnten nicht geladen werden" error={error} onRetry={refetch} />
         ) : filtered.length === 0 ? (
-          <EmptyState icon={ListChecks} title="Keine Work Items" description="Keine Eintraege in diesem Filter" />
+          <EmptyState icon={ListChecks} title="Keine Work Items" description="Keine Einträge in diesem Filter" />
         ) : (
           <div className="divide-y divide-slate-800/50">
             {filtered.map((item) => (
@@ -165,7 +147,7 @@ function WorkItemRow({ item }: { item: WorkItem }) {
           )}
           {changedDate && (
             <span className="text-xs text-slate-600 ml-auto">
-              {formatDistanceToNow(new Date(changedDate), { addSuffix: true, locale: de })}
+              {timeAgo(changedDate)}
             </span>
           )}
         </div>

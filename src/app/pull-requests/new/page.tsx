@@ -149,7 +149,7 @@ export default function NewPRPage() {
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-slate-300">Repository *</label>
           {repositories.length === 0 ? (
-            <p className="text-sm text-yellow-400">Kein Repository verfuegbar – Einstellungen pruefen</p>
+            <p className="text-sm text-yellow-400">Kein Repository verfügbar – Einstellungen prüfen</p>
           ) : (
             <div className="relative">
               <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
@@ -311,7 +311,7 @@ export default function NewPRPage() {
               className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-slate-400 hover:text-slate-200 hover:border-slate-600 transition-colors"
             >
               <UserPlus size={14} />
-              Reviewer hinzufuegen
+              Reviewer hinzufügen
             </button>
           )}
         </div>

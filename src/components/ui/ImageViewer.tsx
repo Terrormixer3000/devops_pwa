@@ -96,13 +96,13 @@ export function ImageDiffViewer({
             title="Vorher"
             label={oldLabel}
             src={oldSrc}
-            emptyMessage="Kein vorheriges Bild verfuegbar"
+            emptyMessage="Kein vorheriges Bild verfügbar"
           />
           <ImageViewer
             title="Nachher"
             label={newLabel}
             src={newSrc}
-            emptyMessage="Kein neues Bild verfuegbar"
+            emptyMessage="Kein neues Bild verfügbar"
           />
         </div>
       )}
