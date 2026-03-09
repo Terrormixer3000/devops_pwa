@@ -1673,6 +1673,15 @@ export const demoApi = {
         }
       });
     },
+
+    listPipelineFolders(): string[] {
+      const namespaces = ["core", "billing", "commerce", "ops", "data", "mobile", "web", "shared", "integration", "security"];
+      return [
+        "\\",
+        ...namespaces.map((n) => `\\${n}`),
+        ...namespaces.map((n) => `\\${n}\\delivery`),
+      ];
+    },
   },
 
   releases: {

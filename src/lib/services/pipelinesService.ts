@@ -145,4 +145,53 @@ export const pipelinesService = {
       { status: "cancelling" }
     );
   },
+
+  /** Gibt alle Pipeline-Ordner des Projekts als Pfad-Liste zurueck. */
+  async listPipelineFolders(
+    client: AxiosInstance,
+    project: string
+  ): Promise<string[]> {
+    if (isDemoClient(client)) {
+      return demoApi.pipelines.listPipelineFolders();
+    }
+    const res = await client.get<AzureListResponse<{ path: string }>>(
+      `/${project}/_apis/build/folders?api-version=7.1`
+    );
+    return (res.data.value || []).map((f) => f.path);
+  },
+
+  /** Erstellt eine neue YAML-Pipeline-Definition im Projekt. */
+  async createPipeline(
+    client: AxiosInstance,
+    project: string,
+    payload: {
+      name: string;
+      folder?: string;
+      yamlPath: string;
+      repositoryId: string;
+      repositoryName: string;
+    }
+  ): Promise<Pipeline> {
+    if (isDemoClient(client)) {
+      return { id: Math.floor(Math.random() * 9000) + 1000, name: payload.name, folder: payload.folder || "\\" };
+    }
+
+    const res = await client.post<Pipeline>(
+      `/${project}/_apis/pipelines?api-version=7.1`,
+      {
+        name: payload.name,
+        folder: payload.folder || "\\",
+        configuration: {
+          type: "yaml",
+          path: payload.yamlPath,
+          repository: {
+            id: payload.repositoryId,
+            type: "azureReposGit",
+            name: payload.repositoryName,
+          },
+        },
+      }
+    );
+    return res.data;
+  },
 };
