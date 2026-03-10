@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppBar } from "@/components/layout/AppBar";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
@@ -20,6 +21,7 @@ import { StartPipelineModal } from "@/components/pipelines/StartPipelineModal";
 import { CreatePipelineModal } from "@/components/pipelines/CreatePipelineModal";
 import { timeAgo } from "@/lib/utils/timeAgo";
 import { stripRefPrefix } from "@/lib/utils/gitUtils";
+import { usePipelineCreationStore } from "@/lib/stores/pipelineCreationStore";
 import type { Pipeline } from "@/types";
 import { PlayCircle, ChevronRight, Play, StopCircle, Plus } from "lucide-react";
 
@@ -32,9 +34,21 @@ export default function PipelinesPage() {
   const { settings } = useSettingsStore();
   const { client } = useAzureClient();
   const qc = useQueryClient();
+  const router = useRouter();
+  const {
+    clearDraft,
+    clearFlashMessage,
+    consumeCreateModalResume,
+    draft,
+    flashMessage,
+    resumeCreateModal,
+    setDraft,
+  } = usePipelineCreationStore();
 
   const { selectedIds: selectedDefIds } = usePipelineDefStore();
   const selectedDefNumbers = selectedDefIds.map(Number).filter(Boolean);
+  const isCreateModalOpen = createModal || resumeCreateModal;
+  const activeView = flashMessage || isCreateModalOpen ? "pipelines" : view;
 
   const { data: pipelines, isLoading: pipelinesLoading } = useQuery({
     queryKey: ["pipelines", settings?.project, settings?.demoMode],
@@ -55,14 +69,14 @@ export default function PipelinesPage() {
   const { data: pipelineFolders = [] } = useQuery({
     queryKey: ["pipeline-folders", settings?.project, settings?.demoMode],
     queryFn: () => client && settings ? pipelinesService.listPipelineFolders(client, settings.project) : Promise.resolve([]),
-    enabled: !!client && !!settings && createModal,
+    enabled: !!client && !!settings && isCreateModalOpen,
     staleTime: 10 * 60 * 1000,
   });
 
   const { data: repositories } = useQuery({
     queryKey: ["repositories", settings?.project, settings?.demoMode],
     queryFn: () => client && settings ? repositoriesService.listRepositories(client, settings.project) : Promise.resolve([]),
-    enabled: !!client && !!settings && createModal,
+    enabled: !!client && !!settings && isCreateModalOpen,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -71,7 +85,13 @@ export default function PipelinesPage() {
       if (!client || !settings) throw new Error("Kein Client");
       return pipelinesService.createPipeline(client, settings.project, data);
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["pipelines"] }); setCreateModal(false); },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["pipelines"] });
+      await qc.invalidateQueries({ queryKey: ["pipeline-folders"] });
+      consumeCreateModalResume();
+      clearDraft();
+      setCreateModal(false);
+    },
   });
 
   const startMutation = useMutation({
@@ -87,18 +107,42 @@ export default function PipelinesPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["builds", selectedDefNumbers] }),
   });
 
+  useEffect(() => {
+    if (!flashMessage) return;
+    const timeoutId = window.setTimeout(() => {
+      clearFlashMessage();
+    }, 4000);
+    return () => window.clearTimeout(timeoutId);
+  }, [clearFlashMessage, flashMessage]);
+
   return (
     <div className="min-h-screen">
       <AppBar title={<DeliveryTitleSelector current="pipelines" />} rightSlot={<PipelineSelector pipelines={pipelines || []} loading={pipelinesLoading} />} />
 
       <TabBar
         tabs={[{ key: "builds", label: "Runs" }, { key: "pipelines", label: "Definitionen" }]}
-        activeKey={view}
+        activeKey={activeView}
         onChange={(key) => setView(key as "pipelines" | "builds")}
       />
 
       <div className="pt-[3.85rem]">
-        {view === "pipelines" && (
+        {flashMessage && (
+          <div className="px-4 pt-2">
+            <div
+              className={`rounded-2xl border px-4 py-3 text-sm ${
+                flashMessage.tone === "success"
+                  ? "border-green-700/40 bg-green-900/20 text-green-300"
+                  : flashMessage.tone === "warning"
+                    ? "border-yellow-700/40 bg-yellow-900/20 text-yellow-300"
+                    : "border-blue-700/40 bg-blue-900/20 text-blue-200"
+              }`}
+            >
+              {flashMessage.text}
+            </div>
+          </div>
+        )}
+
+        {activeView === "pipelines" && (
           pipelinesLoading ? <PageLoader /> : !pipelines?.length ? <EmptyState icon={PlayCircle} title="Keine Pipelines gefunden" /> : (
             <div className="divide-y divide-slate-800/50">
               {pipelines.map((pipeline) => (
@@ -122,7 +166,7 @@ export default function PipelinesPage() {
           )
         )}
 
-        {view === "builds" && (
+        {activeView === "builds" && (
           buildsLoading ? <PageLoader /> : buildsError ? (
             <ErrorMessage message="Builds konnten nicht geladen werden" error={buildsError} onRetry={refetch} />
           ) : !builds?.length ? <EmptyState icon={PlayCircle} title="Keine Builds gefunden" /> : (
@@ -164,7 +208,7 @@ export default function PipelinesPage() {
         )}
       </div>
 
-      {view === "pipelines" && (
+      {activeView === "pipelines" && (
         <button
           onClick={() => { createPipelineMutation.reset(); setCreateModal(true); }}
           className="fixed right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-full bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/40 text-sm font-medium transition-colors"
@@ -175,15 +219,30 @@ export default function PipelinesPage() {
         </button>
       )}
 
-      <CreatePipelineModal
-        open={createModal}
-        isPending={createPipelineMutation.isPending}
-        error={createPipelineMutation.error ? (createPipelineMutation.error as Error).message : null}
-        repositories={repositories}
-        pipelineFolders={pipelineFolders}
-        onClose={() => { createPipelineMutation.reset(); setCreateModal(false); }}
-        onSubmit={(data) => createPipelineMutation.mutate(data)}
-      />
+      {isCreateModalOpen && (
+        <CreatePipelineModal
+          open={isCreateModalOpen}
+          isPending={createPipelineMutation.isPending}
+          error={createPipelineMutation.error ? (createPipelineMutation.error as Error).message : null}
+          repositories={repositories}
+          pipelineFolders={pipelineFolders}
+          initialDraft={draft}
+          onClose={() => {
+            createPipelineMutation.reset();
+            consumeCreateModalResume();
+            clearDraft();
+            setCreateModal(false);
+          }}
+          onSubmit={(data) => createPipelineMutation.mutate(data)}
+          onStartEditor={(nextDraft) => {
+            createPipelineMutation.reset();
+            consumeCreateModalResume();
+            setDraft(nextDraft);
+            setCreateModal(false);
+            router.push("/pipelines/new/yaml");
+          }}
+        />
+      )}
 
       <StartPipelineModal
         open={!!startModal}

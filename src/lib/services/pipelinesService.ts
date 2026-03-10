@@ -173,7 +173,7 @@ export const pipelinesService = {
     }
   ): Promise<Pipeline> {
     if (isDemoClient(client)) {
-      return { id: Math.floor(Math.random() * 9000) + 1000, name: payload.name, folder: payload.folder || "\\" };
+      return demoApi.pipelines.createPipeline(payload);
     }
 
     const res = await client.post<Pipeline>(
