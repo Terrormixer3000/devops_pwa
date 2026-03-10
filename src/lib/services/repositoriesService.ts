@@ -318,7 +318,18 @@ export const repositoriesService = {
     parentCommitId?: string,
     changeType: "edit" | "add" = "edit"
   ): Promise<void> {
-    if (isDemoClient(client)) return;
+    if (isDemoClient(client)) {
+      return demoApi.repositories.pushFileChange(
+        repoId,
+        branchName,
+        oldObjectId,
+        filePath,
+        newContent,
+        commitMessage,
+        parentCommitId,
+        changeType
+      );
+    }
 
     // Inhalt als base64 kodieren (UTF-8-sicher via TextEncoder)
     const bytes = new TextEncoder().encode(newContent);

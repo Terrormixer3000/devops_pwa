@@ -1190,6 +1190,149 @@ function listKnownPathsForRepoBranch(state: DemoState, repoId: string, branch: s
     .sort();
 }
 
+function findBranchByObjectId(state: DemoState, repoId: string, objectId: string): string | null {
+  return (state.branches[repoId] || []).find((branch) => branch.objectId === objectId)?.name || null;
+}
+
+function buildTreeObjectId(repoId: string, branch: string, path: string): string {
+  return `${repoId}-${branch}-${hashText(path).toString(36)}`.replace(/[^a-zA-Z0-9-]/g, "").slice(0, 40);
+}
+
+function buildTreeUrl(repoId: string, path: string): string {
+  return `https://demo.local/repos/${repoId}${path}`;
+}
+
+function rebuildTreesForRepoBranch(state: DemoState, repoId: string, branch: string) {
+  const filesForBranch = listKnownPathsForRepoBranch(state, repoId, branch);
+  const treeEntries = new Map<string, Map<string, TreeEntry>>();
+
+  const ensureTreeBucket = (path: string) => {
+    if (!treeEntries.has(path)) {
+      treeEntries.set(path, new Map());
+    }
+    return treeEntries.get(path)!;
+  };
+
+  ensureTreeBucket("/");
+
+  for (const path of filesForBranch) {
+    const segments = path.split("/").filter(Boolean);
+    let currentParent = "/";
+
+    for (let i = 0; i < segments.length - 1; i++) {
+      const segment = segments[i];
+      const nextPath = currentParent === "/" ? `/${segment}` : `${currentParent}/${segment}`;
+      ensureTreeBucket(currentParent).set(
+        nextPath,
+        {
+          objectId: buildTreeObjectId(repoId, branch, nextPath),
+          gitObjectType: "tree",
+          path: nextPath,
+          url: buildTreeUrl(repoId, nextPath),
+        }
+      );
+      ensureTreeBucket(nextPath);
+      currentParent = nextPath;
+    }
+
+    const content = state.files[fileKey(repoId, branch, path)] || "";
+    ensureTreeBucket(currentParent).set(
+      path,
+      {
+        objectId: buildTreeObjectId(repoId, branch, path),
+        gitObjectType: "blob",
+        path,
+        size: content.length,
+        url: buildTreeUrl(repoId, path),
+      }
+    );
+  }
+
+  for (const key of Object.keys(state.trees)) {
+    if (key.startsWith(`${repoId}::${branch}::`)) {
+      delete state.trees[key];
+    }
+  }
+
+  for (const [path, entries] of treeEntries.entries()) {
+    state.trees[treeKey(repoId, branch, path)] = Array.from(entries.values()).sort((a, b) => {
+      if (a.gitObjectType !== b.gitObjectType) {
+        return a.gitObjectType === "tree" ? -1 : 1;
+      }
+      return a.path.localeCompare(b.path);
+    });
+  }
+}
+
+function copyBranchState(state: DemoState, repoId: string, sourceBranch: string, targetBranch: string) {
+  const sourcePrefix = `${repoId}::${sourceBranch}::`;
+  for (const [key, value] of Object.entries(state.files)) {
+    if (!key.startsWith(sourcePrefix)) continue;
+    const path = key.slice(sourcePrefix.length);
+    state.files[fileKey(repoId, targetBranch, path)] = value;
+  }
+
+  state.commits[repoKey(repoId, targetBranch)] = clone(state.commits[repoKey(repoId, sourceBranch)] || []);
+  rebuildTreesForRepoBranch(state, repoId, targetBranch);
+}
+
+function buildDemoWriteCommit(
+  repoId: string,
+  branch: string,
+  filePath: string,
+  commitMessage: string,
+  changeType: "edit" | "add"
+): Commit {
+  const author = pickIdentity(hashText(`${repoId}:${branch}:${filePath}:${commitMessage}`));
+  const timestamp = new Date().toISOString();
+  const commitId = `${repoId}-${branch}-${hashText(`${filePath}:${timestamp}`)}`
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .padEnd(40, "0")
+    .slice(0, 40);
+
+  return {
+    commitId,
+    author: {
+      name: author.displayName,
+      email: author.uniqueName || `${author.id}@demo.local`,
+      date: timestamp,
+    },
+    committer: {
+      name: author.displayName,
+      email: author.uniqueName || `${author.id}@demo.local`,
+      date: timestamp,
+    },
+    comment: commitMessage,
+    changeCounts: {
+      Add: changeType === "add" ? 1 : 0,
+      Edit: changeType === "edit" ? 1 : 0,
+      Delete: 0,
+    },
+    url: `https://demo.local/repos/${repoId}/commits/${commitId}`,
+    remoteUrl: `https://demo.local/repos/${repoId}/commit/${commitId}`,
+  };
+}
+
+function listPipelineFoldersFromPipelines(pipelines: Pipeline[]): string[] {
+  const folders = new Set<string>(["\\"]);
+
+  for (const pipeline of pipelines) {
+    const folder = pipeline.folder || "\\";
+    const parts = folder.split("\\").filter(Boolean);
+    let current = "";
+    for (const part of parts) {
+      current = current ? `${current}\\${part}` : `\\${part}`;
+      folders.add(current);
+    }
+  }
+
+  return Array.from(folders).sort((a, b) => {
+    if (a === "\\") return -1;
+    if (b === "\\") return 1;
+    return a.localeCompare(b);
+  });
+}
+
 function buildDemoCommitChanges(
   state: DemoState,
   repoId: string,
@@ -1347,6 +1490,15 @@ export const demoApi = {
         if (existing.some((b) => b.name === branchName)) {
           throw new Error(`Branch "${branchName}" existiert bereits.`);
         }
+        const sourceBranchName =
+          findBranchByObjectId(state, repoId, sourceObjectId) ||
+          findBranchForCommit(state, repoId, sourceObjectId);
+        if (sourceBranchName) {
+          copyBranchState(state, repoId, sourceBranchName, branchName);
+        } else {
+          state.commits[repoKey(repoId, branchName)] = [];
+          rebuildTreesForRepoBranch(state, repoId, branchName);
+        }
         state.branches[repoId] = [
           {
             name: branchName,
@@ -1437,6 +1589,55 @@ export const demoApi = {
       commitId: string
     ): Array<{ changeType: string; item: { path: string; gitObjectType: "blob" }; originalPath?: string }> {
       return clone(buildDemoCommitChanges(loadDemoState(), repoId, commitId));
+    },
+
+    pushFileChange(
+      repoId: string,
+      branchName: string,
+      oldObjectId: string,
+      filePath: string,
+      newContent: string,
+      commitMessage: string,
+      parentCommitId?: string,
+      changeType: "edit" | "add" = "edit"
+    ): void {
+      withDemoState((state) => {
+        const existingBranches = state.branches[repoId] || [];
+        let branch = existingBranches.find((candidate) => candidate.name === branchName);
+
+        if (!branch) {
+          const sourceBranchName =
+            (parentCommitId && (
+              findBranchByObjectId(state, repoId, parentCommitId) ||
+              findBranchForCommit(state, repoId, parentCommitId)
+            )) ||
+            null;
+          if (sourceBranchName) {
+            copyBranchState(state, repoId, sourceBranchName, branchName);
+          } else {
+            state.commits[repoKey(repoId, branchName)] = [];
+            rebuildTreesForRepoBranch(state, repoId, branchName);
+          }
+
+          branch = {
+            name: branchName,
+            objectId: oldObjectId,
+            creator: existingBranches[0]?.creator ?? pickIdentity(0),
+            url: `https://demo.local/repos/${repoId}/branches/${branchName}`,
+          };
+          state.branches[repoId] = [branch, ...existingBranches];
+        }
+
+        state.files[fileKey(repoId, branchName, filePath)] = newContent;
+        rebuildTreesForRepoBranch(state, repoId, branchName);
+
+        const commit = buildDemoWriteCommit(repoId, branchName, filePath, commitMessage, changeType);
+        state.commits[repoKey(repoId, branchName)] = [
+          commit,
+          ...(state.commits[repoKey(repoId, branchName)] || []),
+        ];
+        branch.objectId = commit.commitId;
+      });
     },
   },
 
@@ -1589,6 +1790,26 @@ export const demoApi = {
       return clone(loadDemoState().pipelines);
     },
 
+    createPipeline(payload: {
+      name: string;
+      folder?: string;
+      yamlPath: string;
+      repositoryId: string;
+      repositoryName: string;
+    }): Pipeline {
+      return withDemoState((state) => {
+        const nextId = Math.max(0, ...state.pipelines.map((pipeline) => pipeline.id)) + 1;
+        const pipeline: Pipeline = {
+          id: nextId,
+          name: payload.name,
+          folder: payload.folder || "\\",
+          project: projectRef(),
+        };
+        state.pipelines.unshift(pipeline);
+        return clone(pipeline);
+      });
+    },
+
     listBuilds(definitionIds?: number[], top = 20, repositoryId?: string): Build[] {
       const state = loadDemoState();
       let buildList = [...state.builds];
@@ -1675,12 +1896,7 @@ export const demoApi = {
     },
 
     listPipelineFolders(): string[] {
-      const namespaces = ["core", "billing", "commerce", "ops", "data", "mobile", "web", "shared", "integration", "security"];
-      return [
-        "\\",
-        ...namespaces.map((n) => `\\${n}`),
-        ...namespaces.map((n) => `\\${n}\\delivery`),
-      ];
+      return listPipelineFoldersFromPipelines(loadDemoState().pipelines);
     },
   },
 
