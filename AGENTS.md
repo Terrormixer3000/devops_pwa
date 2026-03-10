@@ -70,6 +70,7 @@
 - Global bootstrapping happens in `src/components/layout/Providers.tsx`.
 - UI data fetching is primarily handled with React Query.
 - Cross-page client state and persistence are handled with Zustand stores.
+- YAML pipeline creation supports two flows: direct creation from an existing YAML path, or a draft/editor flow that writes the YAML file before optionally creating the pipeline definition.
 - Pull Request creation opens as a drawer on `/pull-requests`; `/pull-requests/new` is a redirect-only compatibility route.
 - Push notifications use API routes under `src/app/api/push/*`, a local JSON subscription store in `data/subscriptions.json`, and `public/sw-custom.js`.
 - Each push subscription has a `webhookToken` (64 hex chars, 256-bit entropy) generated at registration time and stored in `data/subscriptions.json`.
