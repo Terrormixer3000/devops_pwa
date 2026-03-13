@@ -4,20 +4,12 @@ import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, FolderOpen, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
-import type { PipelineCreationDraft, PipelineYamlEntryMode } from "@/lib/stores/pipelineCreationStore";
+import type { PipelineCreationDraft } from "@/lib/stores/pipelineCreationStore";
 
 interface Repository {
   id: string;
   name: string;
   defaultBranch?: string;
-}
-
-export interface CreatePipelineData {
-  name: string;
-  folder: string;
-  yamlPath: string;
-  repositoryId: string;
-  repositoryName: string;
 }
 
 /** Gibt direkte Kinder eines Ordner-Pfads zurück. */
@@ -77,61 +69,42 @@ function getNewFolderError(name: string): string | null {
 
 interface CreatePipelineModalProps {
   open: boolean;
-  isPending: boolean;
-  error: string | null;
   repositories: Repository[] | undefined;
   pipelineFolders: string[];
-  initialDraft?: PipelineCreationDraft | null;
   onClose: () => void;
-  onSubmit: (data: CreatePipelineData) => void;
   onStartEditor: (draft: PipelineCreationDraft) => void;
 }
 
-/** Modal fuer YAML-Pipelines mit Direkt-Create oder Editor-Flow. */
+/** Modal fuer YAML-Pipelines; sammelt Metadaten und springt dann immer in den Editor. */
 export function CreatePipelineModal({
   open,
-  isPending,
-  error,
   repositories,
   pipelineFolders,
-  initialDraft = null,
   onClose,
-  onSubmit,
   onStartEditor,
 }: CreatePipelineModalProps) {
-  const initialFolder = initialDraft?.folder || "\\";
-  const initialYamlPath = normalizeYamlPath(initialDraft?.yamlPath || "/azure-pipelines.yml");
-  const initialMissingFolderChain = expandFolderChain(initialFolder).filter(
-    (candidate) => candidate !== "\\" && !pipelineFolders.includes(candidate)
-  );
-
-  const [name, setName] = useState(initialDraft?.name || "");
-  const [selectedRepoId, setSelectedRepoId] = useState(initialDraft?.repositoryId || "");
-  const [yamlPath, setYamlPath] = useState(initialYamlPath);
+  const initialFolder = "\\";
+  const [name, setName] = useState("");
+  const [selectedRepoId, setSelectedRepoId] = useState("");
+  const [yamlPath, setYamlPath] = useState("/azure-pipelines.yml");
   const [folder, setFolder] = useState(initialFolder);
-  const [entryMode, setEntryMode] = useState<PipelineYamlEntryMode>(
-    initialDraft?.entryMode || "existing-yaml"
-  );
   const [folderPickerOpen, setFolderPickerOpen] = useState(false);
   const [folderPickerPath, setFolderPickerPath] = useState(initialFolder);
-  const [folderHistory, setFolderHistory] = useState<string[]>(buildFolderHistory(initialFolder));
-  const [createdFolders, setCreatedFolders] = useState<string[]>(initialMissingFolderChain);
+  const [folderHistory, setFolderHistory] = useState<string[]>([]);
+  const [createdFolders, setCreatedFolders] = useState<string[]>(
+    expandFolderChain(initialFolder).filter((candidate) => candidate !== "\\" && !pipelineFolders.includes(candidate))
+  );
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [newFolderError, setNewFolderError] = useState<string | null>(null);
+
   const selectedRepo =
     repositories?.find((candidate) => candidate.id === selectedRepoId) ||
     (selectedRepoId
       ? {
           id: selectedRepoId,
-          name:
-            initialDraft?.repositoryId === selectedRepoId
-              ? initialDraft.repositoryName
-              : repositories?.find((candidate) => candidate.id === selectedRepoId)?.name || "",
-          defaultBranch:
-            initialDraft?.repositoryId === selectedRepoId
-              ? `refs/heads/${initialDraft.defaultBranch}`
-              : repositories?.find((candidate) => candidate.id === selectedRepoId)?.defaultBranch,
+          name: repositories?.find((candidate) => candidate.id === selectedRepoId)?.name || "",
+          defaultBranch: repositories?.find((candidate) => candidate.id === selectedRepoId)?.defaultBranch,
         }
       : (repositories?.[0] ?? null));
 
@@ -144,23 +117,6 @@ export function CreatePipelineModal({
     [availableFolders, folderPickerPath]
   );
 
-  const handleClose = () => {
-    if (isPending) return;
-    setFolderPickerOpen(false);
-    onClose();
-  };
-
-  const handleDirectCreate = () => {
-    if (!name.trim() || !selectedRepo) return;
-    onSubmit({
-      name: name.trim(),
-      folder: folder || "\\",
-      yamlPath: normalizeYamlPath(yamlPath),
-      repositoryId: selectedRepo.id,
-      repositoryName: selectedRepo.name,
-    });
-  };
-
   const handleStartEditor = () => {
     if (!name.trim() || !selectedRepo) return;
     onStartEditor({
@@ -170,9 +126,8 @@ export function CreatePipelineModal({
       repositoryId: selectedRepo.id,
       repositoryName: selectedRepo.name,
       defaultBranch: (selectedRepo.defaultBranch || "refs/heads/main").replace("refs/heads/", ""),
-      entryMode: "new-yaml",
-      editorContent: initialDraft?.editorContent || "",
-      fileExistsOnDefaultBranch: initialDraft?.fileExistsOnDefaultBranch ?? null,
+      editorContent: "",
+      fileExistsOnDefaultBranch: null,
     });
   };
 
@@ -212,7 +167,7 @@ export function CreatePipelineModal({
   return (
     <Modal
       open={open}
-      onClose={handleClose}
+      onClose={onClose}
       title={folderPickerOpen ? "Ordner wählen" : "Neue Pipeline erstellen"}
     >
       {folderPickerOpen ? (
@@ -339,12 +294,6 @@ export function CreatePipelineModal({
         </div>
       ) : (
         <div className="space-y-4">
-          {error && (
-            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2.5">
-              <p className="text-sm text-red-300">{error}</p>
-            </div>
-          )}
-
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-slate-300">Name</label>
             <input
@@ -354,32 +303,6 @@ export function CreatePipelineModal({
               placeholder="Meine Pipeline"
               className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
             />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-300">YAML-Modus</label>
-            <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-800/90 p-1">
-              {[
-                { key: "existing-yaml" as const, label: "Vorhandene YAML" },
-                { key: "new-yaml" as const, label: "Neue YAML-Datei" },
-              ].map((mode) => (
-                <button
-                  key={mode.key}
-                  type="button"
-                  onClick={() => setEntryMode(mode.key)}
-                  className={`rounded-[0.9rem] py-2.5 text-xs font-medium transition-colors ${
-                    entryMode === mode.key ? "bg-slate-700 text-slate-100 shadow-sm" : "text-slate-400"
-                  }`}
-                >
-                  {mode.label}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-slate-500">
-              {entryMode === "existing-yaml"
-                ? "Erstellt direkt eine Pipeline-Definition für eine vorhandene YAML-Datei."
-                : "Öffnet einen Editor, schreibt die YAML-Datei und committed sie vor dem Erstellen."}
-            </p>
           </div>
 
           <div className="space-y-1.5">
@@ -434,25 +357,13 @@ export function CreatePipelineModal({
           </div>
 
           <div className="flex gap-2 pt-1">
-            <Button variant="ghost" className="flex-1" onClick={handleClose} disabled={isPending}>
+            <Button variant="ghost" className="flex-1" onClick={onClose}>
               Abbrechen
             </Button>
-            {entryMode === "existing-yaml" ? (
-              <Button
-                className="flex-1"
-                loading={isPending}
-                disabled={isInvalid || isPending}
-                onClick={handleDirectCreate}
-              >
-                <Plus size={16} />
-                Erstellen
-              </Button>
-            ) : (
-              <Button className="flex-1" disabled={isInvalid} onClick={handleStartEditor}>
-                <Plus size={16} />
-                Weiter zum Editor
-              </Button>
-            )}
+            <Button className="flex-1" disabled={isInvalid} onClick={handleStartEditor}>
+              <Plus size={16} />
+              Weiter
+            </Button>
           </div>
         </div>
       )}
