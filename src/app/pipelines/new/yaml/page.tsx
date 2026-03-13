@@ -4,15 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, FileCode2, GitBranch, Save } from "lucide-react";
+import { FileCode2, GitBranch, Save } from "lucide-react";
 import { AppBar } from "@/components/layout/AppBar";
-import { ErrorMessage } from "@/components/ui/ErrorMessage";
-import { PageLoader } from "@/components/ui/LoadingSpinner";
-import { Button } from "@/components/ui/Button";
 import {
   PipelineYamlCommitModal,
   type PipelineYamlCommitRequest,
 } from "@/components/pipelines/PipelineYamlCommitModal";
+import { BackActionButton } from "@/components/ui/BackButton";
+import { Button } from "@/components/ui/Button";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { useAzureClient } from "@/lib/hooks/useAzureClient";
 import { pullRequestsService } from "@/lib/services/pullRequestsService";
 import { pipelinesService } from "@/lib/services/pipelinesService";
@@ -84,13 +85,7 @@ export default function PipelineYamlEditorPage() {
   const queryClient = useQueryClient();
   const { settings } = useSettingsStore();
   const { client } = useAzureClient();
-  const {
-    clearDraft,
-    draft,
-    patchDraft,
-    requestCreateModalResume,
-    setFlashMessage,
-  } = usePipelineCreationStore();
+  const { clearDraft, draft, patchDraft, setFlashMessage } = usePipelineCreationStore();
 
   const [editorContent, setEditorContent] = useState("");
   const [editorHydrated, setEditorHydrated] = useState(false);
@@ -133,6 +128,14 @@ export default function PipelineYamlEditorPage() {
   });
 
   const defaultBranchRef = branches?.find((branch) => branch.name === draft?.defaultBranch) || null;
+  const existingBranchNames = useMemo(() => {
+    const branchNames = Array.from(new Set((branches || []).map((branch) => branch.name)));
+    return branchNames.sort((left, right) => {
+      if (left === draft?.defaultBranch) return -1;
+      if (right === draft?.defaultBranch) return 1;
+      return left.localeCompare(right);
+    });
+  }, [branches, draft?.defaultBranch]);
 
   const {
     data: existingYaml,
@@ -205,15 +208,8 @@ export default function PipelineYamlEditorPage() {
     setEditorHydrated(true);
   }, [draft, editorHydrated, existingYaml, normalizedYamlPath, patchDraft]);
 
-  const navigateBackToConfig = () => {
-    if (!draft) return;
-    patchDraft({
-      editorContent,
-      fileExistsOnDefaultBranch: existingYaml?.exists ?? draft.fileExistsOnDefaultBranch,
-      yamlPath: normalizedYamlPath,
-      entryMode: "new-yaml",
-    });
-    requestCreateModalResume();
+  const navigateBackToPipelines = () => {
+    clearDraft();
     router.push("/pipelines");
   };
 
@@ -223,6 +219,27 @@ export default function PipelineYamlEditorPage() {
     setFlashMessage({ tone, text });
     clearDraft();
     router.push("/pipelines");
+  };
+
+  const fileExistsOnBranch = async (branchName: string): Promise<boolean> => {
+    if (!client || !settings || !draft) return false;
+    if (branchName === draft.defaultBranch) {
+      return existingYaml?.exists ?? false;
+    }
+
+    try {
+      const items = await repositoriesService.getTree(
+        client,
+        settings.project,
+        draft.repositoryId,
+        branchName,
+        getParentPath(normalizedYamlPath)
+      );
+      return items.some((item) => item.gitObjectType === "blob" && item.path === normalizedYamlPath);
+    } catch (error) {
+      if (isNotFoundError(error)) return false;
+      throw error;
+    }
   };
 
   const handleRetryAction = async () => {
@@ -265,16 +282,22 @@ export default function PipelineYamlEditorPage() {
     setCommitError(null);
     setRetryAction(null);
 
-    const changeType = draft.fileExistsOnDefaultBranch ? "edit" : "add";
+    const createPullRequest = request.createPR && request.branchName !== draft.defaultBranch;
 
     try {
-      if (request.targetMode === "current") {
+      if (request.targetKind === "existing") {
+        const targetBranchRef = branches?.find((branch) => branch.name === request.branchName);
+        if (!targetBranchRef) {
+          throw new Error(`Branch "${request.branchName}" wurde nicht gefunden.`);
+        }
+
+        const changeType = await fileExistsOnBranch(request.branchName) ? "edit" : "add";
         await repositoriesService.pushFileChange(
           client,
           settings.project,
           draft.repositoryId,
-          draft.defaultBranch,
-          defaultBranchRef.objectId,
+          request.branchName,
+          targetBranchRef.objectId,
           normalizedYamlPath,
           editorContent,
           request.commitMessage,
@@ -282,44 +305,81 @@ export default function PipelineYamlEditorPage() {
           changeType
         );
 
-        patchDraft({
-          editorContent,
-          fileExistsOnDefaultBranch: true,
-        });
+        patchDraft(
+          request.branchName === draft.defaultBranch
+            ? { editorContent, fileExistsOnDefaultBranch: true }
+            : { editorContent }
+        );
 
-        try {
-          await pipelinesService.createPipeline(client, settings.project, {
-            name: draft.name,
-            folder: draft.folder,
-            yamlPath: normalizedYamlPath,
-            repositoryId: draft.repositoryId,
-            repositoryName: draft.repositoryName,
-          });
-          await finalizeToPipelines("success", `Pipeline "${draft.name}" wurde erstellt.`);
-        } catch {
-          setCommitModalOpen(false);
-          setRetryAction({
-            kind: "pipeline",
-            message:
-              "Die YAML-Datei wurde bereits auf dem aktuellen Branch committed. Die Pipeline-Definition konnte jedoch nicht erstellt werden.",
-            error: null,
-            payload: {
+        if (request.branchName === draft.defaultBranch) {
+          try {
+            await pipelinesService.createPipeline(client, settings.project, {
               name: draft.name,
               folder: draft.folder,
               yamlPath: normalizedYamlPath,
               repositoryId: draft.repositoryId,
               repositoryName: draft.repositoryName,
+            });
+            await finalizeToPipelines("success", `Pipeline "${draft.name}" wurde erstellt.`);
+          } catch {
+            setCommitModalOpen(false);
+            setRetryAction({
+              kind: "pipeline",
+              message:
+                "Die YAML-Datei wurde bereits auf dem Default-Branch committed. Die Pipeline-Definition konnte jedoch nicht erstellt werden.",
+              error: null,
+              payload: {
+                name: draft.name,
+                folder: draft.folder,
+                yamlPath: normalizedYamlPath,
+                repositoryId: draft.repositoryId,
+                repositoryName: draft.repositoryName,
+              },
+            });
+          }
+          return;
+        }
+
+        if (!createPullRequest) {
+          await finalizeToPipelines(
+            "info",
+            `YAML-Datei wurde auf Branch "${request.branchName}" committed. Eine Pipeline-Definition wurde noch nicht angelegt.`
+          );
+          return;
+        }
+
+        try {
+          const pr = await pullRequestsService.create(client, settings.project, draft.repositoryId, {
+            title: request.prTitle || request.commitMessage,
+            sourceRefName: `refs/heads/${request.branchName}`,
+            targetRefName: `refs/heads/${draft.defaultBranch}`,
+          });
+          clearDraft();
+          router.push(`/pull-requests/${draft.repositoryId}/${pr.pullRequestId}`);
+        } catch {
+          setCommitModalOpen(false);
+          setRetryAction({
+            kind: "pr",
+            message:
+              `Die YAML-Datei wurde auf Branch "${request.branchName}" committed. Der Pull Request konnte nicht erstellt werden.`,
+            error: null,
+            payload: {
+              repoId: draft.repositoryId,
+              sourceBranch: request.branchName,
+              targetBranch: draft.defaultBranch,
+              title: request.prTitle || request.commitMessage,
             },
           });
         }
         return;
       }
 
+      const changeType = draft.fileExistsOnDefaultBranch ? "edit" : "add";
       await repositoriesService.pushFileChange(
         client,
         settings.project,
         draft.repositoryId,
-        request.newBranchName,
+        request.branchName,
         NEW_BRANCH_OLD_OBJECT_ID,
         normalizedYamlPath,
         editorContent,
@@ -328,15 +388,12 @@ export default function PipelineYamlEditorPage() {
         changeType
       );
 
-      patchDraft({
-        editorContent,
-        fileExistsOnDefaultBranch: true,
-      });
+      patchDraft({ editorContent });
 
-      if (!request.createPR) {
+      if (!createPullRequest) {
         await finalizeToPipelines(
           "info",
-          `YAML-Datei wurde auf Branch "${request.newBranchName}" committed. Eine Pipeline-Definition wurde noch nicht angelegt.`
+          `YAML-Datei wurde auf Branch "${request.branchName}" committed. Eine Pipeline-Definition wurde noch nicht angelegt.`
         );
         return;
       }
@@ -344,7 +401,7 @@ export default function PipelineYamlEditorPage() {
       try {
         const pr = await pullRequestsService.create(client, settings.project, draft.repositoryId, {
           title: request.prTitle || request.commitMessage,
-          sourceRefName: `refs/heads/${request.newBranchName}`,
+          sourceRefName: `refs/heads/${request.branchName}`,
           targetRefName: `refs/heads/${draft.defaultBranch}`,
         });
         clearDraft();
@@ -354,11 +411,11 @@ export default function PipelineYamlEditorPage() {
         setRetryAction({
           kind: "pr",
           message:
-            `Die YAML-Datei wurde auf Branch "${request.newBranchName}" committed. Der Pull Request konnte nicht erstellt werden.`,
+            `Die YAML-Datei wurde auf Branch "${request.branchName}" committed. Der Pull Request konnte nicht erstellt werden.`,
           error: null,
           payload: {
             repoId: draft.repositoryId,
-            sourceBranch: request.newBranchName,
+            sourceBranch: request.branchName,
             targetBranch: draft.defaultBranch,
             title: request.prTitle || request.commitMessage,
           },
@@ -436,12 +493,13 @@ export default function PipelineYamlEditorPage() {
     <div className="min-h-screen">
       <AppBar title="Pipeline YAML" />
 
-      <div className="mx-auto max-w-4xl space-y-4 px-4 pt-[calc(var(--app-bar-height)+1rem)] pb-6">
-        <div className="flex flex-wrap gap-2">
-          <Button variant="ghost" onClick={navigateBackToConfig}>
-            <ArrowLeft size={16} />
-            Zurück zur Konfiguration
-          </Button>
+      <div className="mx-auto max-w-4xl space-y-4 px-4 pb-6 pt-[calc(var(--app-bar-height)+1rem)]">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <BackActionButton
+            onClick={navigateBackToPipelines}
+            label="Pipelines"
+            disabled={commitPending}
+          />
           <Button
             onClick={() => {
               setCommitError(null);
@@ -450,7 +508,7 @@ export default function PipelineYamlEditorPage() {
             disabled={commitPending || retryPending || !!retryAction}
           >
             <Save size={16} />
-            Speichern und committen
+            Committen
           </Button>
         </div>
 
@@ -460,7 +518,9 @@ export default function PipelineYamlEditorPage() {
             {retryAction.error && <p className="mt-2 text-sm text-red-300">{retryAction.error}</p>}
             <div className="mt-3 flex gap-2">
               <Button onClick={handleRetryAction} loading={retryPending} disabled={retryPending}>
-                {retryAction.kind === "pipeline" ? "Pipeline-Definition erneut anlegen" : "Pull Request erneut anlegen"}
+                {retryAction.kind === "pipeline"
+                  ? "Pipeline-Definition erneut anlegen"
+                  : "Pull Request erneut anlegen"}
               </Button>
             </div>
           </div>
@@ -482,7 +542,7 @@ export default function PipelineYamlEditorPage() {
               <p className="font-mono">{draft.folder || "\\"}</p>
             </div>
             <div>
-              <p className="text-xs text-slate-500">Aktueller Branch</p>
+              <p className="text-xs text-slate-500">Default-Branch</p>
               <p className="inline-flex items-center gap-1.5">
                 <GitBranch size={14} className="text-blue-400" />
                 <span className="font-mono">{draft.defaultBranch}</span>
@@ -528,7 +588,8 @@ export default function PipelineYamlEditorPage() {
       {commitModalOpen && (
         <PipelineYamlCommitModal
           open={commitModalOpen}
-          currentBranchName={draft.defaultBranch}
+          defaultBranchName={draft.defaultBranch}
+          existingBranches={existingBranchNames}
           pending={commitPending}
           error={commitError}
           onClose={() => {
