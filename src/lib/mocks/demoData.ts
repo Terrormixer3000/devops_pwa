@@ -1342,35 +1342,22 @@ function buildDemoCommitChanges(
   const knownPaths = listKnownPathsForRepoBranch(state, repoId, branch);
   if (knownPaths.length === 0) return [];
 
+  const preferredPaths = [
+    "/README.md",
+    "/src/main.ts",
+    "/docs/architecture.md",
+    "/docs/release-notes.md",
+  ].filter((path) => knownPaths.includes(path));
+  const candidatePaths = preferredPaths.length > 0 ? preferredPaths : knownPaths;
   const seed = hashText(commitId);
-  const count = 1 + (seed % 3);
+  const count = Math.min(candidatePaths.length, 1 + (seed % 3));
   const result: Array<{ changeType: string; item: { path: string; gitObjectType: "blob" }; originalPath?: string }> = [];
+  const seen = new Set<string>();
 
-  for (let i = 0; i < count; i++) {
-    const path = knownPaths[(seed + i * 7) % knownPaths.length];
-    const variant = (seed + i * 11) % 8;
-
-    if (variant === 0) {
-      const newPath = `/src/demo/new-${commitId.slice(0, 6)}-${i}.ts`;
-      result.push({ changeType: "add", item: { path: newPath, gitObjectType: "blob" } });
-      continue;
-    }
-
-    if (variant === 1) {
-      result.push({ changeType: "delete", item: { path, gitObjectType: "blob" } });
-      continue;
-    }
-
-    if (variant === 2) {
-      const renamedPath = path.replace(/([^/]+)$/, `${commitId.slice(0, 4)}-$1`);
-      result.push({
-        changeType: "rename",
-        originalPath: path,
-        item: { path: renamedPath, gitObjectType: "blob" },
-      });
-      continue;
-    }
-
+  for (let i = 0; result.length < count && i < candidatePaths.length * 2; i++) {
+    const path = candidatePaths[(seed + i * 7) % candidatePaths.length];
+    if (seen.has(path)) continue;
+    seen.add(path);
     result.push({ changeType: "edit", item: { path, gitObjectType: "blob" } });
   }
 
@@ -1770,9 +1757,17 @@ export const demoApi = {
     },
 
     getIterationChanges(repoId: string, prId: number, iterationId: number): IterationChanges {
-      return clone(
-        loadDemoState().changes[changeKey(repoId, prId, iterationId)] || { changeEntries: [] }
-      );
+      const state = loadDemoState();
+      const key = changeKey(repoId, prId, iterationId);
+      const iteration = (state.iterations[prKey(repoId, prId)] || []).find((candidate) => candidate.id === iterationId);
+
+      if (iteration?.sourceRefCommit?.commitId) {
+        return {
+          changeEntries: clone(buildDemoCommitChanges(state, repoId, iteration.sourceRefCommit.commitId)),
+        };
+      }
+
+      return clone(state.changes[key] || { changeEntries: [] });
     },
 
     getPolicies(prId: number): Array<{ id: string; status: string; displayName: string; isRequired: boolean }> {
