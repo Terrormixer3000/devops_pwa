@@ -4,13 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileCode2, GitBranch, Save } from "lucide-react";
+import { ChevronLeft, FileCode2, GitBranch, Save } from "lucide-react";
 import { AppBar } from "@/components/layout/AppBar";
 import {
   PipelineYamlCommitModal,
   type PipelineYamlCommitRequest,
 } from "@/components/pipelines/PipelineYamlCommitModal";
-import { BackActionButton } from "@/components/ui/BackButton";
 import { Button } from "@/components/ui/Button";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
@@ -212,6 +211,37 @@ export default function PipelineYamlEditorPage() {
     clearDraft();
     router.push("/pipelines");
   };
+
+  const appBarTitle = draft ? (
+    <button
+      type="button"
+      onClick={navigateBackToPipelines}
+      disabled={commitPending}
+      className="flex items-center gap-0.5 text-[18px] font-semibold tracking-[-0.01em] text-slate-100 transition-opacity active:opacity-70 disabled:opacity-40 disabled:cursor-not-allowed"
+    >
+      <ChevronLeft size={26} className="-ml-1.5" />
+      Pipelines
+    </button>
+  ) : (
+    "Pipeline YAML"
+  );
+
+  const appBarCommitButton = draft ? (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => {
+        setCommitError(null);
+        setCommitModalOpen(true);
+      }}
+      loading={commitPending}
+      disabled={commitPending || retryPending || !!retryAction}
+      className="rounded-full border-blue-500/20 bg-blue-600/10 px-3 text-blue-100 shadow-none hover:bg-blue-600/15"
+    >
+      <Save size={16} />
+      Committen
+    </Button>
+  ) : null;
 
   const finalizeToPipelines = async (tone: "success" | "info" | "warning", text: string) => {
     await queryClient.invalidateQueries({ queryKey: ["pipelines"] });
@@ -431,7 +461,7 @@ export default function PipelineYamlEditorPage() {
   if (!draft) {
     return (
       <div className="min-h-screen">
-        <AppBar title="Pipeline YAML" />
+        <AppBar title={appBarTitle} />
         <PageLoader />
       </div>
     );
@@ -440,7 +470,7 @@ export default function PipelineYamlEditorPage() {
   if (branchesLoading) {
     return (
       <div className="min-h-screen">
-        <AppBar title="Pipeline YAML" />
+        <AppBar title={appBarTitle} />
         <PageLoader />
       </div>
     );
@@ -449,8 +479,8 @@ export default function PipelineYamlEditorPage() {
   if (branchesError || !defaultBranchRef) {
     return (
       <div className="min-h-screen">
-        <AppBar title="Pipeline YAML" />
-        <div className="px-4 pt-[calc(var(--app-bar-height)+1rem)]">
+        <AppBar title={appBarTitle} />
+        <div className="px-4 pt-4">
           <ErrorMessage
             message="Default-Branch konnte nicht geladen werden."
             error={branchesError || "Branch nicht gefunden"}
@@ -466,7 +496,7 @@ export default function PipelineYamlEditorPage() {
   if (existingYamlLoading || !editorHydrated) {
     return (
       <div className="min-h-screen">
-        <AppBar title="Pipeline YAML" />
+        <AppBar title={appBarTitle} />
         <PageLoader />
       </div>
     );
@@ -475,8 +505,8 @@ export default function PipelineYamlEditorPage() {
   if (existingYamlError) {
     return (
       <div className="min-h-screen">
-        <AppBar title="Pipeline YAML" />
-        <div className="px-4 pt-[calc(var(--app-bar-height)+1rem)]">
+        <AppBar title={appBarTitle} />
+        <div className="px-4 pt-4">
           <ErrorMessage
             message="YAML-Datei konnte nicht geladen werden."
             error={existingYamlError}
@@ -491,27 +521,9 @@ export default function PipelineYamlEditorPage() {
 
   return (
     <div className="min-h-screen">
-      <AppBar title="Pipeline YAML" />
+      <AppBar title={appBarTitle} rightSlot={appBarCommitButton} />
 
-      <div className="mx-auto max-w-4xl space-y-4 px-4 pb-6 pt-[calc(var(--app-bar-height)+1rem)]">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <BackActionButton
-            onClick={navigateBackToPipelines}
-            label="Pipelines"
-            disabled={commitPending}
-          />
-          <Button
-            onClick={() => {
-              setCommitError(null);
-              setCommitModalOpen(true);
-            }}
-            disabled={commitPending || retryPending || !!retryAction}
-          >
-            <Save size={16} />
-            Committen
-          </Button>
-        </div>
-
+      <div className="mx-auto max-w-4xl space-y-4 px-4 pb-6 pt-4">
         {retryAction && (
           <div className="rounded-2xl border border-yellow-700/40 bg-yellow-900/20 p-4">
             <p className="text-sm text-yellow-200">{retryAction.message}</p>
