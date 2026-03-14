@@ -31,7 +31,7 @@ export function ApprovalModal({ open, approval, isPending, error, onApprove, onR
   };
 
   return (
-    <Modal open={open} onClose={handleClose} title="Approval erteilen">
+    <Modal open={open} onClose={handleClose} title="Freigabe erteilen">
       <div className="space-y-4">
         {approval && (
           <p className="text-sm text-slate-300">
@@ -55,7 +55,7 @@ export function ApprovalModal({ open, approval, isPending, error, onApprove, onR
           loading={isPending}
           onClick={() => approval && onApprove(approval.id, comment)}
         >
-          <ThumbsUp size={16} /> Approven
+          <ThumbsUp size={16} /> Freigeben
         </Button>
         <Button
           fullWidth
