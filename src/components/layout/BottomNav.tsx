@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   LayoutDashboard,
   GitPullRequest,
@@ -10,22 +11,17 @@ import {
   Settings,
 } from "lucide-react";
 
-/**
- * Untere Navigation mit fuenf Haupt-Tabs.
- * Beide "Delivery"-Unterbereiche (Pipelines + Releases) werden als aktiv markiert
- * wenn der Pfad mit `/pipelines` oder `/releases` beginnt.
- */
-// Navigationseintraege fuer die untere Leiste
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/explorer", label: "Code", icon: FolderGit2 },
-  { href: "/pull-requests", label: "PRs", icon: GitPullRequest },
-  { href: "/pipelines", label: "Delivery", icon: Rocket },
-  { href: "/settings", label: "Settings", icon: Settings },
-];
-
 export function BottomNav() {
   const pathname = usePathname();
+  const t = useTranslations("nav");
+
+  const navItems = [
+    { href: "/dashboard", label: t("dashboard"), icon: LayoutDashboard },
+    { href: "/explorer", label: t("code"), icon: FolderGit2 },
+    { href: "/pull-requests", label: t("prs"), icon: GitPullRequest },
+    { href: "/pipelines", label: t("delivery"), icon: Rocket },
+    { href: "/settings", label: t("settings"), icon: Settings },
+  ];
 
   return (
     <nav

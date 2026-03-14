@@ -26,6 +26,7 @@ import { ReleaseSelector } from "@/components/layout/selectors/ReleaseSelector";
 import { DeliveryTitleSelector } from "@/components/layout/DeliveryTitleSelector";
 import { ReleaseDefinition, ReleaseApproval, ReleaseEnvironment } from "@/types";
 import { Rocket, ChevronRight, Play, ThumbsUp, ThumbsDown, AlertCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { timeAgo } from "@/lib/utils/timeAgo";
 
 type Tab = "releases" | "definitionen" | "approvals";
@@ -41,6 +42,8 @@ export default function ReleasesPage() {
   const { settings } = useSettingsStore();
   const { vsrmClient } = useAzureClient();
   const qc = useQueryClient();
+  const t = useTranslations("releases");
+  const tc = useTranslations("common");
 
   // Ausgewaehlte Release-Definitionen aus dem Tab-spezifischen Store
   const { selectedIds: selectedDefIds } = useReleaseDefStore();
@@ -84,7 +87,7 @@ export default function ReleasesPage() {
     mutationFn: (def: ReleaseDefinition) =>
       vsrmClient && settings
         ? releasesService.createRelease(vsrmClient, settings.project, def.id)
-        : Promise.reject("Kein Client"),
+        : Promise.reject(t("noClient")),
     onSuccess: (createdRelease) => {
       setStartModal(null);
       qc.invalidateQueries({ queryKey: ["releases"] });
@@ -99,7 +102,7 @@ export default function ReleasesPage() {
         ? approve
           ? releasesService.approveRelease(vsrmClient, settings.project, id, comment)
           : releasesService.rejectApproval(vsrmClient, settings.project, id, comment)
-        : Promise.reject("Kein Client"),
+        : Promise.reject(t("noClient")),
     onSuccess: () => {
       setApprovalModal(null);
       setApprovalError(null);
@@ -117,9 +120,9 @@ export default function ReleasesPage() {
       {/* Tabs */}
       <TabBar
         tabs={[
-          { key: "releases", label: "Releases" },
-          { key: "definitionen", label: "Pipelines" },
-          { key: "approvals", label: `Approvals${pendingCount > 0 ? ` (${pendingCount})` : ""}` },
+          { key: "releases", label: t("title") },
+          { key: "definitionen", label: t("pipelines") },
+          { key: "approvals", label: `${t("approvals")}${pendingCount > 0 ? ` (${pendingCount})` : ""}` },
         ]}
         activeKey={activeTab}
         onChange={(key) => setActiveTab(key as Tab)}
@@ -130,7 +133,7 @@ export default function ReleasesPage() {
         {activeTab === "definitionen" && (
           <div>
             {defsLoading ? <PageLoader /> : !definitions?.length ? (
-              <EmptyState icon={Rocket} title="Keine Release-Pipelines" />
+              <EmptyState icon={Rocket} title={t("noReleasePipelines")} />
             ) : (
               <div className="divide-y divide-slate-800/50">
                 {definitions.map((def) => (
@@ -144,7 +147,7 @@ export default function ReleasesPage() {
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-700/30 hover:bg-purple-700/50 text-purple-400 rounded-lg text-xs font-medium transition-colors"
                     >
                       <Play size={12} />
-                      Starten
+                      {t("start")}
                     </button>
                   </div>
                 ))}
@@ -157,9 +160,9 @@ export default function ReleasesPage() {
         {activeTab === "releases" && (
           <div>
             {releasesLoading ? <PageLoader /> : releasesError ? (
-              <ErrorMessage message="Releases konnten nicht geladen werden" error={releasesError} onRetry={refetch} />
+              <ErrorMessage message={t("releasesLoadError")} error={releasesError} onRetry={refetch} />
             ) : !filteredReleases.length ? (
-              <EmptyState icon={Rocket} title="Keine Releases gefunden" />
+              <EmptyState icon={Rocket} title={t("noReleases")} />
             ) : (
               <div className="divide-y divide-slate-800/50">
                 {filteredReleases.map((release) => (
@@ -194,7 +197,7 @@ export default function ReleasesPage() {
         {activeTab === "approvals" && (
           <div>
             {approvalsLoading ? <PageLoader /> : !approvals?.length ? (
-              <EmptyState icon={ThumbsUp} title="Keine ausstehenden Approvals" />
+              <EmptyState icon={ThumbsUp} title={t("noPendingApprovals")} />
             ) : (
               <div className="divide-y divide-slate-800/50">
                 {approvals.map((approval) => (
@@ -215,15 +218,15 @@ export default function ReleasesPage() {
                           href={`/releases/${approval.releaseReference.id}`}
                           className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700/70 bg-slate-800/70 px-3 py-2 text-xs font-medium text-slate-200 hover:bg-slate-700/80"
                         >
-                          Details
+                          {t("details")}
                           <ChevronRight size={13} />
                         </Link>
                       ) : null}
                       <Button size="sm" variant="primary" onClick={() => setApprovalModal(approval)}>
-                        <ThumbsUp size={14} /> Freigeben
+                        <ThumbsUp size={14} /> {t("approve")}
                       </Button>
                       <Button size="sm" variant="danger" onClick={() => setApprovalModal(approval)}>
-                        <ThumbsDown size={14} /> Ablehnen
+                        <ThumbsDown size={14} /> {t("reject")}
                       </Button>
                     </div>
                   </div>
@@ -235,16 +238,16 @@ export default function ReleasesPage() {
       </div>
 
       {/* Release starten Modal */}
-      <Modal open={!!startModal} onClose={() => setStartModal(null)} title="Release starten">
+      <Modal open={!!startModal} onClose={() => setStartModal(null)} title={t("startRelease")}>
         <div className="space-y-3">
           <p className="text-sm text-slate-300">{startModal?.name}</p>
           {startMutation.isError && (
             <p className="text-sm text-red-400">{(startMutation.error as Error).message}</p>
           )}
           <Button fullWidth loading={startMutation.isPending} onClick={() => startModal && startMutation.mutate(startModal)}>
-            <Rocket size={16} /> Release erstellen
+            <Rocket size={16} /> {t("createRelease")}
           </Button>
-          <Button fullWidth variant="ghost" onClick={() => setStartModal(null)}>Abbrechen</Button>
+          <Button fullWidth variant="ghost" onClick={() => setStartModal(null)}>{tc("cancel")}</Button>
         </div>
       </Modal>
 

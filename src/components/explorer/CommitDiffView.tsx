@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { GitCommit, ChevronRight } from "lucide-react";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -34,7 +35,8 @@ export function CommitDiffView({
   diff?: CommitFileDiff;
   diffLoading: boolean;
 }) {
-  if (!commit) return <EmptyState icon={GitCommit} title="Kein Commit ausgewählt" />;
+  const td = useTranslations("explorer.commitDiff");
+  if (!commit) return <EmptyState icon={GitCommit} title={td("noCommitSelected")} />;
   if (changesLoading) return <PageLoader />;
 
   const changeType = selectedChange?.changeType.toLowerCase();
@@ -91,7 +93,7 @@ export function CommitDiffView({
               loading={diffLoading}
               error={diff?.error}
               emptyMessage={
-                changeType === "rename" ? "Nur Umbenennung ohne Inhaltsänderung" : "Keine zeilenbasierten Unterschiede"
+                changeType === "rename" ? td("renameOnly") : td("noDiff")
               }
             />
           )}

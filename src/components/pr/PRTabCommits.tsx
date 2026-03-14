@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, GitCommit } from "lucide-react";
 import { RichDiffViewer } from "@/components/ui/RichDiffViewer";
 import { ChangeTypeDot } from "./ChangeTypeDot";
@@ -50,6 +51,7 @@ export function PRTabCommits({
   commitNewPath: string;
   commitSelectedChangeType: string | undefined;
 }) {
+  const t = useTranslations("prCommits");
   if (selectedIterationId) {
     return (
       <div className="space-y-3">
@@ -57,7 +59,7 @@ export function PRTabCommits({
           onClick={() => { onSelectIteration(null); onSelectCommitChange(""); }}
           className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-200 transition-colors"
         >
-          <ChevronLeft size={16} /> Alle Commits
+          <ChevronLeft size={16} /> {t("allCommits")}
         </button>
 
         {commitChanges?.changeEntries && commitChanges.changeEntries.length > 0 ? (
@@ -84,7 +86,7 @@ export function PRTabCommits({
             })}
           </div>
         ) : (
-          <p className="text-sm text-slate-500 text-center py-4">Keine geänderten Dateien</p>
+          <p className="text-sm text-slate-500 text-center py-4">{t("noFiles")}</p>
         )}
 
         {selectedCommitChange && (

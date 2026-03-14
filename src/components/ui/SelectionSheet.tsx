@@ -3,6 +3,7 @@
 import { useLayoutEffect, useState } from "react";
 import { Check, Star, ChevronDown, X } from "lucide-react";
 import { Drawer } from "vaul";
+import { useTranslations } from "next-intl";
 import { LoadingSpinner } from "./LoadingSpinner";
 
 /** Daten fuer einen einzelnen Eintrag im Auswahl-Sheet. */
@@ -58,9 +59,10 @@ export function SelectionSheet({
   multiSelect = true,
   favoriteIds,
   onToggleFavorite,
-  emptyMessage = "Keine Einträge gefunden",
+  emptyMessage,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const t = useTranslations("selectionSheet");
   // Filtermodus: Favoriten oder alle anzeigen
   const [showAll, setShowAll] = useState(false);
 
@@ -79,7 +81,7 @@ export function SelectionSheet({
   const hasFavorites = !!favoriteIds && !!onToggleFavorite;
   const resolvedDescription =
     description ||
-    `${sheetTitle}. ${multiSelect ? "Wähle einen oder mehrere Einträge aus." : "Wähle einen Eintrag aus."}`;
+    `${sheetTitle}. ${multiSelect ? t("descriptionMulti") : t("descriptionSingle")}`;
 
   // Angezeigte Eintraege: Favoriten oder alle
   const displayed = hasFavorites && !showAll && favoriteIds!.length > 0
@@ -167,13 +169,13 @@ export function SelectionSheet({
               onClick={() => setShowAll(false)}
               className={`rounded-[0.9rem] py-2.5 text-sm font-medium transition-colors ${!showAll ? "bg-slate-700 text-slate-100 shadow-[0_6px_16px_rgba(0,0,0,0.18)]" : "text-slate-400"}`}
             >
-              Favoriten
+              {t("favorites")}
             </button>
             <button
               onClick={() => setShowAll(true)}
               className={`rounded-[0.9rem] py-2.5 text-sm font-medium transition-colors ${showAll ? "bg-slate-700 text-slate-100 shadow-[0_6px_16px_rgba(0,0,0,0.18)]" : "text-slate-400"}`}
             >
-              Alle
+              {t("all")}
             </button>
             </div>
           </div>
@@ -185,7 +187,7 @@ export function SelectionSheet({
             onClick={() => { onClear?.(); }}
             className="w-full flex items-center gap-3 border-b border-slate-800 px-4 py-3 text-sm text-blue-400 transition-colors hover:bg-slate-800/40"
           >
-            Alle anzeigen (Auswahl aufheben)
+            {t("showAll")}
           </button>
         )}
 
@@ -195,7 +197,7 @@ export function SelectionSheet({
             <LoadingSpinner size="md" />
           </div>
         ) : displayed.length === 0 ? (
-          <p className="p-6 text-center text-sm text-slate-500">{emptyMessage}</p>
+          <p className="p-6 text-center text-sm text-slate-500">{emptyMessage ?? t("emptyMessage")}</p>
         ) : (
           <div className="divide-y divide-slate-800/50">
             {displayed.map((item) => {
@@ -248,7 +250,7 @@ export function SelectionSheet({
               onClick={() => setOpen(false)}
               className="w-full rounded-2xl border border-blue-400/30 bg-blue-600 py-3.5 text-sm font-medium text-white shadow-[0_10px_24px_rgba(0,120,212,0.28)] transition-colors hover:bg-blue-500"
             >
-              {selectedIds.length} {selectedIds.length === 1 ? "Eintrag" : "Einträge"} ausgewählt
+              {t("confirmSelection", { count: selectedIds.length })}
             </button>
           </div>
         )}

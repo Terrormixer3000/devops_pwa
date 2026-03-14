@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -17,12 +18,12 @@ function normalizeBranch(branch: string): string {
 }
 
 /** Validiert einen Branch-Namen und gibt eine Fehlermeldung oder `null` zurück. */
-function getBranchError(branch: string): string | null {
-  if (!branch) return "Bitte einen Branch-Namen eingeben.";
-  if (branch.startsWith("/") || branch.endsWith("/")) return "Branch darf nicht mit / starten oder enden.";
-  if (branch.endsWith(".") || branch.endsWith(".lock")) return "Branch endet mit einem ungültigen Suffix.";
-  if (branch.includes(" ") || branch.includes("..") || branch.includes("//")) return "Branch enthält ungültige Zeichen.";
-  if (branch.includes("@{") || branch.includes("\\")) return "Branch-Format ist ungültig.";
+function getBranchError(branch: string, t: (key: string) => string): string | null {
+  if (!branch) return t("branchErrorEmpty");
+  if (branch.startsWith("/") || branch.endsWith("/")) return t("branchErrorSlash");
+  if (branch.endsWith(".") || branch.endsWith(".lock")) return t("branchErrorSuffix");
+  if (branch.includes(" ") || branch.includes("..") || branch.includes("//")) return t("branchErrorChars");
+  if (branch.includes("@{") || branch.includes("\\")) return t("branchErrorFormat");
   return null;
 }
 
@@ -37,11 +38,12 @@ interface StartPipelineModalProps {
 
 /** Modal zum Starten einer Pipeline mit Branch-Auswahl und optionalen Parametern. */
 export function StartPipelineModal({ open, pipeline, isPending, error, onClose, onStart }: StartPipelineModalProps) {
+  const t = useTranslations("startPipeline");
   const [branch, setBranch] = useState("main");
   const [params, setParams] = useState<PipelineParam[]>([]);
 
   const normalized = normalizeBranch(branch);
-  const branchError = getBranchError(normalized);
+  const branchError = getBranchError(normalized, t);
   const branchRef = normalized ? `refs/heads/${normalized}` : "";
   const canStart = !!pipeline && !branchError && !isPending;
 
@@ -64,10 +66,10 @@ export function StartPipelineModal({ open, pipeline, isPending, error, onClose, 
   };
 
   return (
-    <Modal open={open} onClose={handleClose} title="Pipeline starten">
+    <Modal open={open} onClose={handleClose} title={t("title")}>
       <div className="space-y-5">
         <div className="rounded-2xl border border-slate-700/70 bg-slate-800/45 px-4 py-3">
-          <p className="text-[11px] uppercase tracking-wide text-slate-500">Definition</p>
+          <p className="text-[11px] uppercase tracking-wide text-slate-500">{t("definition")}</p>
           <p className="mt-1 truncate text-sm font-medium text-slate-100">{pipeline?.name}</p>
           {pipeline?.folder && pipeline.folder !== "\\" && (
             <p className="mt-1 text-xs text-slate-500">{pipeline.folder}</p>
@@ -75,7 +77,7 @@ export function StartPipelineModal({ open, pipeline, isPending, error, onClose, 
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-300">Branch</label>
+          <label className="text-sm font-medium text-slate-300">{t("branch")}</label>
           <div className="overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-900/60">
             <div className="flex items-center gap-1.5 border-b border-slate-800 px-3 py-2 text-[11px] text-slate-500">
               <GitBranch size={13} />
@@ -88,7 +90,6 @@ export function StartPipelineModal({ open, pipeline, isPending, error, onClose, 
               onKeyDown={(e) => { if (e.key === "Enter" && canStart) { e.preventDefault(); handleStart(); } }}
               className="w-full bg-transparent px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none"
               placeholder="main"
-              autoFocus
             />
           </div>
           <div className="flex flex-wrap gap-2">
@@ -111,7 +112,7 @@ export function StartPipelineModal({ open, pipeline, isPending, error, onClose, 
             <p className="text-xs text-red-400">{branchError}</p>
           ) : (
             <p className="text-xs text-slate-500">
-              Ziel-Ref: <span className="font-mono text-slate-300">{branchRef}</span>
+              {t("targetRef")} <span className="font-mono text-slate-300">{branchRef}</span>
             </p>
           )}
         </div>
@@ -119,18 +120,18 @@ export function StartPipelineModal({ open, pipeline, isPending, error, onClose, 
         {/* Pipeline-Parameter */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-slate-300">Parameter</label>
+            <label className="text-sm font-medium text-slate-300">{t("parameters")}</label>
             <button
               type="button"
               onClick={() => setParams((p) => [...p, { key: "", value: "" }])}
               className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
             >
               <Plus size={12} />
-              Hinzufügen
+              {t("add")}
             </button>
           </div>
           {params.length === 0 ? (
-            <p className="text-xs text-slate-600">Keine Parameter gesetzt</p>
+            <p className="text-xs text-slate-600">{t("noParams")}</p>
           ) : (
             <div className="space-y-2">
               {params.map((param, i) => (
@@ -139,14 +140,14 @@ export function StartPipelineModal({ open, pipeline, isPending, error, onClose, 
                     type="text"
                     value={param.key}
                     onChange={(e) => setParams((prev) => prev.map((p, j) => j === i ? { ...p, key: e.target.value } : p))}
-                    placeholder="Name"
+                    placeholder={t("paramNamePlaceholder")}
                     className="flex-1 min-w-0 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
                   />
                   <input
                     type="text"
                     value={param.value}
                     onChange={(e) => setParams((prev) => prev.map((p, j) => j === i ? { ...p, value: e.target.value } : p))}
-                    placeholder="Wert"
+                    placeholder={t("paramValuePlaceholder")}
                     className="flex-1 min-w-0 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
                   />
                   <button
@@ -165,7 +166,7 @@ export function StartPipelineModal({ open, pipeline, isPending, error, onClose, 
         <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 px-3 py-2.5">
           <p className="flex items-start gap-2 text-xs text-blue-200">
             <Info size={14} className="mt-0.5 flex-shrink-0 text-blue-300" />
-            Der Run startet sofort mit dem Branch-Stand und den angegebenen Parametern.
+            {t("infoText")}
           </p>
         </div>
 
@@ -177,11 +178,11 @@ export function StartPipelineModal({ open, pipeline, isPending, error, onClose, 
 
         <div className="flex gap-2">
           <Button variant="ghost" className="flex-1" onClick={handleClose} disabled={isPending}>
-            Abbrechen
+            {t("cancel")}
           </Button>
           <Button className="flex-1" loading={isPending} disabled={!canStart} onClick={handleStart}>
             <Play size={16} />
-            Jetzt starten
+            {t("startNow")}
           </Button>
         </div>
       </div>

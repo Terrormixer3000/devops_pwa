@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 
@@ -26,6 +27,7 @@ export function CommitSheet({
   onSave: SaveHandler;
   pendingContent: string;
 }) {
+  const ts = useTranslations("explorer.commitSheet");
   const [commitMessage, setCommitMessage] = useState("");
   const [targetMode, setTargetMode] = useState<"current" | "new-branch">("current");
   const [newBranchName, setNewBranchName] = useState("");
@@ -61,28 +63,28 @@ export function CommitSheet({
       await onSave(pendingContent, commitMessage.trim(), targetMode, newBranchName.trim(), createPR, prTitle.trim());
       reset();
     } catch (err) {
-      setError((err as Error).message || "Fehler beim Speichern.");
+      setError((err as Error).message || ts("saveError"));
     } finally {
       setPending(false);
     }
   };
 
   return (
-    <Modal open={open} onClose={handleClose} title="Änderungen speichern">
+    <Modal open={open} onClose={handleClose} title={ts("title")}>
       <div className="space-y-4">
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-300">Commit-Nachricht *</label>
+          <label className="text-sm font-medium text-slate-300">{ts("commitMessage")}</label>
           <input
             type="text"
             value={commitMessage}
             onChange={(e) => setCommitMessage(e.target.value)}
-            placeholder="z.B. Fix: Tippfehler korrigiert"
+            placeholder={ts("commitMessagePlaceholder")}
             className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm"
           />
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-300">Ziel</label>
+          <label className="text-sm font-medium text-slate-300">{ts("target")}</label>
           <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-800/90 p-1">
             {(["current", "new-branch"] as const).map((m) => (
               <button
@@ -92,7 +94,7 @@ export function CommitSheet({
                   targetMode === m ? "bg-slate-700 text-slate-100 shadow-sm" : "text-slate-400"
                 }`}
               >
-                {m === "current" ? `Branch: ${currentBranchName}` : "Neuer Branch"}
+                {m === "current" ? ts("currentBranch", { branch: currentBranchName }) : ts("newBranch")}
               </button>
             ))}
           </div>
@@ -101,12 +103,12 @@ export function CommitSheet({
         {targetMode === "new-branch" && (
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-300">Branch-Name *</label>
+              <label className="text-sm font-medium text-slate-300">{ts("branchName")}</label>
               <input
                 type="text"
                 value={newBranchName}
                 onChange={(e) => setNewBranchName(e.target.value.replace(/\s+/g, "-"))}
-                placeholder="z.B. feature/meine-änderung"
+                placeholder={ts("branchNamePlaceholder")}
                 autoCapitalize="none"
                 autoCorrect="off"
                 className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm"
@@ -119,19 +121,19 @@ export function CommitSheet({
                 onChange={(e) => setCreatePR(e.target.checked)}
                 className="rounded border-slate-600 bg-slate-800 text-blue-500"
               />
-              <span className="text-sm text-slate-300">Pull Request erstellen</span>
+              <span className="text-sm text-slate-300">{ts("createPR")}</span>
             </label>
             {createPR && (
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-slate-300">PR-Titel *</label>
+                <label className="text-sm font-medium text-slate-300">{ts("prTitle")}</label>
                 <input
                   type="text"
                   value={prTitle}
                   onChange={(e) => setPrTitle(e.target.value)}
-                  placeholder="z.B. Feature: Neue Datei hinzugefügt"
+                  placeholder={ts("prTitlePlaceholder")}
                   className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm"
                 />
-                <p className="text-xs text-slate-500">Ziel-Branch: {currentBranchName}</p>
+                <p className="text-xs text-slate-500">{ts("targetBranch", { branch: currentBranchName })}</p>
               </div>
             )}
           </div>
@@ -144,7 +146,7 @@ export function CommitSheet({
           disabled={isDisabled}
           className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors"
         >
-          {pending ? "Wird gespeichert…" : "Speichern"}
+          {pending ? ts("saving") : ts("save")}
         </button>
       </div>
     </Modal>

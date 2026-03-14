@@ -1,11 +1,15 @@
 "use client";
 
 import { useEffect } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { NextIntlClientProvider } from "next-intl";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { useRepositoryStore } from "@/lib/stores/repositoryStore";
 import { repositoriesService } from "@/lib/services/repositoriesService";
 import { createAzureClient } from "@/lib/api/client";
+import { messages, detectBrowserLocale } from "@/lib/i18n";
+import { setDemoLocale } from "@/lib/mocks/demoData";
+import type { Locale } from "@/types";
 
 // Globaler QueryClient fuer React Query
 const queryClient = new QueryClient({
@@ -19,6 +23,45 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+/**
+ * Laedt die gespeicherte oder automatisch erkannte Sprache und stellt
+ * sie per NextIntlClientProvider bereit. Reagiert auf Aenderungen in den Settings.
+ */
+function LocaleProvider({ children, initialLocale }: { children: React.ReactNode; initialLocale: Locale }) {
+  const { settings, setSettings } = useSettingsStore();
+  const locale = settings?.locale ?? initialLocale;
+
+  const qc = useQueryClient();
+  useEffect(() => {
+    setDemoLocale(locale);
+    // Demo-Queries invalidieren damit Texte in der neuen Sprache nachgeladen werden.
+    qc.invalidateQueries({ queryKey: ["pr-policies"] });
+    qc.invalidateQueries({ queryKey: ["pr-threads"] });
+  }, [locale, qc]);
+
+  useEffect(() => {
+    if (settings?.locale) {
+      document.documentElement.lang = settings.locale;
+      // Cookie aktualisieren, falls noch nicht vorhanden (z.B. nach erstem Update mit Cookie-Support)
+      if (!document.cookie.includes("azdevops_locale=")) {
+        document.cookie = `azdevops_locale=${settings.locale}; path=/; max-age=31536000; SameSite=Lax`;
+      }
+    } else if (settings && !settings.locale) {
+      const detected = detectBrowserLocale();
+      document.documentElement.lang = detected;
+      setSettings({ ...settings, locale: detected });
+    } else {
+      document.documentElement.lang = initialLocale;
+    }
+  }, [initialLocale, settings, setSettings]);
+
+  return (
+    <NextIntlClientProvider locale={locale} messages={messages[locale]}>
+      {children}
+    </NextIntlClientProvider>
+  );
+}
 
 /**
  * Initialisierungskomponente ohne visuellen Output.
@@ -80,11 +123,15 @@ function AppInit() {
  * Root-Provider-Wrapper: bindet React Query ein und fuehrt die App-Initialisierung durch.
  * Muss moeglichst weit oben im Komponent-Baum (in layout.tsx) verwendet werden.
  */
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({ children, initialLocale = "de" }: { children: React.ReactNode; initialLocale?: Locale }) {
+  // Demo-Locale synchron setzen, damit React Query beim ersten Fetch bereits die richtige Sprache verwendet.
+  setDemoLocale(initialLocale);
   return (
     <QueryClientProvider client={queryClient}>
-      <AppInit />
-      {children}
+      <LocaleProvider initialLocale={initialLocale}>
+        <AppInit />
+        {children}
+      </LocaleProvider>
     </QueryClientProvider>
   );
 }

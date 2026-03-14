@@ -3,6 +3,7 @@
 import Link, { LinkProps } from "next/link";
 import { ButtonHTMLAttributes, ReactNode } from "react";
 import { ChevronLeft } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 /** Kompakter oder Standard-Zurueck-Button mit Chevron-Icon. */
 type BackButtonSize = "compact" | "default";
@@ -41,11 +42,12 @@ interface BackLinkProps extends Omit<LinkProps, "href"> {
 /** Navigationslink der als Zurück-Button dargestellt wird. */
 export function BackLink({
   href,
-  label = "Zurück",
+  label,
   className = "",
   size = "default",
   ...props
 }: BackLinkProps) {
+  const t = useTranslations("common");
   return (
     <Link
       href={href}
@@ -53,7 +55,7 @@ export function BackLink({
       {...props}
     >
       <ChevronLeft size={sizeStyles[size].icon} />
-      <span>{label}</span>
+      <span>{label ?? t("back")}</span>
     </Link>
   );
 }
@@ -68,21 +70,22 @@ interface BackActionButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> 
 
 /** Klick-Button der als Zurück-Button dargestellt wird (kein href, kein Router-Push). */
 export function BackActionButton({
-  label = "Zurück",
+  label,
   className = "",
   iconOnly = false,
   size = "default",
   ...props
 }: BackActionButtonProps) {
+  const t = useTranslations("common");
   return (
     <button
       type="button"
       className={`${baseClasses(size, iconOnly)} ${className}`}
-      aria-label={iconOnly ? "Zurück" : undefined}
+      aria-label={iconOnly ? t("back") : undefined}
       {...props}
     >
       <ChevronLeft size={sizeStyles[size].icon} />
-      {!iconOnly ? <span>{label}</span> : null}
+      {!iconOnly ? <span>{label ?? t("back")}</span> : null}
     </button>
   );
 }

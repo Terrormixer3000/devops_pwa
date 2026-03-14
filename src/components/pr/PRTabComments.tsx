@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { CommentThread } from "./CommentThread";
@@ -29,10 +30,11 @@ export function PRTabComments({
   onDeleteComment: (threadId: number, commentId: number) => void;
   onReplyToThread: (threadId: number, content: string) => void;
 }) {
+  const t = useTranslations("prComments");
   return (
     <div className="space-y-4">
       {commentThreads.length === 0 ? (
-        <p className="text-sm text-slate-500 text-center py-4">Noch keine Kommentare</p>
+        <p className="text-sm text-slate-500 text-center py-4">{t("noComments")}</p>
       ) : (
         commentThreads.map((thread) => (
           <CommentThread
@@ -48,11 +50,11 @@ export function PRTabComments({
       )}
 
       <div className="flex flex-col gap-2 pt-2 border-t border-slate-800">
-        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Neuer Kommentar</h3>
+        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t("newComment")}</h3>
         <textarea
           value={commentText}
           onChange={(e) => setCommentText(e.target.value)}
-          placeholder="Kommentar schreiben…"
+          placeholder={t("placeholder")}
           rows={3}
           className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none"
         />
@@ -64,7 +66,7 @@ export function PRTabComments({
           className="self-end"
         >
           <Send size={14} />
-          Senden
+          {t("send")}
         </Button>
       </div>
     </div>

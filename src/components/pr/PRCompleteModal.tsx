@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { GitMerge, AlertCircle } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -31,17 +32,18 @@ export function PRCompleteModal({
   onClose: () => void;
   onComplete: () => void;
 }) {
+  const t = useTranslations("prComplete");
   return (
-    <Modal open={open} onClose={onClose} title="PR abschließen">
+    <Modal open={open} onClose={onClose} title={t("title")}>
       <div className="space-y-4">
         <div className="space-y-2">
-          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Merge-Strategie</label>
+          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t("mergeStrategy")}</label>
           <div className="grid grid-cols-2 gap-2">
             {([
-              { key: "noFastForward" as const, label: "Merge", desc: "Merge-Commit" },
-              { key: "squash" as const, label: "Squash", desc: "Ein Commit" },
-              { key: "rebase" as const, label: "Rebase", desc: "Linear" },
-              { key: "rebaseMerge" as const, label: "Rebase+Merge", desc: "Rebase mit Merge" },
+              { key: "noFastForward" as const, label: t("mergeCommit"), desc: "Merge-Commit" },
+              { key: "squash" as const, label: t("squash"), desc: "Ein Commit" },
+              { key: "rebase" as const, label: t("rebase"), desc: "Linear" },
+              { key: "rebaseMerge" as const, label: t("rebaseFF"), desc: "Rebase mit Merge" },
             ]).map(({ key, label, desc }) => (
               <button
                 key={key}
@@ -61,7 +63,7 @@ export function PRCompleteModal({
 
         <div className="flex items-center justify-between py-3 border-t border-slate-800">
           <div>
-            <p className="text-sm text-slate-300">Quell-Branch löschen</p>
+            <p className="text-sm text-slate-300">{t("deleteSourceBranch")}</p>
             <p className="text-xs text-slate-500">{sourceBranch}</p>
           </div>
           <button
@@ -87,10 +89,10 @@ export function PRCompleteModal({
 
         <Button fullWidth onClick={onComplete} loading={completePending}>
           <GitMerge size={16} />
-          Jetzt mergen
+          {t("mergeNow")}
         </Button>
         <Button fullWidth variant="ghost" onClick={onClose}>
-          Abbrechen
+          {t("cancel")}
         </Button>
       </div>
     </Modal>

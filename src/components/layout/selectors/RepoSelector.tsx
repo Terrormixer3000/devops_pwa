@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { GitBranch } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { SelectionSheet } from "@/components/ui/SelectionSheet";
 import { useRepositoryStore } from "@/lib/stores/repositoryStore";
 import { usePRRepoStore } from "@/lib/stores/selectionStore";
@@ -15,6 +16,7 @@ import { selectionLabel } from "@/lib/utils/selectionLabel";
 export function PRRepoSelector() {
   const { repositories, favorites, toggleFavorite } = useRepositoryStore();
   const { selectedIds, toggle, clear, load } = usePRRepoStore();
+  const t = useTranslations("selectors");
 
   // Gespeicherte Auswahl beim ersten Mount laden
   useEffect(() => { load(); }, [load]);
@@ -25,19 +27,18 @@ export function PRRepoSelector() {
     sublabel: r.project?.name,
   }));
 
-  // Label: zeigt Auswahl-Zusammenfassung
   const buttonLabel = selectionLabel(
     selectedIds,
-    "Alle Repos",
+    t("allRepos"),
     repositories.find((r) => r.id === selectedIds[0])?.name,
-    `${selectedIds.length} Repos`,
+    t("multipleRepos", { count: selectedIds.length }),
   );
 
   return (
     <SelectionSheet
       buttonLabel={buttonLabel}
       buttonIcon={<GitBranch size={13} className="text-blue-400" />}
-      sheetTitle="Repositories auswaehlen"
+      sheetTitle={t("reposSheet")}
       items={items}
       selectedIds={selectedIds}
       onToggle={toggle}
@@ -45,7 +46,7 @@ export function PRRepoSelector() {
       multiSelect={true}
       favoriteIds={favorites}
       onToggleFavorite={toggleFavorite}
-      emptyMessage="Keine Repositories gefunden"
+      emptyMessage={t("noReposFound")}
     />
   );
 }

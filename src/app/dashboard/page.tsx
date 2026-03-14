@@ -7,6 +7,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { AppBar } from "@/components/layout/AppBar";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
@@ -37,6 +38,8 @@ export default function DashboardPage() {
   const { repositories } = useRepositoryStore();
   const { client } = useAzureClient();
   const settings = useSettingsStore((s) => s.settings);
+  const t = useTranslations("dashboard");
+  const tc = useTranslations("common");
 
   // Dashboard-spezifische Repo-Auswahl (leer = alle Repos)
   const { selectedIds: selectedRepoIds } = useDashboardRepoStore();
@@ -76,22 +79,22 @@ export default function DashboardPage() {
   if (!isConfigured) {
     return (
       <div className="min-h-screen">
-        <AppBar title="Dashboard" />
+        <AppBar title={t("title")} />
         <div className="flex flex-col items-center justify-center gap-4 px-6 py-20">
           <div className="w-16 h-16 rounded-2xl bg-blue-600/20 flex items-center justify-center">
             <Settings size={28} className="text-blue-400" />
           </div>
           <div className="text-center">
-            <h2 className="text-lg font-semibold text-slate-100">Einstellungen konfigurieren</h2>
+            <h2 className="text-lg font-semibold text-slate-100">{t("configureSettings")}</h2>
             <p className="text-sm text-slate-400 mt-1">
-              Gib deine Azure DevOps Organisation und deinen PAT ein, um loszulegen.
+              {t("configureHint")}
             </p>
           </div>
           <Link
             href="/settings"
             className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium text-sm transition-colors"
           >
-            Zu den Einstellungen
+            {t("toSettings")}
           </Link>
         </div>
       </div>
@@ -100,7 +103,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen">
-      <AppBar title="Dashboard" rightSlot={<DashboardSelector />} />
+      <AppBar title={t("title")} rightSlot={<DashboardSelector />} />
 
       <div className="px-4 py-4 space-y-6">
         {/* Hinweis wenn keine Repositories konfiguriert */}
@@ -108,7 +111,7 @@ export default function DashboardPage() {
           <div className="p-4 bg-slate-800/50 border border-slate-700 rounded-xl flex items-start gap-3">
             <AlertCircle size={18} className="text-yellow-400 flex-shrink-0 mt-0.5" />
             <p className="text-sm text-slate-300">
-              Konfiguriere ein Azure DevOps Projekt, um Daten zu sehen.
+              {t("configureProject")}
             </p>
           </div>
         )}
@@ -116,14 +119,14 @@ export default function DashboardPage() {
         {/* Schnellzugriff-Kacheln */}
         <section>
           <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">
-            Schnellzugriff
+            {t("quickAccess")}
           </h2>
           <div className="grid grid-cols-2 gap-3">
-            <QuickLink href="/pull-requests" icon={<GitPullRequest size={22} className="text-blue-400" />} label="Pull Requests" count={prs?.length} />
-            <QuickLink href="/pipelines" icon={<PlayCircle size={22} className="text-green-400" />} label="Pipelines" />
-            <QuickLink href="/releases" icon={<Rocket size={22} className="text-purple-400" />} label="Releases" />
-            <QuickLink href="/explorer" icon={<FolderGit2 size={22} className="text-orange-400" />} label="Code Explorer" />
-            <QuickLink href="/work-items" icon={<CheckSquare size={22} className="text-teal-400" />} label="Work Items" />
+            <QuickLink href="/pull-requests" icon={<GitPullRequest size={22} className="text-blue-400" />} label={t("quickLinks.pullRequests")} count={prs?.length} />
+            <QuickLink href="/pipelines" icon={<PlayCircle size={22} className="text-green-400" />} label={t("quickLinks.pipelines")} />
+            <QuickLink href="/releases" icon={<Rocket size={22} className="text-purple-400" />} label={t("quickLinks.releases")} />
+            <QuickLink href="/explorer" icon={<FolderGit2 size={22} className="text-orange-400" />} label={t("quickLinks.explorer")} />
+            <QuickLink href="/work-items" icon={<CheckSquare size={22} className="text-teal-400" />} label={t("quickLinks.workItems")} />
           </div>
         </section>
 
@@ -132,13 +135,12 @@ export default function DashboardPage() {
           <section>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
-                Aktive PRs
+                {t("activePRs")}
               </h2>
               <Link href="/pull-requests" className="text-xs text-blue-400 flex items-center gap-1">
-                Alle <ChevronRight size={14} />
+                {tc("all")} <ChevronRight size={14} />
               </Link>
             </div>
-
             {prsLoading ? (
               <PageLoader />
             ) : prs && prs.length > 0 ? (
@@ -152,13 +154,13 @@ export default function DashboardPage() {
                     <p className="text-sm font-medium text-slate-100 line-clamp-1">{pr.title}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-xs text-slate-500">{pr.createdBy.displayName}</span>
-                      {pr.isDraft && <Badge variant="muted" size="sm">Draft</Badge>}
+                      {pr.isDraft && <Badge variant="muted" size="sm">{tc("draft")}</Badge>}
                     </div>
                   </Link>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-slate-500 text-center py-4">Keine aktiven Pull Requests</p>
+              <p className="text-sm text-slate-500 text-center py-4">{t("noActivePRs")}</p>
             )}
           </section>
         )}
@@ -167,17 +169,17 @@ export default function DashboardPage() {
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
-              Letzte Builds
+              {t("recentBuilds")}
             </h2>
             <Link href="/pipelines" className="text-xs text-blue-400 flex items-center gap-1">
-              Alle <ChevronRight size={14} />
+              {tc("all")} <ChevronRight size={14} />
             </Link>
           </div>
 
           {buildsLoading ? (
             <PageLoader />
           ) : buildsError ? (
-            <ErrorMessage message="Builds konnten nicht geladen werden" error={buildsError} />
+            <ErrorMessage message={t("buildsLoadError")} error={buildsError} />
           ) : builds && builds.length > 0 ? (
             <div className="space-y-2">
               {builds.map((build) => (
@@ -196,7 +198,7 @@ export default function DashboardPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-slate-500 text-center py-4">Keine Builds gefunden</p>
+              <p className="text-sm text-slate-500 text-center py-4">{t("noBuildsFound")}</p>
           )}
         </section>
       </div>

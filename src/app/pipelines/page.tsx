@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronRight, Play, PlayCircle, Plus, StopCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { AppBar } from "@/components/layout/AppBar";
 import { DeliveryTitleSelector } from "@/components/layout/DeliveryTitleSelector";
 import { PipelineSelector } from "@/components/layout/selectors/PipelineSelector";
@@ -36,6 +37,7 @@ export default function PipelinesPage() {
   const qc = useQueryClient();
   const router = useRouter();
   const { clearDraft, clearFlashMessage, flashMessage, setDraft } = usePipelineCreationStore();
+  const t = useTranslations("pipelines");
 
   const { selectedIds: selectedDefIds } = usePipelineDefStore();
   const selectedDefNumbers = selectedDefIds.map(Number).filter(Boolean);
@@ -89,7 +91,7 @@ export default function PipelinesPage() {
       branchRef: string;
       params?: Record<string, string>;
     }) => {
-      if (!client || !settings) throw new Error("Kein Client");
+      if (!client || !settings) throw new Error(t("noClient"));
       return pipelinesService.queueBuild(
         client,
         settings.project,
@@ -108,7 +110,7 @@ export default function PipelinesPage() {
     mutationFn: (buildId: number) =>
       client && settings
         ? pipelinesService.cancelBuild(client, settings.project, buildId)
-        : Promise.reject(new Error("Kein Client")),
+        : Promise.reject(new Error(t("noClient"))),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["builds", selectedDefNumbers] }),
   });
 
@@ -128,7 +130,7 @@ export default function PipelinesPage() {
       />
 
       <TabBar
-        tabs={[{ key: "builds", label: "Runs" }, { key: "pipelines", label: "Definitionen" }]}
+        tabs={[{ key: "builds", label: t("runs") }, { key: "pipelines", label: t("definitions") }]}
         activeKey={activeView}
         onChange={(key) => setView(key as "pipelines" | "builds")}
       />
@@ -154,7 +156,7 @@ export default function PipelinesPage() {
           (pipelinesLoading ? (
             <PageLoader />
           ) : !pipelines?.length ? (
-            <EmptyState icon={PlayCircle} title="Keine Pipelines gefunden" />
+            <EmptyState icon={PlayCircle} title={t("noPipelinesFound")} />
           ) : (
             <div className="divide-y divide-slate-800/50">
               {pipelines.map((pipeline) => (
@@ -173,7 +175,7 @@ export default function PipelinesPage() {
                     className="flex items-center gap-1.5 rounded-lg bg-green-700/30 px-3 py-1.5 text-xs font-medium text-green-400 transition-colors hover:bg-green-700/50"
                   >
                     <Play size={12} />
-                    Starten
+                    {t("start")}
                   </button>
                 </div>
               ))}
@@ -184,9 +186,9 @@ export default function PipelinesPage() {
           (buildsLoading ? (
             <PageLoader />
           ) : buildsError ? (
-            <ErrorMessage message="Builds konnten nicht geladen werden" error={buildsError} onRetry={refetch} />
+            <ErrorMessage message={t("loadError")} error={buildsError} onRetry={refetch} />
           ) : !builds?.length ? (
-            <EmptyState icon={PlayCircle} title="Keine Builds gefunden" />
+            <EmptyState icon={PlayCircle} title={t("noBuildsFound")} />
           ) : (
             <div>
               <div className="divide-y divide-slate-800/50">
@@ -244,7 +246,7 @@ export default function PipelinesPage() {
           style={{ bottom: "var(--fab-bottom-offset)" }}
         >
           <Plus size={18} />
-          Neue Pipeline
+          {t("newPipeline")}
         </button>
       )}
 

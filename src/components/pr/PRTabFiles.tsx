@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ChevronRight } from "lucide-react";
 import { RichDiffViewer } from "@/components/ui/RichDiffViewer";
 import { ChangeTypeDot } from "./ChangeTypeDot";
@@ -37,8 +38,9 @@ export function PRTabFiles({
   const oldPath = selectedChange?.originalPath || selectedChange?.item.path || "";
   const newPath = selectedChange?.item.path || "";
 
+  const t = useTranslations("prFiles");
   if (changeEntries.length === 0) {
-    return <p className="text-sm text-slate-500 text-center py-4">Keine geänderten Dateien</p>;
+    return <p className="text-sm text-slate-500 text-center py-4">{t("noFiles")}</p>;
   }
 
   return (
@@ -81,8 +83,8 @@ export function PRTabFiles({
           error={selectedFileDiff?.error}
           emptyMessage={
             selectedChangeType === "rename"
-              ? "Nur Umbenennung ohne Inhaltsänderung"
-              : "Keine zeilenbasierten Unterschiede"
+              ? t("renameOnly")
+              : t("noDiff")
           }
         />
       )}

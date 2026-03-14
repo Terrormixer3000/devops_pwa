@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ThumbsUp, ThumbsDown, Zap } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -20,25 +21,26 @@ export function PRVoteModal({
   onClose: () => void;
   onVote: (vote: number) => void;
 }) {
+  const t = useTranslations("prVote");
   return (
-    <Modal open={open} onClose={onClose} title="Pull Request bewerten">
+    <Modal open={open} onClose={onClose} title={t("title")}>
       <div className="space-y-3">
         <Button fullWidth onClick={() => onVote(10)} loading={votePending}>
-          <ThumbsUp size={16} /> Genehmigen
+          <ThumbsUp size={16} /> {t("approve")}
         </Button>
         <Button fullWidth variant="secondary" onClick={() => onVote(5)} loading={votePending}>
-          Genehmigen mit Vorbehalten
+          {t("approveWithSuggestions")}
         </Button>
         <Button fullWidth variant="ghost" onClick={() => onVote(-5)} loading={votePending}>
-          Warten auf Autor
+          {t("waitForAuthor")}
         </Button>
 
         <div className="flex items-center justify-between py-2.5 px-3 bg-slate-800/50 rounded-xl border border-slate-700/60">
           <div className="flex items-center gap-2">
             <Zap size={14} className="text-yellow-400" />
             <div>
-              <p className="text-sm text-slate-200">Auto-Complete</p>
-              <p className="text-xs text-slate-500">Automatisch mergen wenn alle Policies bestanden</p>
+              <p className="text-sm text-slate-200">{t("autoComplete")}</p>
+              <p className="text-xs text-slate-500">{t("autoCompleteDesc")}</p>
             </div>
           </div>
           <button
@@ -56,7 +58,7 @@ export function PRVoteModal({
         </div>
 
         <Button fullWidth variant="danger" onClick={() => onVote(-10)} loading={votePending}>
-          <ThumbsDown size={16} /> Ablehnen
+          <ThumbsDown size={16} /> {t("reject")}
         </Button>
       </div>
     </Modal>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 
@@ -24,6 +25,7 @@ interface ApprovalModalProps {
 /** Wiederverwendbarer Approval-Dialog fuer Release-Freigaben. */
 export function ApprovalModal({ open, approval, isPending, error, onApprove, onReject, onClose }: ApprovalModalProps) {
   const [comment, setComment] = useState("");
+  const t = useTranslations("approval");
 
   const handleClose = () => {
     setComment("");
@@ -31,7 +33,7 @@ export function ApprovalModal({ open, approval, isPending, error, onApprove, onR
   };
 
   return (
-    <Modal open={open} onClose={handleClose} title="Freigabe erteilen">
+    <Modal open={open} onClose={handleClose} title={t("title")}>
       <div className="space-y-4">
         {approval && (
           <p className="text-sm text-slate-300">
@@ -39,7 +41,7 @@ export function ApprovalModal({ open, approval, isPending, error, onApprove, onR
           </p>
         )}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-400">Kommentar (optional)</label>
+          <label className="text-sm font-medium text-slate-400">{t("commentLabel")}</label>
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
@@ -55,7 +57,7 @@ export function ApprovalModal({ open, approval, isPending, error, onApprove, onR
           loading={isPending}
           onClick={() => approval && onApprove(approval.id, comment)}
         >
-          <ThumbsUp size={16} /> Freigeben
+          <ThumbsUp size={16} /> {t("approve")}
         </Button>
         <Button
           fullWidth
@@ -63,9 +65,9 @@ export function ApprovalModal({ open, approval, isPending, error, onApprove, onR
           loading={isPending}
           onClick={() => approval && onReject(approval.id, comment)}
         >
-          <ThumbsDown size={16} /> Ablehnen
+          <ThumbsDown size={16} /> {t("reject")}
         </Button>
-        <Button fullWidth variant="ghost" onClick={handleClose}>Abbrechen</Button>
+        <Button fullWidth variant="ghost" onClick={handleClose}>{t("cancel")}</Button>
       </div>
     </Modal>
   );

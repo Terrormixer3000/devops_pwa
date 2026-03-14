@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { MessageCircle, Send, CheckCheck, RotateCcw } from "lucide-react";
 import { CommentItem } from "./CommentItem";
@@ -21,6 +22,7 @@ export function CommentThread({
   onDeleteComment: (commentId: number) => void;
   onReply: (content: string) => void;
 }) {
+  const t = useTranslations("commentThread");
   const [showReply, setShowReply] = useState(false);
   const [replyText, setReplyText] = useState("");
 
@@ -44,16 +46,16 @@ export function CommentThread({
             isResolved ? "text-green-400" : "text-yellow-400"
           }`}
         >
-          {isResolved ? "Gelöst" : "Offen"}
+          {isResolved ? t("resolved") : t("open")}
         </span>
         <button
           onClick={() => onUpdateStatus(isResolved ? "active" : "fixed")}
           className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-200 transition-colors"
         >
           {isResolved ? (
-            <><RotateCcw size={11} /> Öffnen</>
+            <><RotateCcw size={11} /> {t("reopen")}</>
           ) : (
-            <><CheckCheck size={11} /> Lösen</>
+            <><CheckCheck size={11} /> {t("resolve")}</>
           )}
         </button>
       </div>
@@ -73,7 +75,7 @@ export function CommentThread({
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
             rows={2}
-            placeholder="Antworten…"
+            placeholder={t("replyPlaceholder")}
             autoFocus
             className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-blue-500 resize-none"
           />
@@ -83,13 +85,13 @@ export function CommentThread({
               disabled={!replyText.trim()}
               className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-colors disabled:opacity-40"
             >
-              <Send size={12} /> Senden
+              <Send size={12} /> {t("send")}
             </button>
             <button
               onClick={() => { setShowReply(false); setReplyText(""); }}
               className="px-2.5 py-1 rounded-lg text-xs text-slate-400 hover:text-slate-200 transition-colors"
             >
-              Abbrechen
+              {t("cancel")}
             </button>
           </div>
         </div>
@@ -98,7 +100,7 @@ export function CommentThread({
           onClick={() => setShowReply(true)}
           className="w-full flex items-center justify-center gap-1.5 py-2 text-xs text-slate-500 hover:text-slate-300 border-t border-slate-800 transition-colors"
         >
-          <MessageCircle size={12} /> Antworten
+          <MessageCircle size={12} /> {t("reply")}
         </button>
       )}
     </div>

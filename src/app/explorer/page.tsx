@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { AppBar } from "@/components/layout/AppBar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
@@ -10,6 +11,7 @@ import { RepoExplorer } from "@/components/explorer/RepoExplorer";
 import { FolderGit2 } from "lucide-react";
 
 export default function ExplorerPage() {
+  const t = useTranslations("explorer");
   const { settings } = useSettingsStore();
   const { selectedRepositories } = useRepositoryStore();
   const { client } = useAzureClient();
@@ -17,12 +19,12 @@ export default function ExplorerPage() {
 
   return (
     <div className="min-h-screen">
-      <AppBar title="Code Explorer" rightSlot={<CodeRepoSelector />} />
+      <AppBar title={t("title")} rightSlot={<CodeRepoSelector />} />
       {!repo ? (
         <EmptyState
           icon={FolderGit2}
-          title="Kein Repository ausgewählt"
-          description="Waehle ein Repository in der oberen Leiste"
+          title={t("noRepoSelected")}
+          description={t("repoHint")}
         />
       ) : null}
       {repo && settings && client ? (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { History, Pencil, X } from "lucide-react";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
@@ -37,6 +38,7 @@ export function FileViewer({
   onEditChange?: (content: string) => void;
   onRequestCommit?: () => void;
 }) {
+  const t = useTranslations("explorer");
   const [mode, setMode] = useState<"preview" | "text">("preview");
 
   if (loading) return <PageLoader />;
@@ -57,7 +59,7 @@ export function FileViewer({
           {onOpenHistory && !editMode && (
             <button
               onClick={() => onOpenHistory(path)}
-              title="Dateihistorie"
+              title={t("fileHistory")}
               className="flex items-center gap-1 text-xs text-slate-500 hover:text-blue-400 transition-colors"
             >
               <History size={14} />
@@ -66,7 +68,7 @@ export function FileViewer({
           {canEdit && !editMode && onEditStart && (
             <button
               onClick={() => onEditStart(content)}
-              title="Bearbeiten"
+              title={t("edit")}
               className="flex items-center gap-1 text-xs text-slate-500 hover:text-yellow-400 transition-colors"
             >
               <Pencil size={14} />
@@ -78,11 +80,11 @@ export function FileViewer({
                 onClick={onRequestCommit}
                 className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-colors"
               >
-                Speichern
+                {t("save")}
               </button>
               <button
                 onClick={onEditCancel}
-                title="Abbrechen"
+                title={t("cancel")}
                 className="flex items-center gap-1 text-xs text-slate-500 hover:text-red-400 transition-colors"
               >
                 <X size={14} />
@@ -106,8 +108,8 @@ export function FileViewer({
           <div className="flex items-center justify-end px-3 py-2 border-b border-slate-800/70">
             <div className="inline-flex rounded-lg border border-slate-700/70 bg-slate-900/70 p-1">
               {[
-                { key: "preview", label: "Vorschau" },
-                { key: "text", label: "Text" },
+                { key: "preview", label: t("preview") },
+                { key: "text", label: t("text") },
               ].map((item) => (
                 <button
                   key={item.key}
@@ -123,7 +125,7 @@ export function FileViewer({
           </div>
           {mode === "preview" && isImage ? (
             <div className="p-3">
-              <ImageViewer src={imageDataUrl} emptyMessage="Bild konnte nicht geladen werden" />
+              <ImageViewer src={imageDataUrl} emptyMessage={t("imageLoadError")} />
             </div>
           ) : mode === "preview" && isMarkdown ? (
             <div className="px-4 py-4">

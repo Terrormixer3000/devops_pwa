@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Bell, BellOff, AlertCircle, CheckCircle, ChevronRight } from "lucide-react";
 import { PushSupportHint } from "@/components/ui/PushSupportHint";
 import type { AzureCurrentUser } from "@/lib/services/identityService";
@@ -23,9 +24,10 @@ export function PushNotificationsSection({
   pushSupportStatus, permissionState, isSubscribed, webhookToken,
   pushLoading, pushError, currentUser, canSubscribe, onSubscribe, onUnsubscribe,
 }: PushNotificationsSectionProps) {
+  const t = useTranslations("push");
   return (
     <section className="space-y-4">
-      <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Benachrichtigungen</h2>
+      <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">{t("title")}</h2>
 
       {!webhookToken ? (
         <a
@@ -34,8 +36,8 @@ export function PushNotificationsSection({
         >
           <Bell size={18} className="text-blue-400 flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-slate-200">Push-Notifications einrichten</p>
-            <p className="text-xs text-slate-500">Bitte den Einrichtungs-Wizard durchlaufen</p>
+            <p className="text-sm font-medium text-slate-200">{t("setupPush")}</p>
+            <p className="text-xs text-slate-500">{t("setupPushDesc")}</p>
           </div>
           <ChevronRight size={16} className="flex-shrink-0 text-slate-500" />
         </a>
@@ -47,9 +49,9 @@ export function PushNotificationsSection({
             <div className="flex items-start gap-3 p-4 bg-red-900/20 border border-red-700/40 rounded-xl">
               <AlertCircle size={18} className="text-red-400 flex-shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <p className="text-sm font-medium text-red-300">Erlaubnis verweigert</p>
+                <p className="text-sm font-medium text-red-300">{t("permissionDenied")}</p>
                 <p className="text-xs text-red-400/80">
-                  Notifications wurden blockiert. Bitte in den Browser-Einstellungen wieder erlauben.
+                  {t("permissionDeniedHint")}
                 </p>
               </div>
             </div>
@@ -63,13 +65,13 @@ export function PushNotificationsSection({
                   : <BellOff size={18} className="text-slate-500 flex-shrink-0 mt-0.5" />
                 }
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-slate-200">Push-Benachrichtigungen</p>
+                  <p className="text-sm font-medium text-slate-200">{t("pushNotifications")}</p>
                   <p className="text-xs text-slate-500">
-                    {isSubscribed ? "Aktiv — du wirst bei relevanten Events benachrichtigt" : "Deaktiviert"}
+                    {isSubscribed ? t("activeDesc") : t("deactivated")}
                   </p>
                   {currentUser && (
                     <p className="text-[11px] text-slate-500">
-                      Zuordnung: {currentUser.displayName} · {currentUser.id}
+                      {t("assignedTo")}: {currentUser.displayName} · {currentUser.id}
                     </p>
                   )}
                 </div>
@@ -94,13 +96,13 @@ export function PushNotificationsSection({
 
           {pushSupportStatus === "supported" && isSubscribed && (
             <div className="p-4 bg-slate-800/30 border border-slate-700/50 rounded-xl space-y-2">
-              <p className="text-xs font-medium text-slate-400">Benachrichtigungen bei:</p>
+              <p className="text-xs font-medium text-slate-400">{t("notificationsFor")}</p>
               {[
-                "PR-Review-Anfrage",
-                "Build fehlgeschlagen",
-                "Build erfolgreich",
-                "Release-Approval ausstehend",
-                "PR-Kommentar",
+                t("prReviewRequest"),
+                t("buildFailed"),
+                t("buildSuccess"),
+                t("releasePending"),
+                t("prComment"),
               ].map((label) => (
                 <div key={label} className="flex items-center gap-2">
                   <CheckCircle size={14} className="text-blue-400 flex-shrink-0" />

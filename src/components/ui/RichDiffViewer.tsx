@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { UnifiedDiffViewer } from "@/components/ui/UnifiedDiffViewer";
 import { MarkdownViewer } from "@/components/ui/MarkdownViewer";
 import { ImageDiffViewer } from "@/components/ui/ImageViewer";
@@ -40,6 +41,7 @@ export function RichDiffViewer({
   error,
   emptyMessage,
 }: Props) {
+  const t = useTranslations("explorer");
   const isImage = isImagePath(path);
   const isMarkdown = isMarkdownPath(path);
   const supportsPreviewToggle = isImage || isMarkdown;
@@ -67,8 +69,8 @@ export function RichDiffViewer({
       <div className="flex items-center justify-end px-1">
         <div className="inline-flex rounded-lg border border-slate-700/70 bg-slate-900/70 p-1">
           {[
-            { key: "preview", label: "Vorschau" },
-            { key: "text", label: "Text" },
+            { key: "preview", label: t("preview") },
+            { key: "text", label: t("text") },
           ].map((item) => (
             <button
               key={item.key}
@@ -99,7 +101,7 @@ export function RichDiffViewer({
         <div className="overflow-hidden rounded-2xl border border-slate-700/70 bg-slate-900/70">
           <div className="border-b border-slate-800/80 px-3 py-2.5">
             <p className="truncate text-xs font-mono text-slate-300">{title}</p>
-            <p className="mt-1 text-[11px] text-slate-500">Markdown Vorschau</p>
+            <p className="mt-1 text-[11px] text-slate-500">{t("markdownPreview")}</p>
           </div>
           <div className="grid gap-3 p-3 md:grid-cols-2">
             <div className="overflow-hidden rounded-xl border border-slate-700/70">

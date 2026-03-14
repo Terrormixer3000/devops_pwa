@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 
@@ -27,6 +28,7 @@ export function NewFileSheet({
   currentBranchName: string;
   onSave: SaveHandler;
 }) {
+  const tn = useTranslations("explorer.newFile");
   const [fileName, setFileName] = useState("");
   const [fileContent, setFileContent] = useState("");
   const [commitMessage, setCommitMessage] = useState("");
@@ -84,10 +86,10 @@ export function NewFileSheet({
   };
 
   return (
-    <Modal open={open} onClose={handleClose} title="Neue Datei anlegen">
+    <Modal open={open} onClose={handleClose} title={tn("title")}>
       <div className="space-y-4">
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-300">Dateiname *</label>
+          <label className="text-sm font-medium text-slate-300">{tn("filename")}</label>
           <input
             type="text"
             value={fileName}
@@ -101,7 +103,7 @@ export function NewFileSheet({
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-300">Inhalt</label>
+          <label className="text-sm font-medium text-slate-300">{tn("content")}</label>
           <textarea
             value={fileContent}
             onChange={(e) => setFileContent(e.target.value)}
@@ -115,7 +117,7 @@ export function NewFileSheet({
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-300">Commit-Nachricht *</label>
+          <label className="text-sm font-medium text-slate-300">{tn("commitMessage")}</label>
           <input
             type="text"
             value={commitMessage}
@@ -126,7 +128,7 @@ export function NewFileSheet({
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-300">Ziel</label>
+          <label className="text-sm font-medium text-slate-300">{tn("target")}</label>
           <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-800/90 p-1">
             {(["current", "new-branch"] as const).map((m) => (
               <button
@@ -136,7 +138,7 @@ export function NewFileSheet({
                   targetMode === m ? "bg-slate-700 text-slate-100 shadow-sm" : "text-slate-400"
                 }`}
               >
-                {m === "current" ? `Branch: ${currentBranchName}` : "Neuer Branch"}
+                {m === "current" ? tn("currentBranch", { branch: currentBranchName }) : tn("newBranchLabel")}
               </button>
             ))}
           </div>
@@ -145,7 +147,7 @@ export function NewFileSheet({
         {targetMode === "new-branch" && (
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-300">Branch-Name *</label>
+              <label className="text-sm font-medium text-slate-300">{tn("branchName")}</label>
               <input
                 type="text"
                 value={newBranchName}
@@ -163,11 +165,11 @@ export function NewFileSheet({
                 onChange={(e) => setCreatePR(e.target.checked)}
                 className="rounded border-slate-600 bg-slate-800 text-blue-500"
               />
-              <span className="text-sm text-slate-300">Pull Request erstellen</span>
+              <span className="text-sm text-slate-300">{tn("createPR")}</span>
             </label>
             {createPR && (
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-slate-300">PR-Titel *</label>
+                <label className="text-sm font-medium text-slate-300">{tn("prTitle")}</label>
                 <input
                   type="text"
                   value={prTitle}
@@ -175,7 +177,7 @@ export function NewFileSheet({
                   placeholder="z.B. Feature: Neue Datei"
                   className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm"
                 />
-                <p className="text-xs text-slate-500">Ziel-Branch: {currentBranchName}</p>
+                <p className="text-xs text-slate-500">{tn("targetBranch", { branch: currentBranchName })}</p>
               </div>
             )}
           </div>
@@ -188,7 +190,7 @@ export function NewFileSheet({
           disabled={isDisabled}
           className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors"
         >
-          {pending ? "Wird erstellt…" : "Datei erstellen"}
+          {pending ? tn("saving") : tn("save")}
         </button>
       </div>
     </Modal>

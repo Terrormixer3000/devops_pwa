@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { use, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -35,7 +36,7 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
 
   const { data: build, isLoading, error } = useQuery({
     queryKey: ["build", buildIdNum, settings?.project, settings?.demoMode],
-    queryFn: () => client && settings ? pipelinesService.getBuild(client, settings.project, buildIdNum) : Promise.reject("Kein Client"),
+    queryFn: () => client && settings ? pipelinesService.getBuild(client, settings.project, buildIdNum) : Promise.reject(tBd("loadError")),
     enabled: !!client && !!settings,
     refetchInterval: (query) => (query.state.data?.status === "inProgress" ? 5000 : false),
   });
@@ -68,7 +69,7 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
 
   const retryMutation = useMutation({
     mutationFn: () => {
-      if (!client || !settings || !build) return Promise.reject(new Error("Kein Client"));
+      if (!client || !settings || !build) return Promise.reject(new Error(tBd("loadError")));
       return pipelinesService.queueBuild(client, settings.project, build.definition.id, build.sourceBranch);
     },
     onSuccess: (newBuild) => { setActionError(null); qc.invalidateQueries({ queryKey: ["builds"] }); router.push(`/pipelines/${newBuild.id}`); },
@@ -77,31 +78,36 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
 
   const cancelMutation = useMutation({
     mutationFn: () => {
-      if (!client || !settings) return Promise.reject(new Error("Kein Client"));
+      if (!client || !settings) return Promise.reject(new Error(tBd("loadError")));
       return pipelinesService.cancelBuild(client, settings.project, buildIdNum);
     },
     onSuccess: () => { setActionError(null); qc.invalidateQueries({ queryKey: ["build", buildIdNum] }); },
     onError: (err: Error) => setActionError(err.message),
   });
 
-  if (isLoading) return <div className="min-h-screen"><AppBar title="Build" /><PageLoader /></div>;
-  if (error || !build) return <div className="min-h-screen"><AppBar title="Build" /><ErrorMessage message="Build konnte nicht geladen werden" error={error} /></div>;
+  const tBd = useTranslations("pipelines.buildDetail");
+  const tPipelines = useTranslations("pipelines");
+  const tc = useTranslations("common");
+  const tBuildStatus = useTranslations("buildStatus");
+
+  if (isLoading) return <div className="min-h-screen"><AppBar title={tBd("title")} /><PageLoader /></div>;
+  if (error || !build) return <div className="min-h-screen"><AppBar title={tBd("title")} /><ErrorMessage message={tBd("loadError")} error={error} /></div>;
 
   const handleOpenLog = (logId: number, name: string) => { setSelectedLog({ logId, name }); setActiveTab("log"); };
 
   return (
     <div className="min-h-screen">
-      <AppBar title="Build Details" />
+      <AppBar title={tBd("title")} />
 
       <div className="px-4 pt-4">
-        <BackLink href="/pipelines" label="Pipelines" className="mb-3" />
+        <BackLink href="/pipelines" label={tPipelines("title")} className="mb-3" />
       </div>
 
       {/* Build-Kopfbereich */}
       <div className="px-4 pb-4 border-b border-slate-800">
         <div className="flex items-center gap-2 mb-2">
           <h1 className="text-base font-semibold text-slate-100 flex-1">{build.definition.name}</h1>
-          <Badge variant={getBuildStatusVariant(build.result || build.status)}>{getBuildStatusLabel(build.result || build.status)}</Badge>
+          <Badge variant={getBuildStatusVariant(build.result || build.status)}>{getBuildStatusLabel(build.result || build.status, tBuildStatus)}</Badge>
         </div>
         <p className="text-xs text-slate-400 font-mono mb-1">#{build.buildNumber}</p>
         <p className="text-xs text-slate-500">{stripRefPrefix(build.sourceBranch)} · {build.requestedBy.displayName}</p>
@@ -115,7 +121,7 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-700/30 hover:bg-blue-700/50 text-blue-400 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
             >
               {retryMutation.isPending ? <Loader size={12} className="animate-spin" /> : <RotateCcw size={12} />}
-              Erneut starten
+              {tBd("restart")}
             </button>
           )}
           {build.status === "inProgress" && (
@@ -125,7 +131,7 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-700/30 hover:bg-red-700/50 text-red-400 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
             >
               {cancelMutation.isPending ? <Loader size={12} className="animate-spin" /> : <StopCircle size={12} />}
-              Abbrechen
+              {tBd("cancel")}
             </button>
           )}
         </div>
@@ -135,9 +141,9 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
       <TabBar
         variant="underline"
         tabs={[
-          { key: "uebersicht", label: "Übersicht" },
-          { key: "log", label: "Logs" },
-          { key: "artefakte", label: "Artefakte" },
+          { key: "uebersicht", label: tBd("overview") },
+          { key: "log", label: tBd("logs") },
+          { key: "artefakte", label: tBd("artifacts") },
         ]}
         activeKey={activeTab}
         onChange={(key) => setActiveTab(key as Tab)}
@@ -147,7 +153,7 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
         {activeTab === "uebersicht" && (
           <div className="space-y-3 px-3 py-3">
             {timelineView.roots.length === 0 ? (
-              <p className="p-6 text-sm text-slate-500 text-center">Keine Timeline-Daten verfügbar</p>
+              <p className="p-6 text-sm text-slate-500 text-center">{tBd("noTimeline")}</p>
             ) : (
               <>
                 <JobsSummaryCards summary={timelineView.summary} />
@@ -163,21 +169,21 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
           <div className="p-4">
             {!selectedLog ? (
               logRecords.length === 0 ? (
-                <p className="text-sm text-slate-500">Keine Task-Logs verfügbar</p>
+                <p className="text-sm text-slate-500">{tBd("noLogs")}</p>
               ) : (
                 <LogSelector logRecords={logRecords} onSelect={(logId, name) => setSelectedLog({ logId, name })} />
               )
             ) : (
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <BackActionButton onClick={() => setSelectedLog(null)} label="Zurück" size="compact" />
+                  <BackActionButton onClick={() => setSelectedLog(null)} label={tc("back")} size="compact" />
                   <span className="text-xs text-slate-400">{selectedLog.name}</span>
                 </div>
                 {logLoading ? (
                   <PageLoader />
                 ) : (
                   <pre className="text-xs text-slate-300 font-mono whitespace-pre-wrap break-all bg-slate-900 p-3 rounded-xl border border-slate-800 overflow-x-auto">
-                    {logContent || "Kein Log-Inhalt"}
+                    {logContent || tBd("noLogContent")}
                   </pre>
                 )}
               </div>
@@ -188,7 +194,7 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
         {activeTab === "artefakte" && (
           <div className="p-4 space-y-2">
             {!artifacts?.length ? (
-              <p className="text-sm text-slate-500 text-center py-6">Keine Artefakte</p>
+              <p className="text-sm text-slate-500 text-center py-6">{tBd("noArtifacts")}</p>
             ) : (
               artifacts.map((artifact) => (
                 <a

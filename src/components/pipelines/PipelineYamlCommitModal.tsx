@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { GitBranch, Plus } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
@@ -33,6 +34,7 @@ export function PipelineYamlCommitModal({
   onClose,
   onSubmit,
 }: PipelineYamlCommitModalProps) {
+  const t = useTranslations("yamlCommit");
   const [commitMessage, setCommitMessage] = useState("");
   const [targetKind, setTargetKind] = useState<"existing" | "new">("existing");
   const [existingBranchName, setExistingBranchName] = useState(defaultBranchName);
@@ -50,10 +52,10 @@ export function PipelineYamlCommitModal({
     (effectiveCreatePR && !prTitle.trim());
 
   return (
-    <Modal open={open} onClose={onClose} title="YAML committen">
+    <Modal open={open} onClose={onClose} title={t("title")}>
       <div className="space-y-4">
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-300">Commit-Nachricht *</label>
+          <label className="text-sm font-medium text-slate-300">{t("commitMessage")}</label>
           <input
             type="text"
             value={commitMessage}
@@ -64,7 +66,7 @@ export function PipelineYamlCommitModal({
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-300">Ziel</label>
+          <label className="text-sm font-medium text-slate-300">{t("target")}</label>
           <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-800/90 p-1">
             {(["existing", "new"] as const).map((kind) => (
               <button
@@ -75,7 +77,7 @@ export function PipelineYamlCommitModal({
                   targetKind === kind ? "bg-slate-700 text-slate-100 shadow-sm" : "text-slate-400"
                 }`}
               >
-                {kind === "existing" ? "Bestehender Branch" : "Neuer Branch"}
+                {kind === "existing" ? t("existingBranch") : t("newBranch")}
               </button>
             ))}
           </div>
@@ -87,7 +89,7 @@ export function PipelineYamlCommitModal({
             <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-800">
               <div className="flex items-center gap-1.5 border-b border-slate-700/70 px-3 py-2 text-[11px] text-slate-500">
                 <GitBranch size={13} />
-                <span>Vorhandenen Branch wählen</span>
+                <span>{t("chooseExistingBranch")}</span>
               </div>
               <div className="max-h-52 divide-y divide-slate-700/50 overflow-y-auto">
                 {existingBranches.map((branchName) => (
@@ -104,7 +106,7 @@ export function PipelineYamlCommitModal({
                     <span className="min-w-0 flex-1 truncate font-mono">{branchName}</span>
                     {branchName === defaultBranchName && (
                       <span className="rounded-full border border-slate-600 bg-slate-900/70 px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-400">
-                        Default
+                        {t("default")}
                       </span>
                     )}
                   </button>
@@ -114,7 +116,7 @@ export function PipelineYamlCommitModal({
           </div>
         ) : (
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-300">Branch-Name *</label>
+            <label className="text-sm font-medium text-slate-300">{t("branchName")}</label>
             <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-800">
               <div className="flex items-center gap-1.5 border-b border-slate-700/70 px-3 py-2 text-[11px] text-slate-500">
                 <GitBranch size={13} />
@@ -142,12 +144,12 @@ export function PipelineYamlCommitModal({
                 onChange={(e) => setCreatePR(e.target.checked)}
                 className="rounded border-slate-600 bg-slate-800 text-blue-500"
               />
-              <span className="text-sm text-slate-300">Pull Request erstellen</span>
+              <span className="text-sm text-slate-300">{t("createPR")}</span>
             </label>
 
             {effectiveCreatePR && (
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-slate-300">PR-Titel *</label>
+                <label className="text-sm font-medium text-slate-300">{t("prTitle")}</label>
                 <input
                   type="text"
                   value={prTitle}
@@ -155,7 +157,7 @@ export function PipelineYamlCommitModal({
                   placeholder="z.B. Add pipeline YAML"
                   className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
                 />
-                <p className="text-xs text-slate-500">Ziel-Branch: {defaultBranchName}</p>
+                <p className="text-xs text-slate-500">{t("targetBranch", { branch: defaultBranchName })}</p>
               </div>
             )}
           </div>
@@ -165,7 +167,7 @@ export function PipelineYamlCommitModal({
 
         <div className="flex gap-2 pt-1">
           <Button variant="ghost" className="flex-1" onClick={onClose} disabled={pending}>
-            Abbrechen
+            {t("cancel")}
           </Button>
           <Button
             className="flex-1"
@@ -182,7 +184,7 @@ export function PipelineYamlCommitModal({
             }
           >
             <Plus size={16} />
-            Committen
+            {t("commit")}
           </Button>
         </div>
       </div>

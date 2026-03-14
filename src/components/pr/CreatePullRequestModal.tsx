@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { GitBranch, Plus, UserPlus, Wand2, X } from "lucide-react";
@@ -46,6 +47,7 @@ export function CreatePullRequestModal({
   onClose,
   onSubmit,
 }: CreatePullRequestModalProps) {
+  const t = useTranslations("createPR");
   const { settings } = useSettingsStore();
   const { repositories, selectedRepositories } = useRepositoryStore();
   const { client } = useAzureClient();
@@ -161,7 +163,7 @@ export function CreatePullRequestModal({
       }
     } catch (err) {
       setAutoFillError(
-        (err instanceof Error ? err.message : null) || "Commit konnte nicht geladen werden."
+        (err instanceof Error ? err.message : null) || t("commitLoadError")
       );
     } finally {
       setAutoFilling(false);
@@ -190,7 +192,7 @@ export function CreatePullRequestModal({
   const isValid = !!(repo && form.title && form.sourceRefName && (form.targetRefName || defaultTargetBranch));
 
   return (
-    <Modal open={open} onClose={handleClose} title="Neuen Pull Request erstellen">
+    <Modal open={open} onClose={handleClose} title={t("title")}>
       <div className="space-y-4">
         {error && (
           <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2.5">
@@ -199,10 +201,10 @@ export function CreatePullRequestModal({
         )}
 
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-300">Repository *</label>
+          <label className="text-sm font-medium text-slate-300">{t("repo")}</label>
           {repositories.length === 0 ? (
             <p className="rounded-xl border border-yellow-500/20 bg-yellow-500/10 px-3 py-2.5 text-sm text-yellow-300">
-              Kein Repository verfügbar – Einstellungen prüfen
+              {t("noRepoAvailable")}
             </p>
           ) : (
             <div className="relative">
@@ -233,7 +235,7 @@ export function CreatePullRequestModal({
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-3">
-            <label className="text-sm font-medium text-slate-300">Titel *</label>
+            <label className="text-sm font-medium text-slate-300">{t("titleLabel")}</label>
             {form.sourceRefName && (
               <button
                 type="button"
@@ -242,7 +244,7 @@ export function CreatePullRequestModal({
                 className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs text-blue-400 transition-colors hover:bg-blue-900/30 hover:text-blue-300 disabled:opacity-50"
               >
                 <Wand2 size={12} />
-                {autoFilling || commitFetching ? "Lade..." : "Aus Commit befuellen"}
+                {autoFilling || commitFetching ? t("loading") : t("fillFromCommit")}
               </button>
             )}
           </div>
@@ -257,13 +259,13 @@ export function CreatePullRequestModal({
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-300">Von Branch *</label>
+          <label className="text-sm font-medium text-slate-300">{t("fromBranch")}</label>
           <select
             value={form.sourceRefName}
             onChange={(e) => setForm((current) => ({ ...current, sourceRefName: e.target.value }))}
             className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-sm text-slate-100 focus:border-blue-500 focus:outline-none"
           >
-            <option value="">Branch auswaehlen...</option>
+            <option value="">{t("selectBranch")}</option>
             {branches?.map((branch) => (
               <option key={branch.name} value={branch.name}>
                 {branch.name}
@@ -273,13 +275,13 @@ export function CreatePullRequestModal({
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-300">In Branch *</label>
+          <label className="text-sm font-medium text-slate-300">{t("toBranch")}</label>
           <select
             value={form.targetRefName || defaultTargetBranch}
             onChange={(e) => setForm((current) => ({ ...current, targetRefName: e.target.value }))}
             className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-sm text-slate-100 focus:border-blue-500 focus:outline-none"
           >
-            <option value="">Branch auswaehlen...</option>
+            <option value="">{t("selectBranch")}</option>
             {branches?.map((branch) => (
               <option key={branch.name} value={branch.name}>
                 {branch.name}
@@ -289,18 +291,18 @@ export function CreatePullRequestModal({
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-300">Beschreibung</label>
+          <label className="text-sm font-medium text-slate-300">{t("description")}</label>
           <textarea
             value={form.description}
             onChange={(e) => setForm((current) => ({ ...current, description: e.target.value }))}
-            placeholder="Optional: Was aendert dieser PR?"
+            placeholder={t("descriptionPlaceholder")}
             rows={4}
             className="w-full resize-none rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
           />
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-300">Reviewer</label>
+          <label className="text-sm font-medium text-slate-300">{t("reviewers")}</label>
 
           {selectedReviewers.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -335,13 +337,13 @@ export function CreatePullRequestModal({
                 type="text"
                 value={reviewerSearch}
                 onChange={(e) => setReviewerSearch(e.target.value)}
-                placeholder="Name suchen..."
+                placeholder={t("searchReviewers")}
                 autoFocus
                 className="w-full border-b border-slate-700 bg-slate-800 px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none"
               />
               <div className="max-h-40 overflow-y-auto">
                 {filteredMembers.length === 0 ? (
-                  <p className="px-4 py-3 text-xs text-slate-500">Keine Ergebnisse</p>
+                  <p className="px-4 py-3 text-xs text-slate-500">{t("noResults")}</p>
                 ) : (
                   filteredMembers.map((member) => (
                     <button
@@ -375,7 +377,7 @@ export function CreatePullRequestModal({
                 }}
                 className="w-full border-t border-slate-700 px-4 py-2 text-xs text-slate-500 transition-colors hover:text-slate-300"
               >
-                Schliessen
+                {t("close")}
               </button>
             </div>
           ) : (
@@ -385,15 +387,15 @@ export function CreatePullRequestModal({
               className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs text-slate-400 transition-colors hover:border-slate-600 hover:text-slate-200"
             >
               <UserPlus size={14} />
-              Reviewer hinzufügen
+              {t("addReviewer")}
             </button>
           )}
         </div>
 
         <div className="flex items-center justify-between border-t border-slate-800 py-3">
           <div>
-            <p className="text-sm font-medium text-slate-300">Als Draft erstellen</p>
-            <p className="text-xs text-slate-500">Draft PRs sind noch nicht bereit fuer Review</p>
+            <p className="text-sm font-medium text-slate-300">{t("draftLabel")}</p>
+            <p className="text-xs text-slate-500">{t("draftHint")}</p>
           </div>
           <button
             type="button"
@@ -412,11 +414,11 @@ export function CreatePullRequestModal({
 
         <div className="flex gap-2 pt-1">
           <Button variant="ghost" className="flex-1" onClick={handleClose} disabled={isPending}>
-            Abbrechen
+            {t("cancel")}
           </Button>
           <Button className="flex-1" loading={isPending} disabled={!isValid || isPending} onClick={handleSubmit}>
             <Plus size={16} />
-            Erstellen
+            {t("create")}
           </Button>
         </div>
       </div>

@@ -30,11 +30,99 @@ import {
   WorkItem,
 } from "@/types";
 
-const STORAGE_KEY = "azdevops_demo_state";
+const STORAGE_KEY_PREFIX = "azdevops_demo_state";
+let demoLocale = "en";
+
+/** Setzt die aktive Sprache fuer die Demo-Datengenerierung und leert den In-Memory-Cache. */
+export function setDemoLocale(locale: string) {
+  if (locale === demoLocale) return;
+  demoLocale = locale;
+  memoryState = null;
+}
+
+function getStorageKey() {
+  return `${STORAGE_KEY_PREFIX}_${demoLocale}`;
+}
+
 const PROJECT_ID = "demo-project-001";
 const PROJECT_NAME = "Demo Platform";
 const ORGANIZATION_NAME = "demo-org";
 const NOW = new Date("2026-03-06T12:00:00.000Z");
+
+/** Sprachspezifische Texte fuer die Demo-Datengenerierung. */
+const LOCALE_STRINGS = {
+  en: {
+    activePrDesc: (fullName: string) =>
+      `This change stabilizes rollout behavior for ${fullName} and prepares the next release wave.`,
+    completedPrTitle: (ns: string, name: string) => `${ns}: Merge release branch for ${name}`,
+    completedPrDesc: (fullName: string) => `Merging the prepared release changes for ${fullName}.`,
+    abandonedPrTitle: (ns: string, name: string) => `${ns}: Discard experiment for ${name}`,
+    abandonedPrDesc: (fullName: string) =>
+      `Outdated approach for ${fullName}, replaced by new rollout concept.`,
+    threadComment1: "We should align the timeout for the retry path with the load tests.",
+    threadComment2: "Sounds good, I raised the value to 30s and updated the canary checks.",
+    threadComment3: "Please add the migration steps to the release notes.",
+    threadComment4: "Release notes updated, including rollback strategy.",
+    threadComment5: "We are stopping this branch. The technical risks are too high for the current release cycle.",
+    iterationDesc1: "Rollout hardening baseline",
+    iterationDesc2: "Review fixes and feature flag adjustments",
+    iterationDesc3: "Discarded spike",
+    releasePipelineDesc: (name: string) => `${name} release pipeline for the demo project`,
+    approvalComment: "Production deployment approved.",
+    releaseDesc1: "Regular release run with agreed gates.",
+    releaseDesc2: "Follow-up for hotfixes and smoke tests.",
+    readmeContent: (fullName: string, namespace: string, activity: string, branch: string) =>
+      `# ${fullName}\n\nThis is the demo repository ${fullName} in project ${PROJECT_NAME}.\n\n- Namespace: ${namespace}\n- Activity level: ${activity}\n- Branch: ${branch}\n`,
+    architectureContent: (serviceNamePascal: string, fullName: string, serviceName: string, namespace: string, branch: string) =>
+      `# Architecture Overview ${serviceNamePascal}\n\nThis document describes the core components of \`${fullName}\`.\n\n## Context\n\n- Service: ${serviceName}\n- Namespace: ${namespace}\n- Default Branch: ${branch}\n\n## Components\n\n1. API Layer under \`/src/app\`\n2. Domain workflow in \`/src/domain/service.ts\`\n3. Deployment pipelines in \`/.azuredevops\`\n\n## Review Notes\n\n- When changing the API, also update \`docs/release-notes.md\`\n- Update \`assets/system-overview.svg\` when the topology changes\n`,
+    decisionLogContent: (serviceName: string, year: number) =>
+      `# Decision Log\n\n## ${year}-01-15\n- We continue with branch-based deployments for ${serviceName}.\n\n## ${year}-02-03\n- Image assets for ops dashboards are stored in \`/assets\`.\n\n## ${year}-02-24\n- PR reviews now explicitly check Markdown documentation and architecture diagrams.\n`,
+    releaseNotesContent: (branch: string, serviceNamePascal: string) =>
+      `# Release Notes\n\n## ${branch}\n\n### Added\n- Improved logging hooks in the workflow.\n- Updated documentation for ${serviceNamePascal}.\n\n### Changed\n- Pipeline validation in CI made stricter.\n- New preview for diagram assets in the code explorer.\n`,
+    policyMinReviewers: "Minimum reviewers",
+    policyBuildValidation: "Build validation passed",
+    policyCodeCoverage: "Code coverage >= 80%",
+    policyNoConflicts: "No active merge conflict",
+  },
+  de: {
+    activePrDesc: (fullName: string) =>
+      `Diese Aenderung stabilisiert das Rollout-Verhalten fuer ${fullName} und bereitet die naechste Release-Welle vor.`,
+    completedPrTitle: (ns: string, name: string) => `${ns}: Release branch fuer ${name} zusammenfuehren`,
+    completedPrDesc: (fullName: string) => `Merge der vorbereiteten Release-Aenderungen fuer ${fullName}.`,
+    abandonedPrTitle: (ns: string, name: string) => `${ns}: Experiment fuer ${name} verwerfen`,
+    abandonedPrDesc: (fullName: string) =>
+      `Veralteter Ansatz fuer ${fullName}, wird durch neues Rollout-Konzept ersetzt.`,
+    threadComment1: "Wir sollten das Timeout fuer den Retry-Pfad noch an die Load-Tests angleichen.",
+    threadComment2: "Passt, ich habe den Wert auf 30s angehoben und die Canary-Checks nachgezogen.",
+    threadComment3: "Bitte die Release Notes noch um die Migrationsschritte ergaenzen.",
+    threadComment4: "Release Notes sind aktualisiert, inklusive Backout-Strategie.",
+    threadComment5: "Wir stoppen diesen Strang. Die technischen Risiken sind zu hoch fuer den aktuellen Release-Zyklus.",
+    iterationDesc1: "Basis fuer Rollout-Hardening",
+    iterationDesc2: "Review-Fixes und Feature-Flag Anpassungen",
+    iterationDesc3: "Verworfener Spike",
+    releasePipelineDesc: (name: string) => `${name} Release-Pipeline fuer das Demo-Projekt`,
+    approvalComment: "Freigabe fuer Produktivdeployment erteilt.",
+    releaseDesc1: "Regulaerer Release-Run mit abgestimmten Gates.",
+    releaseDesc2: "Nachlauf fuer Hotfixes und Smoke Tests.",
+    readmeContent: (fullName: string, namespace: string, activity: string, branch: string) =>
+      `# ${fullName}\n\nDies ist das Demo-Repository ${fullName} im Projekt ${PROJECT_NAME}.\n\n- Namespace: ${namespace}\n- Aktivitaetsstufe: ${activity}\n- Branch: ${branch}\n`,
+    architectureContent: (serviceNamePascal: string, fullName: string, serviceName: string, namespace: string, branch: string) =>
+      `# Architekturuebersicht ${serviceNamePascal}\n\nDieses Dokument beschreibt die Kernkomponenten von \`${fullName}\`.\n\n## Kontext\n\n- Service: ${serviceName}\n- Namespace: ${namespace}\n- Default Branch: ${branch}\n\n## Komponenten\n\n1. API Layer unter \`/src/app\`\n2. Domain-Workflow in \`/src/domain/service.ts\`\n3. Deployment-Pipelines in \`/.azuredevops\`\n\n## Hinweise fuer Reviews\n\n- Aendere bei API-Aenderungen auch \`docs/release-notes.md\`\n- Aktualisiere \`assets/system-overview.svg\`, wenn sich die Topologie aendert\n`,
+    decisionLogContent: (serviceName: string, year: number) =>
+      `# Decision Log\n\n## ${year}-01-15\n- Wir setzen weiterhin auf branch-basierte Deployments fuer ${serviceName}.\n\n## ${year}-02-03\n- Bildassets fuer Ops-Dashboards liegen in \`/assets\`.\n\n## ${year}-02-24\n- PR-Reviews pruefen jetzt explizit Markdown-Dokumentation und Architekturdiagramme.\n`,
+    releaseNotesContent: (branch: string, serviceNamePascal: string) =>
+      `# Release Notes\n\n## ${branch}\n\n### Added\n- Verbesserte Logging-Hooks im Workflow.\n- Aktualisierte Dokumentation fuer ${serviceNamePascal}.\n\n### Changed\n- Pipeline-Validierung in CI stricter gemacht.\n- Neue Vorschau fuer Diagramm-Assets im Code Explorer.\n`,
+    policyMinReviewers: "Mindestanzahl Reviewer",
+    policyBuildValidation: "Build-Validierung erfolgreich",
+    policyCodeCoverage: "Code Coverage >= 80%",
+    policyNoConflicts: "Kein aktiver Merge-Konflikt",
+  },
+};
+
+/** Gibt die Texte fuer die aktuell eingestellte Demo-Sprache zurueck. */
+function ls() {
+  return LOCALE_STRINGS[demoLocale as keyof typeof LOCALE_STRINGS] ?? LOCALE_STRINGS.en;
+}
 
 type IterationChanges = {
   changeEntries: Array<{ item: { path: string }; changeType: string }>;
@@ -390,7 +478,7 @@ function buildTreeForRepo(repoId: string, branch: string, fullName: string, inde
   ];
 
   const files: Record<string, string> = {
-    [fileKey(repoId, branch, "/README.md")]: `# ${fullName}\n\nDies ist das Demo-Repository ${fullName} im Projekt ${PROJECT_NAME}.\n\n- Namespace: ${namespace}\n- Aktivitaetsstufe: ${repoCatalog[index].activity}\n- Branch: ${branch}\n`,
+    [fileKey(repoId, branch, "/README.md")]: ls().readmeContent(fullName, namespace, repoCatalog[index].activity, branch),
     [fileKey(repoId, branch, "/package.json")]: JSON.stringify(
       {
         name: repoSlug,
@@ -414,9 +502,9 @@ function buildTreeForRepo(repoId: string, branch: string, fullName: string, inde
     [fileKey(repoId, branch, "/infra/chart.yaml")]: `apiVersion: v2\nname: ${repoSlug}\nversion: 0.${index + 1}.0\n`,
     [fileKey(repoId, branch, "/.azuredevops/ci.yml")]: `trigger:\n  branches:\n    include:\n      - main\n      - develop\npool:\n  vmImage: ubuntu-latest\nsteps:\n  - script: npm ci\n  - script: npm test\n  - script: npm run build\n`,
     [fileKey(repoId, branch, "/.azuredevops/release.yml")]: `stages:\n  - stage: Deploy_Dev\n  - stage: Deploy_Test\n  - stage: Deploy_Prod\n`,
-    [fileKey(repoId, branch, "/docs/architecture.md")]: `# Architekturuebersicht ${serviceNamePascal}\n\nDieses Dokument beschreibt die Kernkomponenten von \`${fullName}\`.\n\n## Kontext\n\n- Service: ${serviceName}\n- Namespace: ${namespace}\n- Default Branch: ${sanitizeBranchName(branch)}\n\n## Komponenten\n\n1. API Layer unter \`/src/app\`\n2. Domain-Workflow in \`/src/domain/service.ts\`\n3. Deployment-Pipelines in \`/.azuredevops\`\n\n## Hinweise fuer Reviews\n\n- Aendere bei API-Aenderungen auch \`docs/release-notes.md\`\n- Aktualisiere \`assets/system-overview.svg\`, wenn sich die Topologie aendert\n`,
-    [fileKey(repoId, branch, "/docs/decision-log.md")]: `# Decision Log\n\n## ${NOW.getUTCFullYear()}-01-15\n- Wir setzen weiterhin auf branch-basierte Deployments fuer ${serviceName}.\n\n## ${NOW.getUTCFullYear()}-02-03\n- Bildassets fuer Ops-Dashboards liegen in \`/assets\`.\n\n## ${NOW.getUTCFullYear()}-02-24\n- PR-Reviews pruefen jetzt explizit Markdown-Dokumentation und Architekturdiagramme.\n`,
-    [fileKey(repoId, branch, "/docs/release-notes.md")]: `# Release Notes\n\n## ${sanitizeBranchName(branch)}\n\n### Added\n- Verbesserte Logging-Hooks im Workflow.\n- Aktualisierte Dokumentation fuer ${serviceNamePascal}.\n\n### Changed\n- Pipeline-Validierung in CI stricter gemacht.\n- Neue Vorschau fuer Diagramm-Assets im Code Explorer.\n`,
+    [fileKey(repoId, branch, "/docs/architecture.md")]: ls().architectureContent(serviceNamePascal, fullName, serviceName, namespace, branch),
+    [fileKey(repoId, branch, "/docs/decision-log.md")]: ls().decisionLogContent(serviceName, NOW.getUTCFullYear()),
+    [fileKey(repoId, branch, "/docs/release-notes.md")]: ls().releaseNotesContent(sanitizeBranchName(branch), serviceNamePascal),
     [fileKey(repoId, branch, "/assets/system-overview.svg")]: `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680">\n  <defs>\n    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">\n      <stop offset="0%" stop-color="#0f172a" />\n      <stop offset="100%" stop-color="#1e293b" />\n    </linearGradient>\n  </defs>\n  <rect width="1200" height="680" fill="url(#bg)" rx="24" />\n  <rect x="120" y="120" width="280" height="120" rx="16" fill="#1d4ed8" opacity="0.9" />\n  <text x="260" y="188" text-anchor="middle" fill="#e2e8f0" font-size="28" font-family="Arial">Client App</text>\n  <rect x="460" y="100" width="300" height="160" rx="16" fill="#0ea5e9" opacity="0.9" />\n  <text x="610" y="188" text-anchor="middle" fill="#082f49" font-size="30" font-family="Arial">${serviceNamePascal}</text>\n  <rect x="830" y="120" width="250" height="120" rx="16" fill="#16a34a" opacity="0.9" />\n  <text x="955" y="188" text-anchor="middle" fill="#052e16" font-size="24" font-family="Arial">Downstream API</text>\n  <rect x="410" y="360" width="380" height="190" rx="16" fill="#334155" opacity="0.95" />\n  <text x="600" y="430" text-anchor="middle" fill="#f8fafc" font-size="24" font-family="Arial">Azure DevOps Pipeline</text>\n  <text x="600" y="470" text-anchor="middle" fill="#cbd5e1" font-size="18" font-family="Arial">Build • Test • Release</text>\n  <line x1="400" y1="180" x2="460" y2="180" stroke="#93c5fd" stroke-width="6" />\n  <line x1="760" y1="180" x2="830" y2="180" stroke="#86efac" stroke-width="6" />\n  <line x1="610" y1="260" x2="610" y2="360" stroke="#94a3b8" stroke-width="6" />\n</svg>\n`,
     [fileKey(repoId, branch, "/assets/mobile-preview.png")]: `PNG_PLACEHOLDER_${repoSlug}_${sanitizeBranchName(branch)}`,
   };
@@ -641,7 +729,7 @@ function seedDemoState(): DemoState {
     const activePr: PullRequest = {
       pullRequestId: activePrId,
       title: `${entry.namespace}: Harden ${entry.name} rollout handling`,
-      description: `Diese Aenderung stabilisiert das Rollout-Verhalten fuer ${fullName} und bereitet die naechste Release-Welle vor.`,
+      description: ls().activePrDesc(fullName),
       status: "active",
       createdBy: pickIdentity(index),
       creationDate: daysAgo(index % 9, 10 + (index % 5), 12),
@@ -668,7 +756,7 @@ function seedDemoState(): DemoState {
         comments: [
           {
             id: nextCommentId++,
-            content: "Wir sollten das Timeout fuer den Retry-Pfad noch an die Load-Tests angleichen.",
+            content: ls().threadComment1,
             author: pickIdentity(index + 1),
             publishedDate: daysAgo(index % 6, 11, 0),
             lastUpdatedDate: daysAgo(index % 6, 11, 0),
@@ -676,7 +764,7 @@ function seedDemoState(): DemoState {
           },
           {
             id: nextCommentId++,
-            content: "Passt, ich habe den Wert auf 30s angehoben und die Canary-Checks nachgezogen.",
+            content: ls().threadComment2,
             author: pickIdentity(index),
             publishedDate: daysAgo(index % 6, 11, 40),
             lastUpdatedDate: daysAgo(index % 6, 11, 40),
@@ -688,7 +776,7 @@ function seedDemoState(): DemoState {
     iterations[activePrKey] = [
       {
         id: nextIterationId++,
-        description: "Basis fuer Rollout-Hardening",
+        description: ls().iterationDesc1,
         author: pickIdentity(index),
         createdDate: daysAgo(index % 6, 9, 15),
         updatedDate: daysAgo(index % 6, 9, 15),
@@ -697,7 +785,7 @@ function seedDemoState(): DemoState {
       },
       {
         id: nextIterationId++,
-        description: "Review-Fixes und Feature-Flag Anpassungen",
+        description: ls().iterationDesc2,
         author: pickIdentity(index),
         createdDate: daysAgo(index % 5, 10, 25),
         updatedDate: daysAgo(index % 5, 10, 25),
@@ -720,8 +808,8 @@ function seedDemoState(): DemoState {
       const completedPrId = nextPrId++;
       const completedPr: PullRequest = {
         pullRequestId: completedPrId,
-        title: `${entry.namespace}: Release branch fuer ${entry.name} zusammenfuehren`,
-        description: `Merge der vorbereiteten Release-Aenderungen fuer ${fullName}.`,
+        title: ls().completedPrTitle(entry.namespace, entry.name),
+        description: ls().completedPrDesc(fullName),
         status: "completed",
         createdBy: pickIdentity(index + 3),
         creationDate: daysAgo(10 + (index % 7), 8, 20),
@@ -748,7 +836,7 @@ function seedDemoState(): DemoState {
           comments: [
             {
               id: nextCommentId++,
-              content: "Bitte die Release Notes noch um die Migrationsschritte ergaenzen.",
+              content: ls().threadComment3,
               author: pickIdentity(index + 4),
               publishedDate: daysAgo(9 + (index % 6), 10, 0),
               lastUpdatedDate: daysAgo(9 + (index % 6), 10, 0),
@@ -756,7 +844,7 @@ function seedDemoState(): DemoState {
             },
             {
               id: nextCommentId++,
-              content: "Release Notes sind aktualisiert, inklusive Backout-Strategie.",
+              content: ls().threadComment4,
               author: pickIdentity(index + 3),
               publishedDate: daysAgo(8 + (index % 6), 11, 0),
               lastUpdatedDate: daysAgo(8 + (index % 6), 11, 0),
@@ -791,8 +879,8 @@ function seedDemoState(): DemoState {
       const abandonedBranch = repoBranches.find((branch) => branch.name.startsWith("hotfix/"))?.name || "develop";
       const abandonedPr: PullRequest = {
         pullRequestId: abandonedPrId,
-        title: `${entry.namespace}: Experiment fuer ${entry.name} verwerfen`,
-        description: `Veralteter Ansatz fuer ${fullName}, wird durch neues Rollout-Konzept ersetzt.`,
+        title: ls().abandonedPrTitle(entry.namespace, entry.name),
+        description: ls().abandonedPrDesc(fullName),
         status: "abandoned",
         createdBy: pickIdentity(index + 5),
         creationDate: daysAgo(14 + (index % 5), 13, 5),
@@ -819,7 +907,7 @@ function seedDemoState(): DemoState {
           comments: [
             {
               id: nextCommentId++,
-              content: "Wir stoppen diesen Strang. Die technischen Risiken sind zu hoch fuer den aktuellen Release-Zyklus.",
+              content: ls().threadComment5,
               author: pickIdentity(index + 6),
               publishedDate: daysAgo(13 + (index % 4), 15, 0),
               lastUpdatedDate: daysAgo(13 + (index % 4), 15, 0),
@@ -831,7 +919,7 @@ function seedDemoState(): DemoState {
       iterations[abandonedPrKey] = [
         {
           id: nextIterationId++,
-          description: "Verworfener Spike",
+          description: ls().iterationDesc3,
           author: pickIdentity(index + 5),
           createdDate: daysAgo(15 + (index % 4), 11, 10),
           updatedDate: daysAgo(15 + (index % 4), 11, 10),
@@ -938,7 +1026,7 @@ function seedDemoState(): DemoState {
     releaseDefinitions.push({
       id: 800 + index,
       name,
-      description: `${name} Release-Pipeline fuer das Demo-Projekt`,
+      description: ls().releasePipelineDesc(name),
       createdBy: pickIdentity(index),
       modifiedOn: daysAgo(index + 2, 9, 0),
       environments: [
@@ -960,7 +1048,7 @@ function seedDemoState(): DemoState {
         status: index % 2 === 0 && position === 0 ? "pending" : "approved",
         approver: pickIdentity(index + 2),
         approvedBy: index % 2 === 0 && position === 0 ? undefined : pickIdentity(index + 2),
-        comments: index % 2 === 0 && position === 0 ? "" : "Freigabe fuer Produktivdeployment erteilt.",
+        comments: index % 2 === 0 && position === 0 ? "" : ls().approvalComment,
         createdOn,
         modifiedOn: createdOn,
         releaseEnvironmentReference: { id: definition.environments?.[2].id || 0, name: "Prod" },
@@ -1041,7 +1129,7 @@ function seedDemoState(): DemoState {
         modifiedOn: createdOn,
         releaseDefinition: { id: definition.id, name: definition.name },
         environments,
-        description: position === 0 ? "Regulaerer Release-Run mit abgestimmten Gates." : "Nachlauf fuer Hotfixes und Smoke Tests.",
+        description: position === 0 ? ls().releaseDesc1 : ls().releaseDesc2,
       };
       releases.push(release);
       approvals.push(prodApproval);
@@ -1115,7 +1203,7 @@ function loadDemoState(): DemoState {
 
   try {
     // Demo-Mutationen bleiben im Browser erhalten, bis der lokale Zustand geloescht wird.
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(getStorageKey());
     if (raw) {
       const parsed = JSON.parse(raw) as DemoState;
       if (hasRichExampleFiles(parsed)) {
@@ -1136,11 +1224,16 @@ function loadDemoState(): DemoState {
   return seeded;
 }
 
-/** Speichert den Demo-Zustand im In-Memory-Cache und (sofern verfuegbar) im localStorage. */
+/** Speichert den Demo-Zustand im In-Memory-Cache und (sofern verfuegbar) im localStorage.
+ * Bei QuotaExceededError bleibt der Zustand nur fuer die aktuelle Sitzung erhalten. */
 function saveDemoState(state: DemoState) {
   memoryState = state;
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  try {
+    window.localStorage.setItem(getStorageKey(), JSON.stringify(state));
+  } catch {
+    // localStorage-Kontingent erschoepft – Mutationen leben nur im In-Memory-Cache weiter.
+  }
 }
 
 /** Laedt den aktuellen Demo-Zustand, fuehrt eine Mutation durch und speichert ihn zurueck. */
@@ -1772,10 +1865,10 @@ export const demoApi = {
 
     getPolicies(prId: number): Array<{ id: string; status: string; displayName: string; isRequired: boolean }> {
       return [
-        { id: `policy-${prId}-1`, status: "approved", displayName: "Mindestanzahl Reviewer", isRequired: true },
-        { id: `policy-${prId}-2`, status: "approved", displayName: "Build-Validierung erfolgreich", isRequired: true },
-        { id: `policy-${prId}-3`, status: "queued", displayName: "Code Coverage >= 80%", isRequired: false },
-        { id: `policy-${prId}-4`, status: "rejected", displayName: "Kein aktiver Merge-Konflikt", isRequired: true },
+        { id: `policy-${prId}-1`, status: "approved", displayName: ls().policyMinReviewers, isRequired: true },
+        { id: `policy-${prId}-2`, status: "approved", displayName: ls().policyBuildValidation, isRequired: true },
+        { id: `policy-${prId}-3`, status: "queued", displayName: ls().policyCodeCoverage, isRequired: false },
+        { id: `policy-${prId}-4`, status: "rejected", displayName: ls().policyNoConflicts, isRequired: true },
       ];
     },
   },
