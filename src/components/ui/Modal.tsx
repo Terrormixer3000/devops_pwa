@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { X } from "lucide-react";
 import { Drawer } from "vaul";
 
@@ -12,16 +12,26 @@ interface Props {
   open: boolean;
   onClose: () => void;
   title?: string;
+  description?: string;
   children: React.ReactNode;
 }
 
 /** Rendert das Modal als vaul-Drawer-Sheet. */
-export function Modal({ open, onClose, title, children }: Props) {
-  useEffect(() => {
-    if (open) document.body.style.overflow = "hidden";
-    else document.body.style.overflow = "";
+export function Modal({ open, onClose, title, description, children }: Props) {
+  useLayoutEffect(() => {
+    if (open) {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
     return () => { document.body.style.overflow = ""; };
   }, [open]);
+
+  const resolvedDescription =
+    description || (title ? `${title}. Prüfe die Details und wähle anschließend eine Aktion aus.` : undefined);
 
   return (
     <Drawer.Root
@@ -57,6 +67,11 @@ export function Modal({ open, onClose, title, children }: Props) {
                 </button>
               </Drawer.Close>
             </div>
+          )}
+          {resolvedDescription && (
+            <Drawer.Description className="sr-only">
+              {resolvedDescription}
+            </Drawer.Description>
           )}
 
           <div
