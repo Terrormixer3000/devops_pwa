@@ -48,7 +48,7 @@ A mobile-first Progressive Web App (PWA) for Azure DevOps — designed for iPhon
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/your-org/devops_pwa.git
+git clone https://github.com/Terrormixer3000/devops_pwa.git
 cd devops_pwa
 npm install
 ```
