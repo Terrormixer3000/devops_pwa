@@ -8,6 +8,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AppBar } from "@/components/layout/AppBar";
+import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { usePushState } from "@/lib/hooks/usePushState";
 import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
@@ -179,7 +180,13 @@ function ResultBanner({ result }: { result: TestResult | null }) {
 export default function PushTestPage() {
   const { settings } = useSettingsStore();
 
-  const { supportStatus, permissionState: permission, isSubscribed, webhookToken } = usePushState();
+  const {
+    supportStatus,
+    permissionState: permission,
+    isSubscribed,
+    webhookToken,
+    isLoading: pushStateLoading,
+  } = usePushState();
   const { currentUser } = useCurrentUser();
 
   // Test-State
@@ -237,6 +244,51 @@ export default function PushTestPage() {
     !!settings?.organization &&
     !!settings?.project &&
     !!currentUser;
+
+  if (pushStateLoading) {
+    return (
+      <div className="min-h-screen">
+        <AppBar title="Push-Test" />
+        <PageLoader />
+      </div>
+    );
+  }
+
+  if (!webhookToken) {
+    return (
+      <div className="min-h-screen">
+        <AppBar title="Push-Test" />
+
+        <div className="px-4 py-4 max-w-lg mx-auto">
+          <section className="space-y-4 rounded-2xl border border-blue-700/30 bg-slate-800/40 p-4">
+            <div className="space-y-1">
+              <h2 className="text-base font-semibold text-slate-100">Wizard zuerst abschließen</h2>
+              <p className="text-sm text-slate-400">
+                Die Testansicht wird erst freigeschaltet, nachdem der Push-Wizard vollständig
+                durchlaufen wurde und eine Webhook-URL für diesen Browser gespeichert ist.
+              </p>
+            </div>
+
+            <Link
+              href="/push-setup"
+              className="flex items-center justify-between gap-3 rounded-xl border border-blue-700/40 bg-blue-900/15 p-3.5 text-left transition-colors hover:bg-blue-900/25"
+            >
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium text-blue-300">Zum Push-Wizard</p>
+                <p className="text-xs text-blue-400/70">Einrichtung abschließen und Webhook-URL erzeugen</p>
+              </div>
+              <ChevronRight size={16} className="flex-shrink-0 text-blue-400" />
+            </Link>
+
+            <p className="text-xs text-slate-500">
+              Danach kannst du auf dieser Seite echte Test-Events für deinen gespeicherten Browser
+              auslösen.
+            </p>
+          </section>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
