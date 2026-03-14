@@ -4,7 +4,6 @@
  */
 
 export interface BuildStatusMeta {
-  label: string;
   badgeVariant: "success" | "danger" | "info" | "muted" | "warning" | "default";
   colorClass: string;
   bgClass: string;
@@ -14,7 +13,6 @@ export interface BuildStatusMeta {
 
 const STATUS_MAP: Record<string, BuildStatusMeta> = {
   succeeded: {
-    label: "Erfolgreich",
     badgeVariant: "success",
     colorClass: "text-green-400",
     bgClass: "bg-green-500/20",
@@ -22,7 +20,6 @@ const STATUS_MAP: Record<string, BuildStatusMeta> = {
     pulse: false,
   },
   failed: {
-    label: "Fehlgeschlagen",
     badgeVariant: "danger",
     colorClass: "text-red-400",
     bgClass: "bg-red-500/20",
@@ -30,7 +27,6 @@ const STATUS_MAP: Record<string, BuildStatusMeta> = {
     pulse: false,
   },
   canceled: {
-    label: "Abgebrochen",
     badgeVariant: "muted",
     colorClass: "text-slate-400",
     bgClass: "bg-slate-500/20",
@@ -38,7 +34,6 @@ const STATUS_MAP: Record<string, BuildStatusMeta> = {
     pulse: false,
   },
   inProgress: {
-    label: "Laeuft",
     badgeVariant: "info",
     colorClass: "text-blue-400",
     bgClass: "bg-blue-500/20",
@@ -46,7 +41,6 @@ const STATUS_MAP: Record<string, BuildStatusMeta> = {
     pulse: true,
   },
   partiallySucceeded: {
-    label: "Teilweise erfolgreich",
     badgeVariant: "warning",
     colorClass: "text-yellow-400",
     bgClass: "bg-yellow-500/20",
@@ -54,7 +48,6 @@ const STATUS_MAP: Record<string, BuildStatusMeta> = {
     pulse: false,
   },
   none: {
-    label: "Ausstehend",
     badgeVariant: "muted",
     colorClass: "text-slate-500",
     bgClass: "bg-slate-700/30",

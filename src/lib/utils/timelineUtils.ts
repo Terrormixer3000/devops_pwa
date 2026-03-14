@@ -42,9 +42,8 @@ export interface TimelineView {
   summary: TimelineSummary;
 }
 
-/** Darstellungsmetadaten für einen einzelnen Timeline-Status (Farbe, Label, CSS-Klassen). */
+/** Darstellungsmetadaten für einen einzelnen Timeline-Status (Farbe, CSS-Klassen). */
 export interface StatusMeta {
-  label: string;
   badge: TimelineBadgeVariant;
   textClass: string;
   progressClass: string;
@@ -66,13 +65,26 @@ export const EMPTY_TIMELINE_RECORDS: TimelineRecord[] = [];
 
 /** Status-Metadaten-Zuordnung für alle bekannten `TimelineStatus`-Werte. */
 export const STATUS_META: Record<TimelineStatus, StatusMeta> = {
-  running: { label: "Läuft", badge: "info", textClass: "text-blue-400", progressClass: "bg-blue-500" },
-  failed: { label: "Fehler", badge: "danger", textClass: "text-red-400", progressClass: "bg-red-500" },
-  succeeded: { label: "Erfolgreich", badge: "success", textClass: "text-green-400", progressClass: "bg-green-500" },
-  canceled: { label: "Abgebrochen", badge: "muted", textClass: "text-slate-400", progressClass: "bg-slate-500" },
-  partial: { label: "Teilweise", badge: "warning", textClass: "text-yellow-400", progressClass: "bg-yellow-500" },
-  pending: { label: "Ausstehend", badge: "muted", textClass: "text-slate-500", progressClass: "bg-slate-600" },
+  running: { badge: "info", textClass: "text-blue-400", progressClass: "bg-blue-500" },
+  failed: { badge: "danger", textClass: "text-red-400", progressClass: "bg-red-500" },
+  succeeded: { badge: "success", textClass: "text-green-400", progressClass: "bg-green-500" },
+  canceled: { badge: "muted", textClass: "text-slate-400", progressClass: "bg-slate-500" },
+  partial: { badge: "warning", textClass: "text-yellow-400", progressClass: "bg-yellow-500" },
+  pending: { badge: "muted", textClass: "text-slate-500", progressClass: "bg-slate-600" },
 };
+
+/** Gibt das lokalisierte Label fuer einen Timeline-Status zurueck. */
+export function getTimelineStatusLabel(status: TimelineStatus, t: (key: string) => string): string {
+  const keyMap: Record<TimelineStatus, string> = {
+    running: "statusRunning",
+    failed: "statusFailed",
+    succeeded: "statusSucceeded",
+    canceled: "statusCanceled",
+    partial: "statusPartial",
+    pending: "statusPending",
+  };
+  return t(keyMap[status] ?? "statusPending");
+}
 
 /** Baut die hierarchische Timeline-Ansicht aus den flachen `TimelineRecord`-Eintraegen auf. */
 export function buildTimelineView(records: TimelineRecord[]): TimelineView {
@@ -220,11 +232,8 @@ export function getBuildStatusVariant(status: string): "success" | "danger" | "w
   return map[status] || "muted";
 }
 
-/** Übersetzt einen Build-Status-String in ein deutsches Anzeigelabel. */
-export function getBuildStatusLabel(status: string): string {
-  const labels: Record<string, string> = {
-    succeeded: "Erfolgreich", failed: "Fehlgeschlagen", canceled: "Abgebrochen",
-    inProgress: "Läuft", partiallySucceeded: "Teilweise", none: "Ausstehend", notStarted: "Nicht gestartet",
-  };
-  return labels[status] || status;
+/** Gibt das lokalisierte Label fuer einen Build-Status zurueck. */
+export function getBuildStatusLabel(status: string, t: (key: string) => string): string {
+  const knownKeys = ["succeeded", "failed", "canceled", "inProgress", "partiallySucceeded", "none", "notStarted"];
+  return knownKeys.includes(status) ? t(status) : status;
 }

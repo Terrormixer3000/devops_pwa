@@ -7,6 +7,7 @@ import { AppSettings } from "@/types";
 
 // Schluessel fuer den localStorage-Eintrag
 const STORAGE_KEY = "azdevops_settings";
+const LOCALE_COOKIE = "azdevops_locale";
 const DEFAULT_SETTINGS: AppSettings = {
   organization: "",
   project: "",
@@ -31,6 +32,11 @@ export const settingsService = {
   // Einstellungen im lokalen Speicher speichern
   save(settings: AppSettings): void {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    // Locale auch als Cookie persistieren, damit der Server beim nächsten Request
+    // die richtige Sprache kennt und kein Flackern beim SSR entsteht.
+    if (settings.locale) {
+      document.cookie = `${LOCALE_COOKIE}=${settings.locale}; path=/; max-age=31536000; SameSite=Lax`;
+    }
   },
 
   // Einstellungen loeschen
@@ -48,6 +54,7 @@ export const settingsService = {
 
     keysToRemove.forEach((key) => localStorage.removeItem(key));
     localStorage.removeItem(STORAGE_KEY);
+    document.cookie = `${LOCALE_COOKIE}=; path=/; max-age=0`;
   },
 
   // Prueft ob alle Pflichtfelder ausgefuellt sind
