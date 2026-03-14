@@ -3,6 +3,9 @@
 /** Hell- oder Dunkel-Theme der App. */
 export type ThemeMode = "dark" | "light";
 
+/** Sprache der App-Oberflaeche. */
+export type Locale = "de" | "en";
+
 /** Gesamte App-Konfiguration, die im localStorage gespeichert wird. */
 export interface AppSettings {
   organization: string;
@@ -10,6 +13,7 @@ export interface AppSettings {
   pat: string;
   demoMode: boolean;
   theme: ThemeMode;
+  locale?: Locale;
 }
 
 // ─── Repository ─────────────────────────────────────────────────────────────

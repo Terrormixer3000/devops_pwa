@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/layout/Providers";
+import type { Locale } from "@/types";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { OfflineBanner } from "@/components/ui/OfflineBanner";
 
@@ -36,9 +38,13 @@ export const viewport: Viewport = {
 };
 
 /** Root-Layout der App: setzt HTML-Lang, PWA-Meta-Tags und bindet BottomNav sowie Provider ein. */
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies();
+  const localeCookie = cookieStore.get("azdevops_locale")?.value;
+  const initialLocale: Locale = localeCookie === "en" ? "en" : "de";
+
   return (
-    <html lang="de" data-theme="dark">
+    <html lang={initialLocale} data-theme="dark">
       <head>
         {/* iOS PWA Meta-Tags */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -46,7 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" sizes="180x180" href={APPLE_TOUCH_ICON} />
       </head>
       <body className={`${inter.variable} font-sans bg-slate-900 text-slate-100 antialiased`}>
-        <Providers>
+        <Providers initialLocale={initialLocale}>
           <OfflineBanner />
           {/* Hauptinhalt: oben feste AppBar, unten feste Bottom-Nav mit iPhone-Safe-Area */}
           <main className="min-h-screen" style={{ paddingTop: "var(--app-bar-height)", paddingBottom: "var(--bottom-nav-height)" }}>
