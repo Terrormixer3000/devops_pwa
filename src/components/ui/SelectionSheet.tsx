@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { Check, Star, ChevronDown, X } from "lucide-react";
 import { Drawer } from "vaul";
 import { LoadingSpinner } from "./LoadingSpinner";
@@ -23,6 +23,7 @@ interface Props {
   buttonIcon?: React.ReactNode;
   trigger?: React.ReactNode;
   sheetTitle: string;
+  description?: string;
 
   // Verfuegbare Eintraege
   items: SelectionItem[];
@@ -48,6 +49,7 @@ export function SelectionSheet({
   buttonIcon,
   trigger,
   sheetTitle,
+  description,
   items,
   loading,
   selectedIds,
@@ -62,8 +64,11 @@ export function SelectionSheet({
   // Filtermodus: Favoriten oder alle anzeigen
   const [showAll, setShowAll] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return undefined;
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
@@ -72,6 +77,9 @@ export function SelectionSheet({
   }, [open]);
 
   const hasFavorites = !!favoriteIds && !!onToggleFavorite;
+  const resolvedDescription =
+    description ||
+    `${sheetTitle}. ${multiSelect ? "Wähle einen oder mehrere Einträge aus." : "Wähle einen Eintrag aus."}`;
 
   // Angezeigte Eintraege: Favoriten oder alle
   const displayed = hasFavorites && !showAll && favoriteIds!.length > 0
@@ -92,7 +100,12 @@ export function SelectionSheet({
   return (
     <Drawer.Root
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={(nextOpen) => {
+        if (nextOpen && document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+        setOpen(nextOpen);
+      }}
       direction="bottom"
       modal={true}
       noBodyStyles={true}
@@ -137,6 +150,9 @@ export function SelectionSheet({
               </button>
             </Drawer.Close>
           </div>
+          <Drawer.Description className="sr-only">
+            {resolvedDescription}
+          </Drawer.Description>
 
           <div
             className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain"

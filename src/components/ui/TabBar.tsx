@@ -26,22 +26,24 @@ interface TabBarProps {
 export function TabBar({ tabs, activeKey, onChange, variant = "pill", className }: TabBarProps) {
   if (variant === "underline") {
     return (
-      <div className={`${className ?? "sticky-below-appbar"} bg-slate-900/95 backdrop-blur-md border-b border-slate-800`}>
-        <div className="flex px-4">
-          {tabs.map(({ key, label, icon }) => (
-            <button
-              key={key}
-              onClick={() => onChange(key)}
-              className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                activeKey === key
-                  ? "border-blue-500 text-blue-400"
-                  : "border-transparent text-slate-500 hover:text-slate-300"
-              }`}
-            >
-              {icon}
-              {label}
-            </button>
-          ))}
+      <div className={`${className ?? "sticky-below-appbar"} overflow-x-hidden bg-slate-900/95 border-b border-slate-800 backdrop-blur-md`}>
+        <div className="overflow-x-auto hide-scrollbar">
+          <div className="flex min-w-full w-max px-4">
+            {tabs.map(({ key, label, icon }) => (
+              <button
+                key={key}
+                onClick={() => onChange(key)}
+                className={`flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeKey === key
+                    ? "border-blue-500 text-blue-400"
+                    : "border-transparent text-slate-500 hover:text-slate-300"
+                }`}
+              >
+                {icon}
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     );
