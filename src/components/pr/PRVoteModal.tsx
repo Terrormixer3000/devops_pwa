@@ -24,10 +24,10 @@ export function PRVoteModal({
     <Modal open={open} onClose={onClose} title="Pull Request bewerten">
       <div className="space-y-3">
         <Button fullWidth onClick={() => onVote(10)} loading={votePending}>
-          <ThumbsUp size={16} /> Approven
+          <ThumbsUp size={16} /> Genehmigen
         </Button>
         <Button fullWidth variant="secondary" onClick={() => onVote(5)} loading={votePending}>
-          Approven mit Vorbehalten
+          Genehmigen mit Vorbehalten
         </Button>
         <Button fullWidth variant="ghost" onClick={() => onVote(-5)} loading={votePending}>
           Warten auf Autor

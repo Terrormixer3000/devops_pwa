@@ -5,18 +5,12 @@
  * Artefakten und Genehmigungsaktionen.
  */
 
-/**
- * Release-Detailseite: Zeigt alle Umgebungen eines Releases mit Status,
- * Artefakten und Genehmigungsaktionen.
- */
-
 import { use, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppBar } from "@/components/layout/AppBar";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import { TabBar } from "@/components/ui/TabBar";
 import { ApprovalModal } from "@/components/ui/ApprovalModal";
 import { BackLink } from "@/components/ui/BackButton";
@@ -222,7 +216,7 @@ function EnvironmentCard({ env, onApprove }: { env: ReleaseEnvironment; onApprov
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-700/30 hover:bg-green-700/50 text-green-400 rounded-lg text-xs font-medium transition-colors"
               >
                 <ThumbsUp size={12} />
-                Approven
+                Freigeben
               </button>
             ))}
           </div>

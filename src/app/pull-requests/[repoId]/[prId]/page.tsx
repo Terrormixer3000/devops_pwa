@@ -7,7 +7,6 @@ import { TabBar } from "@/components/ui/TabBar";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import { usePRDetail } from "@/lib/hooks/usePRDetail";
 import { PRTabOverview } from "@/components/pr/PRTabOverview";
 import { PRTabFiles } from "@/components/pr/PRTabFiles";
@@ -28,7 +27,6 @@ import {
   MessageCircle,
   Clock,
   User,
-  UserPlus,
   X,
 } from "lucide-react";
 
@@ -93,7 +91,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
               onClick={() => h.setApproveModal(true)}
               className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-700/50 hover:text-slate-100 transition-colors"
             >
-              <ThumbsUp size={14} /> Approven
+              <ThumbsUp size={14} /> Genehmigen
             </button>
             <div className="w-px bg-slate-700/50 flex-shrink-0" />
             <button
@@ -109,7 +107,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
               disabled={h.mergeBlockers.length > 0}
               className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-700/50 hover:text-blue-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <GitMerge size={14} /> Complete
+              <GitMerge size={14} /> Abschließen
             </button>
           </div>
         )}

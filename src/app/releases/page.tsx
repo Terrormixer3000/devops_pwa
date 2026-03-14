@@ -220,7 +220,7 @@ export default function ReleasesPage() {
                         </Link>
                       ) : null}
                       <Button size="sm" variant="primary" onClick={() => setApprovalModal(approval)}>
-                        <ThumbsUp size={14} /> Approven
+                        <ThumbsUp size={14} /> Freigeben
                       </Button>
                       <Button size="sm" variant="danger" onClick={() => setApprovalModal(approval)}>
                         <ThumbsDown size={14} /> Ablehnen
