@@ -8,6 +8,8 @@
  * - Subscription an den eigenen API-Server senden / loeschen
  */
 
+import type { PushEventPreferences } from "@/types";
+
 /** Konvertiert einen Base64url-String in einen Uint8Array (benoetigt fuer VAPID Public Key) */
 function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -207,7 +209,8 @@ export const pushService = {
     org: string,
     project: string,
     azureUserId: string,
-    displayName: string
+    displayName: string,
+    eventPreferences: PushEventPreferences
   ): Promise<{ webhookToken: string }> {
     const response = await fetch("/api/push/subscribe", {
       method: "POST",
@@ -218,6 +221,7 @@ export const pushService = {
         project: normalizeText(project),
         azureUserId: normalizeText(azureUserId),
         displayName: normalizeText(displayName),
+        eventPreferences,
       }),
     });
 

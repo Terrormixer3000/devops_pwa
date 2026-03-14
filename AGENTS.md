@@ -74,9 +74,10 @@ Minimum validation:
 - Pull Request creation opens as a drawer on `/pull-requests`; `/pull-requests/new` is a redirect-only compatibility route.
 - Push notifications use API routes under `src/app/api/push/*`, a local JSON subscription store in `data/subscriptions.json`, and `public/sw-custom.js`.
 - Each push subscription has a `webhookToken` (64 hex chars, 256-bit entropy) generated at registration time and stored in `data/subscriptions.json`.
+- Each browser subscription also stores per-event notification preferences; settings and server-side delivery must stay aligned so disabled event types are not sent.
 - The webhook endpoint `POST /api/push/webhook` requires `?t=<webhookToken>` — no global secret.
 - The token is stored in the browser under `localStorage` key `azdevops_push_token` by `pushService`.
-- Push setup is gated behind a 5-step wizard at `/push-setup`. The `/settings` and `/push-test` pages only show toggle/status UI after the wizard is completed (token present in `localStorage`).
+- Push setup happens directly on `/settings`: activate notifications there, then manually register the generated personal webhook URL in Azure DevOps. `/push-setup` is redirect-only compatibility. `/push-test` requires an active subscription plus token present in `localStorage`.
 
 ---
 
@@ -228,7 +229,7 @@ The app uses `next-intl` for all user-facing text. Translation files live in `sr
 ## Shared Hooks (`src/lib/hooks/`)
 
 - `useCurrentUser.ts` — loads the Azure DevOps current user once; used on pages that need the GUID
-- `usePushState.ts` — bundles push support/permission/subscription state + `refresh()`; replaces manual push `useEffect` blocks on settings, push-setup, and push-test pages
+- `usePushState.ts` — bundles push support/permission/subscription state + `refresh()`; replaces manual push `useEffect` blocks on settings and push-test pages
 - `useRepoExplorer.ts` — all state, queries, and handlers for the explorer page
 - `usePRDetail.ts` — all state, queries, mutations, and computed values for the PR detail page; returns an `h` object consumed by the page and sub-components
 - `useAzureClient.ts`, `usePullToRefresh.ts` — existing hooks, unchanged

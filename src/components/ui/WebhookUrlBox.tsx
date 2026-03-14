@@ -12,7 +12,7 @@ interface WebhookUrlBoxProps {
 
 /**
  * Zeigt eine Webhook-URL mit Kopier-Schaltflaeche an.
- * Wird auf push-setup und push-test Seiten verwendet.
+ * Wird auf settings und push-test Seiten verwendet.
  */
 export function WebhookUrlBox({ token, compact = false }: WebhookUrlBoxProps) {
   const [copied, setCopied] = useState(false);

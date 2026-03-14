@@ -14,7 +14,7 @@ interface PushState {
 
 /**
  * Hook der den Push-Notification-Status buendelt.
- * Ersetzt manuelle useEffect+useState Bloecke auf settings, push-setup und push-test Seiten.
+ * Ersetzt manuelle useEffect+useState Bloecke auf settings und push-test Seiten.
  */
 export function usePushState(): PushState {
   const [supportStatus, setSupportStatus] = useState<PushSupportStatus>(() =>

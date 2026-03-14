@@ -12,7 +12,7 @@ interface PushSupportHintProps {
 
 /**
  * Hinweistext zum Browser-/Geraete-Support fuer Push-Benachrichtigungen.
- * Wird auf settings, push-setup und push-test Seiten verwendet.
+ * Wird auf settings und push-test Seiten verwendet.
  */
 export function PushSupportHint({ status, compact = false }: PushSupportHintProps) {
   const t = useTranslations("pushSupport");
