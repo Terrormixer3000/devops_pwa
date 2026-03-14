@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ChevronRight, GitCommit } from "lucide-react";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -16,8 +17,9 @@ export function CommitList({
   loading: boolean;
   onSelect: (commit: Commit) => void;
 }) {
+  const t = useTranslations("explorer");
   if (loading) return <PageLoader />;
-  if (!commits || commits.length === 0) return <EmptyState icon={GitCommit} title="Keine Commits gefunden" />;
+  if (!commits || commits.length === 0) return <EmptyState icon={GitCommit} title={t("noCommitsFound")} />;
 
   return (
     <div className="divide-y divide-slate-800/50">

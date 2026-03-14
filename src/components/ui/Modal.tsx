@@ -3,6 +3,7 @@
 import { useLayoutEffect } from "react";
 import { X } from "lucide-react";
 import { Drawer } from "vaul";
+import { useTranslations } from "next-intl";
 
 /**
  * Bottom-Sheet-Variante ohne Swipe-Handle im Header — gedacht fuer Bestaetigungs-Dialoge
@@ -18,6 +19,7 @@ interface Props {
 
 /** Rendert das Modal als vaul-Drawer-Sheet. */
 export function Modal({ open, onClose, title, description, children }: Props) {
+  const t = useTranslations("modal");
   useLayoutEffect(() => {
     if (open) {
       if (document.activeElement instanceof HTMLElement) {
@@ -31,7 +33,7 @@ export function Modal({ open, onClose, title, description, children }: Props) {
   }, [open]);
 
   const resolvedDescription =
-    description || (title ? `${title}. Prüfe die Details und wähle anschließend eine Aktion aus.` : undefined);
+    description || (title ? t("defaultDescription", { title }) : undefined);
 
   return (
     <Drawer.Root

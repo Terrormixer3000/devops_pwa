@@ -47,7 +47,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
     );
     set({ repositories: repos, selectedRepositories: selected });
     if (typeof window !== "undefined") {
-      localStorage.setItem(SELECTED_KEY, JSON.stringify(selected));
+      try { localStorage.setItem(SELECTED_KEY, JSON.stringify(selected)); } catch { /* ignore */ }
     }
   },
 
@@ -120,6 +120,6 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
   /** Schreibt die aktuelle Auswahl in den localStorage. */
   persistSelection: () => {
     const selected = get().selectedRepositories;
-    localStorage.setItem(SELECTED_KEY, JSON.stringify(selected));
+    try { localStorage.setItem(SELECTED_KEY, JSON.stringify(selected)); } catch { /* ignore */ }
   },
 }));

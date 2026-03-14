@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { AlertCircle, UserPlus, X, ShieldCheck } from "lucide-react";
 import { VoteBadge } from "./VoteBadge";
 import type { PullRequest } from "@/types";
@@ -23,6 +24,7 @@ export function PRTabOverview({
   onToggleReviewerRequired: (reviewerId: string, isRequired: boolean) => void;
   onRemoveReviewer: (reviewerId: string) => void;
 }) {
+  const t = useTranslations("prOverview");
   const isActive = pr.status === "active";
   return (
     <div className="space-y-4">
@@ -41,24 +43,24 @@ export function PRTabOverview({
       {/* Beschreibung */}
       {pr.description ? (
         <div>
-          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Beschreibung</h3>
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">{t("description")}</h3>
           <p className="text-sm text-slate-300 whitespace-pre-wrap">{pr.description}</p>
         </div>
       ) : (
-        <p className="text-sm text-slate-500">Keine Beschreibung</p>
+        <p className="text-sm text-slate-500">{t("noDescription")}</p>
       )}
 
       {/* Reviewer */}
       {(pr.reviewers.length > 0 || isActive) && (
         <div>
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Reviewer</h3>
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t("reviewers")}</h3>
             {isActive && (
               <button
                 onClick={onOpenReviewerModal}
                 className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
               >
-                <UserPlus size={13} /> Hinzufügen
+                <UserPlus size={13} /> {t("addReviewer")}
               </button>
             )}
           </div>
@@ -71,19 +73,19 @@ export function PRTabOverview({
                   <>
                     <button
                       onClick={() => onToggleReviewerRequired(r.id, !r.isRequired)}
-                      title={r.isRequired ? "Als Optional setzen" : "Als Pflicht setzen"}
+                      title={r.isRequired ? t("setOptional") : t("setRequired")}
                       className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors flex-shrink-0 ${
                         r.isRequired
                           ? "border-red-700/60 text-red-400 hover:bg-red-900/30"
                           : "border-slate-600 text-slate-500 hover:text-slate-300"
                       }`}
                     >
-                      {r.isRequired ? "Pflicht" : "Optional"}
+                      {r.isRequired ? t("required") : t("optional")}
                     </button>
                     <button
                       onClick={() => onRemoveReviewer(r.id)}
                       className="p-1 text-slate-600 hover:text-red-400 transition-colors flex-shrink-0"
-                      title="Entfernen"
+                      title={t("removeReviewer")}
                     >
                       <X size={13} />
                     </button>
@@ -92,7 +94,7 @@ export function PRTabOverview({
               </div>
             ))}
             {pr.reviewers.length === 0 && (
-              <p className="text-sm text-slate-500 py-1 px-2">Noch keine Reviewer</p>
+              <p className="text-sm text-slate-500 py-1 px-2">{t("noReviewers")}</p>
             )}
           </div>
         </div>
@@ -102,16 +104,16 @@ export function PRTabOverview({
       {policies && policies.length > 0 && (
         <div>
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
-            <ShieldCheck size={12} /> Policy-Checks
+            <ShieldCheck size={12} /> {t("policyChecks")}
           </h3>
           <div className="space-y-1.5">
             {policies.map((policy) => {
               const statusMap: Record<string, { label: string; cls: string }> = {
-                approved: { label: "Bestanden", cls: "text-green-400" },
-                rejected: { label: "Fehlgeschlagen", cls: "text-red-400" },
-                queued: { label: "Wartend", cls: "text-yellow-400" },
-                running: { label: "Laufend", cls: "text-blue-400" },
-                notApplicable: { label: "N/A", cls: "text-slate-500" },
+                approved: { label: t("policyApproved"), cls: "text-green-400" },
+                rejected: { label: t("policyRejected"), cls: "text-red-400" },
+                queued: { label: t("policyQueued"), cls: "text-yellow-400" },
+                running: { label: t("policyRunning"), cls: "text-blue-400" },
+                notApplicable: { label: t("policyNotApplicable"), cls: "text-slate-500" },
               };
               const s = statusMap[policy.status] || { label: policy.status, cls: "text-slate-400" };
               return (

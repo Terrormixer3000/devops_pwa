@@ -5,6 +5,7 @@
  * Artefakten und Genehmigungsaktionen.
  */
 
+import { useTranslations } from "next-intl";
 import { use, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppBar } from "@/components/layout/AppBar";
@@ -33,13 +34,15 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
   const { settings } = useSettingsStore();
   const { vsrmClient } = useAzureClient();
   const qc = useQueryClient();
+  const trd = useTranslations("releases.releaseDetail");
+  const tReleases = useTranslations("releases");
 
   // Release-Details laden
   const { data: release, isLoading, error } = useQuery({
     queryKey: ["release", releaseIdNum, settings?.project, settings?.demoMode],
     queryFn: () => vsrmClient && settings
       ? releasesService.getRelease(vsrmClient, settings.project, releaseIdNum)
-      : Promise.reject("Kein Client"),
+      : Promise.reject(trd("loadError")),
     enabled: !!vsrmClient && !!settings,
     refetchInterval: 15000,
   });
@@ -51,7 +54,7 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
         ? approve
           ? releasesService.approveRelease(vsrmClient, settings.project, id, comment)
           : releasesService.rejectApproval(vsrmClient, settings.project, id, comment)
-        : Promise.reject("Kein Client"),
+        : Promise.reject(trd("loadError")),
     onSuccess: () => {
       setApproveError(null);
       setApprovalModal(null);
@@ -70,16 +73,16 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
     enabled: !!vsrmClient && !!settings && !!selectedEnvId && activeTab === "logs",
   });
 
-  if (isLoading) return <div className="min-h-screen"><AppBar title="Release" /><PageLoader /></div>;
-  if (error || !release) return <div className="min-h-screen"><AppBar title="Release" /><ErrorMessage message="Release konnte nicht geladen werden" error={error} /></div>;
+  if (isLoading) return <div className="min-h-screen"><AppBar title={trd("title")} /><PageLoader /></div>;
+  if (error || !release) return <div className="min-h-screen"><AppBar title={trd("title")} /><ErrorMessage message={trd("loadError")} error={error} /></div>;
 
   return (
     <div className="min-h-screen">
-      <AppBar title="Release Details" />
+      <AppBar title={trd("title")} />
 
       {/* Zurueck */}
       <div className="px-4 pt-4">
-        <BackLink href="/releases" label="Releases" className="mb-3" />
+        <BackLink href="/releases" label={tReleases("title")} className="mb-3" />
       </div>
 
       {/* Release-Kopfbereich */}
@@ -97,8 +100,8 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
       {/* Tab-Leiste */}
       <TabBar
         tabs={[
-          { key: "umgebungen", label: "Umgebungen", icon: <CheckCircle size={14} /> },
-          { key: "logs", label: "Logs", icon: <ScrollText size={14} /> },
+          { key: "umgebungen", label: trd("environments"), icon: <CheckCircle size={14} /> },
+          { key: "logs", label: trd("logs"), icon: <ScrollText size={14} /> },
         ]}
         activeKey={activeTab}
         onChange={(key) => setActiveTab(key as "umgebungen" | "logs")}
@@ -137,13 +140,13 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
           </div>
 
           {!selectedEnvId && (
-            <p className="text-sm text-slate-500 text-center py-8">Umgebung auswaehlen um Logs zu sehen</p>
+            <p className="text-sm text-slate-500 text-center py-8">{trd("selectEnvForLogs")}</p>
           )}
           {selectedEnvId && logsLoading && <PageLoader />}
           {selectedEnvId && !logsLoading && deployLogs && (
             <div className="bg-slate-900 rounded-xl border border-slate-700/60 overflow-auto">
               <pre className="p-3 text-xs font-mono text-slate-300 leading-relaxed whitespace-pre-wrap">
-                {deployLogs || "Keine Logs verfügbar"}
+                {deployLogs || trd("noLogs")}
               </pre>
             </div>
           )}
@@ -156,7 +159,7 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
         approval={approvalModal ? {
           id: approvalModal.id,
           releaseName: release.name,
-          environmentName: approvalModal.releaseEnvironmentReference?.name || "Environment",
+          environmentName: approvalModal.releaseEnvironmentReference?.name || trd("environmentFallback"),
         } : null}
         isPending={approveMutation.isPending}
         error={approveError}
@@ -171,6 +174,8 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
 // Umgebungskarte mit Status und Deploy-Schritten
 /** Karte fuer eine einzelne Release-Umgebung mit Status und Genehmigungsschaltflaeche. */
 function EnvironmentCard({ env, onApprove }: { env: ReleaseEnvironment; onApprove: (approval: ReleaseApproval) => void }) {
+  const trd = useTranslations("releases.releaseDetail");
+  const tStatus = useTranslations("releases.releaseDetail.statusLabels");
   const variants: Record<string, "success" | "danger" | "info" | "muted" | "warning"> = {
     succeeded: "success",
     rejected: "danger",
@@ -182,14 +187,14 @@ function EnvironmentCard({ env, onApprove }: { env: ReleaseEnvironment; onApprov
   };
 
   const statusLabels: Record<string, string> = {
-    succeeded: "Erfolgreich",
-    rejected: "Abgelehnt",
-    inProgress: "Laeuft",
-    notStarted: "Ausstehend",
-    canceled: "Abgebrochen",
-    queued: "In der Warteschlange",
-    partiallySucceeded: "Teilweise erfolgreich",
-    scheduled: "Geplant",
+    succeeded: tStatus("succeeded"),
+    rejected: tStatus("rejected"),
+    inProgress: tStatus("inProgress"),
+    notStarted: tStatus("notStarted"),
+    canceled: tStatus("canceled"),
+    queued: tStatus("queued"),
+    partiallySucceeded: tStatus("partiallySucceeded"),
+    scheduled: tStatus("scheduled"),
   };
 
   return (
@@ -206,7 +211,7 @@ function EnvironmentCard({ env, onApprove }: { env: ReleaseEnvironment; onApprov
       {env.preDeployApprovals?.filter((a) => a.status === "pending").length > 0 && (
         <div className="px-4 py-2.5 bg-yellow-900/20 border-b border-slate-700/50">
           <p className="text-xs text-yellow-400 mb-2">
-            Warte auf Approval von: {env.preDeployApprovals.filter((a) => a.status === "pending").map((a) => a.approver.displayName).join(", ")}
+          {trd("awaitingApproval", { approvers: env.preDeployApprovals.filter((a) => a.status === "pending").map((a) => a.approver.displayName).join(", ") })}
           </p>
           <div className="flex gap-2">
             {env.preDeployApprovals.filter((a) => a.status === "pending").map((a) => (
@@ -216,7 +221,7 @@ function EnvironmentCard({ env, onApprove }: { env: ReleaseEnvironment; onApprov
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-700/30 hover:bg-green-700/50 text-green-400 rounded-lg text-xs font-medium transition-colors"
               >
                 <ThumbsUp size={12} />
-                Freigeben
+                {trd("approve")}
               </button>
             ))}
           </div>

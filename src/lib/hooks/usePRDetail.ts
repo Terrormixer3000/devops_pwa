@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { useAzureClient } from "@/lib/hooks/useAzureClient";
@@ -14,6 +15,7 @@ export type MergeStrategy = "noFastForward" | "squash" | "rebase" | "rebaseMerge
 
 /** Alle State, Queries, Mutations und berechneten Werte fuer die PR-Detailseite. */
 export function usePRDetail(repoId: string, prIdNum: number) {
+  const t = useTranslations("prOverview");
   const [activeTab, setActiveTab] = useState<"uebersicht" | "dateien" | "kommentare" | "commits">("uebersicht");
   const [commentText, setCommentText] = useState("");
   const [approveModal, setApproveModal] = useState(false);
@@ -311,33 +313,35 @@ export function usePRDetail(repoId: string, prIdNum: number) {
       return pullRequestsService.complete(client, settings.project, repoId, prIdNum, pr.sourceRefName, deleteSourceBranch, mergeStrategy);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["pr", repoId, prIdNum] }); setCompleteModal(false); setCompleteError(null); },
-    onError: (err: Error) => setCompleteError(err.message || "Merge fehlgeschlagen."),
+    onError: (err: Error) => setCompleteError(err.message || t("blockerMergeFailed")),
   });
 
   // Merge-Blocker ableiten
   const mergeBlockers: string[] = [];
   if (pr) {
-    if (pr.isDraft) mergeBlockers.push("PR ist ein Draft");
-    if (pr.mergeStatus === "conflicts") mergeBlockers.push("Merge-Konflikte vorhanden");
-    if (pr.mergeStatus === "rejectedByPolicy") mergeBlockers.push("PR durch Policy abgelehnt");
-    if (pr.mergeStatus === "failure") mergeBlockers.push("Merge fehlgeschlagen");
+    if (pr.isDraft) mergeBlockers.push(t("blockerDraft"));
+    if (pr.mergeStatus === "conflicts") mergeBlockers.push(t("blockerConflicts"));
+    if (pr.mergeStatus === "rejectedByPolicy") mergeBlockers.push(t("blockerRejectedByPolicy"));
+    if (pr.mergeStatus === "failure") mergeBlockers.push(t("blockerMergeFailed"));
     for (const r of pr.reviewers) {
-      if (r.isRequired && r.vote < 0) mergeBlockers.push(`Reviewer abgelehnt: ${r.displayName}`);
-      else if (r.isRequired && r.vote === 0) mergeBlockers.push(`Reviewer ausstehend: ${r.displayName}`);
+      if (r.isRequired && r.vote < 0) mergeBlockers.push(t("blockerReviewerRejected", { name: r.displayName }));
+      else if (r.isRequired && r.vote === 0) mergeBlockers.push(t("blockerReviewerPending", { name: r.displayName }));
     }
   }
   if (policies) {
     for (const p of policies) {
       if (!p.isRequired) continue;
-      if (p.status === "rejected") mergeBlockers.push(`Policy fehlgeschlagen: ${p.displayName}`);
-      else if (p.status === "queued" || p.status === "running") mergeBlockers.push(`Policy ausstehend: ${p.displayName}`);
+      if (p.status === "rejected") mergeBlockers.push(t("blockerPolicyFailed", { name: p.displayName }));
+      else if (p.status === "queued" || p.status === "running") mergeBlockers.push(t("blockerPolicyPending", { name: p.displayName }));
     }
   }
   const unresolvedCommentCount = threads
-    ? threads.filter((t) => (t.status === "active" || t.status === "pending") && t.comments.some((c) => c.commentType === "text")).length
+    ? threads.filter((th) => (th.status === "active" || th.status === "pending") && th.comments.some((c) => c.commentType === "text")).length
     : 0;
   if (unresolvedCommentCount > 0) {
-    mergeBlockers.push(`${unresolvedCommentCount} ungelöste${unresolvedCommentCount === 1 ? "r" : ""} Kommentar${unresolvedCommentCount === 1 ? "" : "e"}`);
+    mergeBlockers.push(unresolvedCommentCount === 1
+      ? t("blockerUnresolvedComments", { count: unresolvedCommentCount })
+      : t("blockerUnresolvedCommentsPlural", { count: unresolvedCommentCount }));
   }
 
   // Verfügbare Mitglieder fuer Reviewer-Modal

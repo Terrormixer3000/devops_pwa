@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { GitBranch, Tag, ChevronRight, GitCompare, Plus } from "lucide-react";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
@@ -39,6 +40,7 @@ export function BranchList({
   const [createError, setCreateError] = useState<string | null>(null);
   const [createPending, setCreatePending] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const t = useTranslations("explorer");
 
   const resetForm = () => {
     setNewBranchName("");
@@ -61,7 +63,7 @@ export function BranchList({
   const handleCreateSubmit = async () => {
     const trimmedName = newBranchName.trim();
     if (!trimmedName) {
-      setCreateError("Branch-Name darf nicht leer sein.");
+      setCreateError(t("branchNameEmpty"));
       return;
     }
 
@@ -69,14 +71,14 @@ export function BranchList({
     if (sourceMode === "branch") {
       const sourceBranch = branches.find((b) => b.name === sourceBranchName);
       if (!sourceBranch) {
-        setCreateError("Quell-Branch nicht gefunden.");
+        setCreateError(t("sourceBranchNotFound"));
         return;
       }
       sourceObjectId = sourceBranch.objectId;
     } else {
       const hash = sourceCommitHash.trim();
       if (!hash) {
-        setCreateError("Commit-Hash darf nicht leer sein.");
+        setCreateError(t("commitHashEmpty"));
         return;
       }
       sourceObjectId = hash;
@@ -88,17 +90,17 @@ export function BranchList({
       await onCreateBranch(trimmedName, sourceObjectId);
       setCreateOpen(false);
       resetForm();
-      setSuccessMessage(`Branch "${trimmedName}" wurde erstellt.`);
+      setSuccessMessage(t("branchCreated", { name: trimmedName }));
       setTimeout(() => setSuccessMessage(null), 3500);
     } catch (err) {
-      setCreateError((err as Error).message || "Fehler beim Erstellen des Branches.");
+      setCreateError((err as Error).message || t("createBranchError"));
     } finally {
       setCreatePending(false);
     }
   };
 
   if (loading) return <PageLoader />;
-  if (error) return <ErrorMessage message="Branches konnten nicht geladen werden" error={error} onRetry={onRefetch} />;
+  if (error) return <ErrorMessage message={t("branchesLoadError")} error={error} onRetry={onRefetch} />;
 
   return (
     <div className={mode === "branches" ? "pb-24" : undefined}>
@@ -112,7 +114,7 @@ export function BranchList({
             }`}
           >
             {tab === "branches" ? <GitBranch size={12} /> : <Tag size={12} />}
-            {tab === "branches" ? "Branches" : "Tags"}
+            {tab === "branches" ? t("branchesTab") : t("tagsTab")}
             <span className="ml-1 text-[10px] opacity-70">
               {tab === "branches" ? branches.length : tags.length}
             </span>
@@ -129,7 +131,7 @@ export function BranchList({
       {items.length === 0 ? (
         <EmptyState
           icon={mode === "branches" ? GitBranch : Tag}
-          title={mode === "branches" ? "Keine Branches gefunden" : "Keine Tags gefunden"}
+          title={mode === "branches" ? t("noBranches") : t("noTags")}
         />
       ) : (
         <div className="divide-y divide-slate-800/50">
@@ -153,7 +155,7 @@ export function BranchList({
               {mode === "branches" && (
                 <button
                   onClick={() => onCompare(item)}
-                  title="Vergleichen"
+                  title={t("compareAction")}
                   className="px-3 py-3.5 text-slate-500 hover:text-blue-400 transition-colors flex-shrink-0"
                 >
                   <GitCompare size={15} />
@@ -164,24 +166,24 @@ export function BranchList({
         </div>
       )}
 
-      <Modal open={createOpen} onClose={handleCloseModal} title="Branch erstellen">
+      <Modal open={createOpen} onClose={handleCloseModal} title={t("createBranch")}>
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-300">Branch-Name *</label>
+            <label className="text-sm font-medium text-slate-300">{t("branchNameLabel")}</label>
             <input
               type="text"
               value={newBranchName}
               onChange={(e) => setNewBranchName(e.target.value.replace(/\s+/g, "-"))}
-              placeholder="z.B. feature/mein-feature"
+              placeholder={t("branchNamePlaceholder")}
               autoCapitalize="none"
               autoCorrect="off"
               className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm"
             />
-            <p className="text-xs text-slate-500">Leerzeichen werden automatisch durch - ersetzt.</p>
+            <p className="text-xs text-slate-500">{t("branchNameHint")}</p>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-300">Quelle</label>
+            <label className="text-sm font-medium text-slate-300">{t("sourceLabel")}</label>
             <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-800/90 p-1">
               {(["branch", "commit"] as const).map((src) => (
                 <button
@@ -193,7 +195,7 @@ export function BranchList({
                       : "text-slate-400"
                   }`}
                 >
-                  {src === "branch" ? "Branch" : "Commit-Hash"}
+                  {src === "branch" ? t("sourceBranchOption") : t("sourceCommitOption")}
                 </button>
               ))}
             </div>
@@ -201,13 +203,13 @@ export function BranchList({
 
           {sourceMode === "branch" ? (
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-300">Von Branch *</label>
+              <label className="text-sm font-medium text-slate-300">{t("fromBranchLabel")}</label>
               <select
                 value={sourceBranchName}
                 onChange={(e) => setSourceBranchName(e.target.value)}
                 className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-blue-500 text-sm"
               >
-                <option value="">Branch auswählen…</option>
+                <option value="">{t("selectBranchOption")}</option>
                 {branches.map((b) => (
                   <option key={b.name} value={b.name}>
                     {b.name}
@@ -217,12 +219,12 @@ export function BranchList({
             </div>
           ) : (
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-300">Commit-Hash *</label>
+              <label className="text-sm font-medium text-slate-300">{t("commitHashLabel")}</label>
               <input
                 type="text"
                 value={sourceCommitHash}
                 onChange={(e) => setSourceCommitHash(e.target.value)}
-                placeholder="z.B. a1b2c3d4e5f6…"
+                placeholder={t("commitHashPlaceholder")}
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
@@ -238,7 +240,7 @@ export function BranchList({
             disabled={isSubmitDisabled}
             className="w-full rounded-xl bg-blue-600 py-3.5 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {createPending ? "Erstelle…" : "Branch erstellen"}
+            {createPending ? t("creating") : t("createBranch")}
           </button>
         </div>
       </Modal>
@@ -248,8 +250,8 @@ export function BranchList({
           onClick={() => setCreateOpen(true)}
           className="fixed right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/30 transition-all hover:bg-blue-500 active:scale-95"
           style={{ bottom: "var(--fab-bottom-offset)" }}
-          aria-label="Branch erstellen"
-          title="Branch erstellen"
+          aria-label={t("createBranch")}
+          title={t("createBranch")}
         >
           <Plus size={24} />
         </button>

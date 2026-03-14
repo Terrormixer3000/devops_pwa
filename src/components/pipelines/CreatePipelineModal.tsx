@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, FolderOpen, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -59,11 +60,11 @@ function buildFolderHistory(path: string): string[] {
   return chain.slice(0, -1);
 }
 
-/** Validiert den Namen eines neuen Unterordners. */
-function getNewFolderError(name: string): string | null {
-  if (!name.trim()) return "Bitte einen Ordnernamen eingeben.";
-  if (name === "." || name === "..") return "Dieser Ordnername ist nicht erlaubt.";
-  if (/[\\/:*?"<>|]/.test(name)) return "Der Ordnername enthaelt ungueltige Zeichen.";
+/** Schlüssel für den Ordnerfehler — wird im Component via t() aufgelöst. */
+function getNewFolderErrorKey(name: string): string | null {
+  if (!name.trim()) return "folderErrorEmpty";
+  if (name === "." || name === "..") return "folderErrorInvalid";
+  if (/[\\/:*?"<>|]/.test(name)) return "folderErrorChars";
   return null;
 }
 
@@ -83,6 +84,7 @@ export function CreatePipelineModal({
   onClose,
   onStartEditor,
 }: CreatePipelineModalProps) {
+  const t = useTranslations("createPipeline");
   const initialFolder = "\\";
   const [name, setName] = useState("");
   const [selectedRepoId, setSelectedRepoId] = useState("");
@@ -133,15 +135,15 @@ export function CreatePipelineModal({
 
   const handleCreateFolder = () => {
     const trimmedName = newFolderName.trim();
-    const validationError = getNewFolderError(trimmedName);
-    if (validationError) {
-      setNewFolderError(validationError);
+    const errorKey = getNewFolderErrorKey(trimmedName);
+    if (errorKey) {
+      setNewFolderError(t(errorKey));
       return;
     }
 
     const nextFolderPath = buildChildFolderPath(folderPickerPath, trimmedName);
     if (availableFolders.includes(nextFolderPath)) {
-      setNewFolderError("Der Ordner existiert bereits.");
+      setNewFolderError(t("folderErrorExists"));
       return;
     }
 
@@ -168,7 +170,7 @@ export function CreatePipelineModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={folderPickerOpen ? "Ordner wählen" : "Neue Pipeline erstellen"}
+      title={folderPickerOpen ? t("chooseFolder") : t("title")}
     >
       {folderPickerOpen ? (
         <div className="flex flex-col gap-3">
@@ -200,7 +202,7 @@ export function CreatePipelineModal({
             className="flex w-full items-center gap-2 rounded-xl border border-blue-500/40 bg-blue-600/15 px-3 py-2.5 text-sm font-medium text-blue-300 transition-colors hover:bg-blue-600/25"
           >
             <FolderOpen size={15} />
-            Diesen Ordner wählen
+            {t("selectThisFolder")}
             <span className="ml-auto max-w-[45%] truncate font-mono text-xs text-blue-400/70">
               {folderPickerPath}
             </span>
@@ -210,7 +212,7 @@ export function CreatePipelineModal({
             <div className="flex items-center justify-between gap-3 px-3 py-2.5">
               <div className="flex min-w-0 items-center gap-2">
                 <Plus size={14} className="flex-shrink-0 text-blue-400" />
-                <span className="truncate text-sm text-slate-200">Neuen Unterordner erstellen</span>
+                <span className="truncate text-sm text-slate-200">{t("createSubfolder")}</span>
               </div>
               <button
                 type="button"
@@ -221,7 +223,7 @@ export function CreatePipelineModal({
                 }}
                 className="flex-shrink-0 text-xs text-blue-400 transition-colors hover:text-blue-300"
               >
-                {creatingFolder ? "Abbrechen" : "Neu"}
+                {creatingFolder ? t("cancel") : t("newShort")}
               </button>
             </div>
             {creatingFolder && (
@@ -239,7 +241,7 @@ export function CreatePipelineModal({
                       handleCreateFolder();
                     }
                   }}
-                  placeholder="z.B. delivery"
+                  placeholder={t("newFolderPlaceholder")}
                   autoFocus
                   className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
                 />
@@ -254,11 +256,11 @@ export function CreatePipelineModal({
                       setNewFolderError(null);
                     }}
                   >
-                    Abbrechen
+                    {t("cancel")}
                   </Button>
                   <Button className="flex-1" onClick={handleCreateFolder}>
                     <Plus size={15} />
-                    Ordner erstellen
+                    {t("createFolder")}
                   </Button>
                 </div>
               </div>
@@ -286,7 +288,7 @@ export function CreatePipelineModal({
               ))}
               {currentFolderChildren.length === 0 && (
                 <p className="bg-slate-800/40 px-3 py-4 text-sm text-slate-500">
-                  Keine Unterordner vorhanden
+                  {t("noSubfolders")}
                 </p>
               )}
             </div>
@@ -295,18 +297,18 @@ export function CreatePipelineModal({
       ) : (
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-300">Name</label>
+            <label className="text-sm font-medium text-slate-300">{t("nameLabel")}</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Meine Pipeline"
+              placeholder={t("namePlaceholder")}
               className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-300">Repository</label>
+            <label className="text-sm font-medium text-slate-300">{t("repositoryLabel")}</label>
             <div className="max-h-40 divide-y divide-slate-700/50 overflow-y-auto rounded-xl border border-slate-700 bg-slate-800">
               {(repositories || []).map((candidate) => (
                 <button
@@ -323,13 +325,13 @@ export function CreatePipelineModal({
                 </button>
               ))}
               {!repositories?.length && (
-                <p className="px-3 py-2.5 text-sm text-slate-500">Keine Repositories gefunden</p>
+                  <p className="px-3 py-2.5 text-sm text-slate-500">{t("noReposFound")}</p>
               )}
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-300">YAML-Pfad</label>
+            <label className="text-sm font-medium text-slate-300">{t("yamlPathLabel")}</label>
             <input
               type="text"
               value={yamlPath}
@@ -341,7 +343,7 @@ export function CreatePipelineModal({
 
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-slate-300">
-              Ordner <span className="font-normal text-slate-500">(optional)</span>
+              {t("folderLabel")} <span className="font-normal text-slate-500">{t("folderOptional")}</span>
             </label>
             <button
               type="button"
@@ -350,7 +352,7 @@ export function CreatePipelineModal({
             >
               <FolderOpen size={15} className="flex-shrink-0 text-slate-400" />
               <span className={folder === "\\" ? "text-slate-500" : "font-mono text-slate-100"}>
-                {folder === "\\" ? "Stammordner (Standard)" : folder}
+                {folder === "\\" ? t("rootFolder") : folder}
               </span>
               <ChevronRight size={15} className="ml-auto flex-shrink-0 text-slate-600" />
             </button>
@@ -358,11 +360,11 @@ export function CreatePipelineModal({
 
           <div className="flex gap-2 pt-1">
             <Button variant="ghost" className="flex-1" onClick={onClose}>
-              Abbrechen
+              {t("cancel")}
             </Button>
             <Button className="flex-1" disabled={isInvalid} onClick={handleStartEditor}>
               <Plus size={16} />
-              Weiter
+              {t("next")}
             </Button>
           </div>
         </div>

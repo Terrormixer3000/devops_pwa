@@ -11,8 +11,9 @@ import { createAzureClient } from "@/lib/api/client";
 import { demoSettings } from "@/lib/mocks/demoData";
 import { identityService, type AzureCurrentUser } from "@/lib/services/identityService";
 import { pushService } from "@/lib/services/pushService";
+import { useTranslations } from "next-intl";
 import { ExternalLink, ListChecks, FlaskConical } from "lucide-react";
-import type { AppSettings, ThemeMode } from "@/types";
+import type { AppSettings, ThemeMode, Locale } from "@/types";
 
 const EMPTY_SETTINGS: AppSettings = { organization: "", project: "", pat: "", demoMode: false, theme: "dark" };
 
@@ -78,7 +79,7 @@ export default function SettingsPage() {
       setTestResult("success");
     } catch (err) {
       setTestResult("error");
-      setTestError(err instanceof Error ? err.message : "Verbindung fehlgeschlagen");
+      setTestError(err instanceof Error ? err.message : t("connectionFailedFallback"));
     } finally {
       setTesting(false);
     }
@@ -95,7 +96,7 @@ export default function SettingsPage() {
   };
 
   const handleClear = () => {
-    if (confirm("Alle Einstellungen löschen?")) {
+    if (confirm(t("confirmClear"))) {
       clearSettings();
       setForm(EMPTY_SETTINGS);
       setShowPat(false);
@@ -111,11 +112,11 @@ export default function SettingsPage() {
     setPushError("");
     try {
       const subscription = await pushService.subscribe();
-      if (!currentUser) throw new Error("Azure DevOps Benutzer konnte nicht ermittelt werden. Bitte zuerst Verbindung testen.");
+      if (!currentUser) throw new Error(t("noUserError"));
       await pushService.registerSubscription(subscription, form.organization || settings?.organization || "", form.project || settings?.project || "", currentUser.id, currentUser.displayName);
       await refreshPushState();
     } catch (err) {
-      setPushError(err instanceof Error ? err.message : "Aktivierung fehlgeschlagen");
+      setPushError(err instanceof Error ? err.message : t("activationFailed"));
     } finally {
       setPushLoading(false);
     }
@@ -128,7 +129,7 @@ export default function SettingsPage() {
       await pushService.unsubscribe();
       await refreshPushState();
     } catch (err) {
-      setPushError(err instanceof Error ? err.message : "Deaktivierung fehlgeschlagen");
+      setPushError(err instanceof Error ? err.message : t("deactivationFailed"));
     } finally {
       setPushLoading(false);
     }
@@ -136,10 +137,11 @@ export default function SettingsPage() {
 
   const canTest = form.demoMode || !!(form.organization && form.project && form.pat);
   const canSubscribe = !!(form.organization || settings?.organization);
+  const t = useTranslations("settings");
 
   return (
     <div className="min-h-screen">
-      <AppBar title="Einstellungen" />
+      <AppBar title={t("title")} />
 
       <div className="px-4 py-4 space-y-6 max-w-lg mx-auto">
         <ConnectionSettings
@@ -155,6 +157,7 @@ export default function SettingsPage() {
           onToggleShowPat={() => setShowPat((v) => !v)}
           onToggleDemoMode={handleToggleDemoMode}
           onChangeTheme={(theme: ThemeMode) => { setForm((prev) => ({ ...prev, theme })); setSaved(false); }}
+          onChangeLocale={(locale: Locale) => { setForm((prev) => ({ ...prev, locale })); setSettings({ ...(settings || EMPTY_SETTINGS), ...form, locale }); }}
           onTest={handleTest}
           onSave={handleSave}
           onClear={handleClear}
@@ -175,15 +178,15 @@ export default function SettingsPage() {
 
         {/* Einrichtung */}
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Einrichtung</h2>
+          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">{t("setupSection")}</h2>
           <a
             href="/push-setup"
             className="flex items-center gap-3 p-4 bg-slate-800/50 border border-slate-700/60 rounded-xl transition-colors hover:bg-slate-700/60 active:scale-[0.99]"
           >
             <ListChecks size={18} className="text-blue-400 flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-200">Push-Wizard starten</p>
-              <p className="text-xs text-slate-500">Schritt-für-Schritt Setup für Push Notifications</p>
+              <p className="text-sm font-medium text-slate-200">{t("startPushWizard")}</p>
+              <p className="text-xs text-slate-500">{t("setupPushWizardDesc")}</p>
             </div>
             <ExternalLink size={14} className="flex-shrink-0 text-slate-600" />
           </a>
@@ -191,15 +194,15 @@ export default function SettingsPage() {
 
         {/* Entwickler */}
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Entwickler</h2>
+          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">{t("developerSection")}</h2>
           <a
             href="/push-test"
             className="flex items-center gap-3 p-4 bg-slate-800/50 border border-slate-700/60 rounded-xl transition-colors hover:bg-slate-700/60 active:scale-[0.99]"
           >
             <FlaskConical size={18} className="text-purple-400 flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-200">Push-Notifications testen</p>
-              <p className="text-xs text-slate-500">Notifications aktivieren und Events simulieren</p>
+              <p className="text-sm font-medium text-slate-200">{t("testPushNotifications")}</p>
+              <p className="text-xs text-slate-500">{t("testPushDesc")}</p>
             </div>
             <ExternalLink size={14} className="flex-shrink-0 text-slate-600" />
           </a>

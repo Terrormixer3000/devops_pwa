@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { GitBranch } from "lucide-react";
 import { BackActionButton } from "@/components/ui/BackButton";
 import { BranchList } from "./BranchList";
@@ -42,6 +43,8 @@ export function RepoExplorer({ repo, settings }: { repo: Repository; settings: A
     handleOpenFile, handleOpenCommit, refetchBranches,
   } = useRepoExplorer(repo, settings);
 
+  const t = useTranslations("explorer");
+
   const canGoBack =
     view === "commits" ||
     view === "commit-diff" ||
@@ -73,7 +76,7 @@ export function RepoExplorer({ repo, settings }: { repo: Repository; settings: A
                     : entry === "commits"
                     ? view === "commits" || view === "commit-diff"
                     : view === "compare";
-                const labels: Record<string, string> = { files: "Dateien", commits: "Commits", compare: "Vergleich" };
+                const label = entry === "files" ? t("tabFiles") : entry === "commits" ? t("tabCommits") : t("tabCompare");
                 return (
                   <button
                     key={entry}
@@ -88,7 +91,7 @@ export function RepoExplorer({ repo, settings }: { repo: Repository; settings: A
                       isActive ? "bg-blue-600 text-white" : "text-slate-400 hover:text-slate-200"
                     }`}
                   >
-                    {labels[entry]}
+                    {label}
                   </button>
                 );
               })}

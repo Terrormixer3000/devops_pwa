@@ -21,13 +21,9 @@ import { usePullToRefresh } from "@/lib/hooks/usePullToRefresh";
 import { timeAgo } from "@/lib/utils/timeAgo";
 import type { WorkItem, WorkItemState } from "@/types";
 import { CheckSquare, Bug, BookOpen, Zap, Layers, ListChecks } from "lucide-react";
+import { useTranslations } from "next-intl";
 
-// Status-Filter-Tabs
-const STATE_FILTERS: { label: string; values: WorkItemState[] | null }[] = [
-  { label: "Aktiv", values: ["Active", "New"] },
-  { label: "Geloest", values: ["Resolved"] },
-  { label: "Alle", values: null },
-];
+// Status-Filter-Tabs — moved inside component to use translations
 
 /** Gibt das passende Typ-Icon fuer einen Work-Item-Typ zurueck. */
 function workItemTypeIcon(type: string) {
@@ -40,11 +36,11 @@ function workItemTypeIcon(type: string) {
 }
 
 /** Gibt ein farb-codiertes Status-Badge fuer einen Work-Item-Status zurueck. */
-function workItemStateBadge(state: string) {
-  if (state === "Active") return <Badge variant="info" size="sm">Aktiv</Badge>;
-  if (state === "New") return <Badge variant="muted" size="sm">Neu</Badge>;
-  if (state === "Resolved") return <Badge variant="success" size="sm">Geloest</Badge>;
-  if (state === "Closed") return <Badge variant="muted" size="sm">Geschlossen</Badge>;
+function workItemStateBadge(state: string, labels: Record<string, string>) {
+  if (state === "Active") return <Badge variant="info" size="sm">{labels.active}</Badge>;
+  if (state === "New") return <Badge variant="muted" size="sm">{labels.new}</Badge>;
+  if (state === "Resolved") return <Badge variant="success" size="sm">{labels.resolved}</Badge>;
+  if (state === "Closed") return <Badge variant="muted" size="sm">{labels.closed}</Badge>;
   return <Badge variant="muted" size="sm">{state}</Badge>;
 }
 
@@ -61,6 +57,12 @@ export default function WorkItemsPage() {
   const [filterIdx, setFilterIdx] = useState(0);
   const { settings } = useSettingsStore();
   const { client } = useAzureClient();
+  const t = useTranslations("workItems");
+  const STATE_FILTERS: { label: string; values: WorkItemState[] | null }[] = [
+    { label: t("active"), values: ["Active", "New"] },
+    { label: t("resolved"), values: ["Resolved"] },
+    { label: t("all"), values: null },
+  ];
 
   const { data: items, isLoading, error, refetch } = useQuery({
     queryKey: ["work-items", settings?.project, settings?.demoMode],
@@ -105,9 +107,9 @@ export default function WorkItemsPage() {
         {isLoading ? (
           <PageLoader />
         ) : error ? (
-          <ErrorMessage message="Work Items konnten nicht geladen werden" error={error} onRetry={refetch} />
+          <ErrorMessage message={t("loadError")} error={error} onRetry={refetch} />
         ) : filtered.length === 0 ? (
-          <EmptyState icon={ListChecks} title="Keine Work Items" description="Keine Einträge in diesem Filter" />
+          <EmptyState icon={ListChecks} title={t("noWorkItems")} description={t("noEntriesInFilter")} />
         ) : (
           <div className="divide-y divide-slate-800/50">
             {filtered.map((item) => (
@@ -122,12 +124,14 @@ export default function WorkItemsPage() {
 
 /** Einzelne Work-Item-Zeile mit Typ, Titel, Status und Prioritaet. */
 function WorkItemRow({ item }: { item: WorkItem }) {
+  const t = useTranslations("workItems");
   const title = item.fields["System.Title"];
   const state = item.fields["System.State"];
   const type = item.fields["System.WorkItemType"];
   const assignedTo = item.fields["System.AssignedTo"];
   const changedDate = item.fields["System.ChangedDate"];
   const priority = item.fields["Microsoft.VSTS.Common.Priority"];
+  const badgeLabels = { active: t("activeBadge"), new: t("newBadge"), resolved: t("resolvedBadge"), closed: t("closedBadge") };
 
   return (
     <div className="px-4 py-3.5 flex items-start gap-3">
@@ -141,7 +145,7 @@ function WorkItemRow({ item }: { item: WorkItem }) {
         </div>
         <p className="text-sm text-slate-100 leading-snug mb-1.5 line-clamp-2">{title}</p>
         <div className="flex items-center gap-2 flex-wrap">
-          {workItemStateBadge(state)}
+          {workItemStateBadge(state, badgeLabels)}
           {assignedTo && (
             <span className="text-xs text-slate-500">{assignedTo.displayName}</span>
           )}

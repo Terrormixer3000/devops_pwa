@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { use } from "react";
 import Link from "next/link";
 import { AppBar } from "@/components/layout/AppBar";
@@ -38,6 +39,9 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
   const prIdNum = parseInt(prId);
 
   const h = usePRDetail(repoId, prIdNum);
+  const tPR = useTranslations("pullRequests");
+  const tTabs = useTranslations("pullRequests.tabs");
+  const tAct = useTranslations("pullRequests.actions");
 
   const BackLink = (
     <Link
@@ -45,12 +49,12 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
       className="flex items-center gap-0.5 text-[18px] font-semibold tracking-[-0.01em] text-slate-100 active:opacity-70 transition-opacity"
     >
       <ChevronLeft size={26} className="-ml-1.5" />
-      Pull Requests
+      {tPR("title")}
     </Link>
   );
 
   if (h.isLoading) return <div className="min-h-screen"><AppBar title={BackLink} /><PageLoader /></div>;
-  if (h.error || !h.pr) return <div className="min-h-screen"><AppBar title={BackLink} /><ErrorMessage message="PR konnte nicht geladen werden" error={h.error} /></div>;
+  if (h.error || !h.pr) return <div className="min-h-screen"><AppBar title={BackLink} /><ErrorMessage message={tPR("prLoadError")} error={h.error} /></div>;
 
   const pr = h.pr;
 
@@ -62,7 +66,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
       <div className="px-4 pb-4 border-b border-slate-800">
         <div className="flex items-start gap-2 mb-2 pt-4">
           <h1 className="text-base font-semibold text-slate-100 leading-snug flex-1">{pr.title}</h1>
-          {pr.isDraft && <Badge variant="muted">Draft</Badge>}
+          {pr.isDraft && <Badge variant="muted">{tPR("draft")}</Badge>}
         </div>
 
         {/* Branch-Info */}
@@ -91,7 +95,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
               onClick={() => h.setApproveModal(true)}
               className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-700/50 hover:text-slate-100 transition-colors"
             >
-              <ThumbsUp size={14} /> Genehmigen
+              <ThumbsUp size={14} /> {tAct("approve")}
             </button>
             <div className="w-px bg-slate-700/50 flex-shrink-0" />
             <button
@@ -99,7 +103,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
               disabled={h.voteMutation.isPending}
               className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-700/50 hover:text-red-400 transition-colors disabled:opacity-40"
             >
-              <ThumbsDown size={14} /> Ablehnen
+              <ThumbsDown size={14} /> {tAct("reject")}
             </button>
             <div className="w-px bg-slate-700/50 flex-shrink-0" />
             <button
@@ -107,7 +111,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
               disabled={h.mergeBlockers.length > 0}
               className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-700/50 hover:text-blue-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <GitMerge size={14} /> Abschließen
+              <GitMerge size={14} /> {tAct("complete")}
             </button>
           </div>
         )}
@@ -128,10 +132,10 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
       <TabBar
         variant="underline"
         tabs={[
-          { key: "uebersicht", label: "Übersicht", icon: <FileText size={14} /> },
-          { key: "dateien", label: `Dateien${h.changes?.changeEntries ? ` (${h.changes.changeEntries.length})` : ""}`, icon: <FileText size={14} /> },
-          { key: "commits", label: "Commits", icon: <GitCommit size={14} /> },
-          { key: "kommentare", label: `Kommentare${h.commentThreads.length ? ` (${h.commentThreads.length})` : ""}`, icon: <MessageCircle size={14} /> },
+          { key: "uebersicht", label: tTabs("overview"), icon: <FileText size={14} /> },
+          { key: "dateien", label: `${tTabs("files")}${h.changes?.changeEntries ? ` (${h.changes.changeEntries.length})` : ""}`, icon: <FileText size={14} /> },
+          { key: "commits", label: tTabs("commits"), icon: <GitCommit size={14} /> },
+          { key: "kommentare", label: `${tTabs("comments")}${h.commentThreads.length ? ` (${h.commentThreads.length})` : ""}`, icon: <MessageCircle size={14} /> },
         ]}
         activeKey={h.activeTab}
         onChange={(key) => h.setActiveTab(key as Tab)}

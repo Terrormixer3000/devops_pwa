@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Pencil, Trash2, Check } from "lucide-react";
 import { timeAgo } from "@/lib/utils/timeAgo";
@@ -19,6 +20,7 @@ export function CommentItem({
   onEdit: (content: string) => void;
   onDelete: () => void;
 }) {
+  const t = useTranslations("commentItem");
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(comment.content);
   const [deleting, setDeleting] = useState(false);
@@ -50,7 +52,7 @@ export function CommentItem({
             <button
               onClick={() => { setEditText(comment.content); setEditing(true); }}
               className="p-1 text-slate-600 hover:text-blue-400 transition-colors"
-              title="Bearbeiten"
+              title={t("editTitle")}
             >
               <Pencil size={12} />
             </button>
@@ -58,7 +60,7 @@ export function CommentItem({
               onClick={handleDelete}
               disabled={deleting}
               className="p-1 text-slate-600 hover:text-red-400 transition-colors disabled:opacity-40"
-              title="Löschen"
+              title={t("deleteTitle")}
             >
               <Trash2 size={12} />
             </button>
@@ -78,13 +80,13 @@ export function CommentItem({
               onClick={handleSaveEdit}
               className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-colors"
             >
-              <Check size={12} /> Speichern
+              <Check size={12} /> {t("save")}
             </button>
             <button
               onClick={() => setEditing(false)}
               className="px-2.5 py-1 rounded-lg text-xs text-slate-400 hover:text-slate-200 transition-colors"
             >
-              Abbrechen
+              {t("cancel")}
             </button>
           </div>
         </div>

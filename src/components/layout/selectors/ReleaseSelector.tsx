@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { Rocket } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { SelectionSheet, SelectionItem } from "@/components/ui/SelectionSheet";
 import { useReleaseDefStore, useReleaseFavStore } from "@/lib/stores/selectionStore";
 import { ReleaseDefinition } from "@/types";
@@ -22,6 +23,7 @@ interface Props {
 export function ReleaseSelector({ definitions, loading }: Props) {
   const { selectedIds, toggle, clear, load } = useReleaseDefStore();
   const { favoriteIds, toggleFavorite, load: loadFavs } = useReleaseFavStore();
+  const t = useTranslations("selectors");
 
   // Gespeicherte Auswahl und Favoriten beim ersten Mount laden
   useEffect(() => { load(); loadFavs(); }, [load, loadFavs]);
@@ -32,19 +34,18 @@ export function ReleaseSelector({ definitions, loading }: Props) {
     sublabel: d.description,
   }));
 
-  // Label: Zusammenfassung der ausgewaehlten Release-Pipelines
   const buttonLabel = selectionLabel(
     selectedIds,
-    "Alle Releases",
+    t("allReleases"),
     definitions.find((d) => String(d.id) === selectedIds[0])?.name,
-    `${selectedIds.length} Pipelines`,
+    t("multipleReleases", { count: selectedIds.length }),
   );
 
   return (
     <SelectionSheet
       buttonLabel={buttonLabel}
       buttonIcon={<Rocket size={13} className="text-purple-400" />}
-      sheetTitle="Release-Pipelines auswaehlen"
+      sheetTitle={t("releasesSheet")}
       items={items}
       loading={loading}
       selectedIds={selectedIds}
@@ -53,7 +54,7 @@ export function ReleaseSelector({ definitions, loading }: Props) {
       multiSelect={true}
       favoriteIds={favoriteIds}
       onToggleFavorite={toggleFavorite}
-      emptyMessage="Keine Release-Pipelines gefunden"
+      emptyMessage={t("noReleasePipelinesFound")}
     />
   );
 }

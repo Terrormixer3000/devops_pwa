@@ -5,6 +5,7 @@
  * von Web-Push-Benachrichtigungen (VAPID-Schluessel, Service Worker, Webhook-URL).
  */
 
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import {
   CheckCircle,
@@ -97,10 +98,15 @@ function StepCard({
       </div>
       {status !== "blocked" && <div className="space-y-3">{children}</div>}
       {status === "blocked" && (
-        <p className="text-xs text-slate-600">Vorherige Schritte zuerst abschliessen.</p>
+        <StepCardBlocked />
       )}
     </section>
   );
+}
+
+function StepCardBlocked() {
+  const t = useTranslations("push");
+  return <p className="text-xs text-slate-600">{t("blockedHint")}</p>;
 }
 
 /** Zeigt die generierte Webhook-URL mit Kopier-Schaltflaeche an. */
@@ -148,14 +154,16 @@ export default function PushSetupPage() {
     [identityDone, prerequisitesDone, subscriptionDone, testDone, webhookDone]
   );
 
+  const t = useTranslations("push");
+
   const handleSubscribe = async () => {
     setSubscribeLoading(true);
     setErrorMessage("");
     setTestResult(null);
 
     try {
-      if (!currentUser) throw new Error("Azure User konnte nicht geladen werden.");
-      if (!organization || !project) throw new Error("Organisation und Projekt muessen gesetzt sein.");
+      if (!currentUser) throw new Error(t("noUserLoadError"));
+      if (!organization || !project) throw new Error(t("orgProjectRequired"));
 
       const subscription = await pushService.subscribe();
       const { webhookToken: token } = await pushService.registerSubscription(
@@ -169,7 +177,7 @@ export default function PushSetupPage() {
       pushService.storeToken(token);
       await refreshPushState();
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : "Aktivierung fehlgeschlagen");
+      setErrorMessage(err instanceof Error ? err.message : t("activationFailed"));
     } finally {
       setSubscribeLoading(false);
     }
@@ -184,7 +192,7 @@ export default function PushSetupPage() {
       await pushService.unsubscribe();
       await refreshPushState();
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : "Deaktivierung fehlgeschlagen");
+      setErrorMessage(err instanceof Error ? err.message : t("deactivationFailed"));
     } finally {
       setSubscribeLoading(false);
     }
@@ -192,7 +200,7 @@ export default function PushSetupPage() {
 
   const handleSendTest = async () => {
     if (!organization || !project || !currentUser) {
-      setErrorMessage("Organisation, Projekt und Azure User sind erforderlich.");
+      setErrorMessage(t("orgProjectUserRequired"));
       return;
     }
 
@@ -220,7 +228,7 @@ export default function PushSetupPage() {
 
       setTestResult(data as TestResult);
     } catch (err) {
-      setTestResult({ ok: false, error: err instanceof Error ? err.message : "Netzwerkfehler" });
+      setTestResult({ ok: false, error: err instanceof Error ? err.message : t("networkError") });
     } finally {
       setTestLoading(false);
     }
@@ -228,7 +236,7 @@ export default function PushSetupPage() {
 
   return (
     <div className="min-h-screen">
-      <AppBar title="Push-Einrichtung" />
+      <AppBar title={t("wizardTitle")} />
 
       <div className="mx-auto max-w-lg space-y-4 px-4 py-4">
         <BackLink href="/settings" className="mb-1" />
@@ -238,14 +246,14 @@ export default function PushSetupPage() {
           <div className="flex items-center gap-2">
             <ShieldCheck size={18} className="text-blue-400" />
             <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-300">
-              Push-Einrichtung
+              {t("wizardTitle")}
             </h2>
           </div>
           <p className="text-xs text-slate-500">
-            Richte Push-Notifications fuer Azure DevOps Events ein. Folge den Schritten der Reihe nach.
+            {t("wizardSubtitle")}
           </p>
           <div className="flex flex-wrap gap-2">
-            {(["Voraussetzungen", "User", "Aktivieren", "Webhook-URL", "Test"] as const).map(
+            {[t("step1"), t("step2"), t("step3"), t("step4"), t("step5")].map(
               (label, i) => (
                 <StepBadge key={label} label={`${i + 1} ${label}`} status={stepStatuses[i]} />
               )
@@ -254,46 +262,45 @@ export default function PushSetupPage() {
         </div>
 
         {/* Schritt 1 — Voraussetzungen */}
-        <StepCard number={1} title="Voraussetzungen prüfen" status={stepStatuses[0]}>
+        <StepCard number={1} title={t("step1Title")} status={stepStatuses[0]}>
           <div className="space-y-1 text-xs text-slate-500">
             <div className="flex items-center justify-between">
-              <span>Organisation</span>
+              <span>{t("orgLabel")}</span>
               {organization ? (
                 <span className="font-mono text-slate-300">{organization}</span>
               ) : (
-                <span className="text-amber-400">nicht gesetzt</span>
+                <span className="text-amber-400">{t("notSet")}</span>
               )}
             </div>
             <div className="flex items-center justify-between">
-              <span>Projekt</span>
+              <span>{t("projectLabel")}</span>
               {project ? (
                 <span className="font-mono text-slate-300">{project}</span>
               ) : (
-                <span className="text-amber-400">nicht gesetzt</span>
+                <span className="text-amber-400">{t("notSet")}</span>
               )}
             </div>
           </div>
           <PushSupportHint status={supportStatus} compact />
           {!hasProjectScope && (
             <p className="text-xs text-slate-500">
-              Bitte Organisation und Projekt in den{" "}
-              <span className="text-blue-400">Einstellungen</span> konfigurieren.
+              {t("configureHint")}
             </p>
           )}
           <Button variant="secondary" onClick={refreshPushState} loading={statusLoading}>
-            Status neu prüfen
+            {t("checkStatus")}
           </Button>
         </StepCard>
 
         {/* Schritt 2 — Azure User */}
-        <StepCard number={2} title="Azure DevOps User laden" status={stepStatuses[1]}>
+        <StepCard number={2} title={t("step2Title")} status={stepStatuses[1]}>
           {currentUser ? (
             <div className="rounded-xl bg-slate-900/50 p-3 space-y-1">
               <p className="text-sm text-slate-200 font-medium">{currentUser.displayName}</p>
               <p className="text-xs font-mono text-slate-500">{currentUser.id}</p>
             </div>
           ) : (
-            <p className="text-xs text-amber-300/90">Noch kein Azure User geladen.</p>
+            <p className="text-xs text-amber-300/90">{t("noUserLoaded")}</p>
           )}
           <Button
             variant="secondary"
@@ -302,23 +309,23 @@ export default function PushSetupPage() {
             disabled={!canResolveIdentity}
           >
             <UserRound size={16} />
-            {currentUser ? "Neu laden" : "Azure User laden"}
+            {currentUser ? t("reloadUser") : t("loadUser")}
           </Button>
           {!canResolveIdentity && (
             <p className="text-xs text-slate-500">
-              Organisation, Projekt und PAT (oder Demo-Modus) muessen gesetzt sein.
+              {t("userRequirements")}
             </p>
           )}
         </StepCard>
 
         {/* Schritt 3 — Aktivieren */}
-        <StepCard number={3} title="Notifications aktivieren" status={stepStatuses[2]}>
+        <StepCard number={3} title={t("step3Title")} status={stepStatuses[2]}>
           <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-500">Status</span>
+            <span className="text-slate-500">{t("statusLabel")}</span>
             {isSubscribed ? (
-              <span className="text-green-300">Aktiv</span>
+              <span className="text-green-300">{t("active")}</span>
             ) : (
-              <span className="text-slate-400">Deaktiviert</span>
+              <span className="text-slate-400">{t("deactivated")}</span>
             )}
           </div>
 
@@ -326,7 +333,7 @@ export default function PushSetupPage() {
             <div className="flex items-start gap-2 rounded-xl border border-red-700/40 bg-red-900/20 p-3">
               <AlertCircle size={14} className="mt-0.5 flex-shrink-0 text-red-400" />
               <p className="text-xs text-red-300">
-                Browser-Erlaubnis wurde verweigert. Bitte in den Browser-Einstellungen wieder erlauben.
+                {t("permissionDeniedHint")}
               </p>
             </div>
           )}
@@ -339,7 +346,7 @@ export default function PushSetupPage() {
               disabled={!canSubscribe || isSubscribed}
             >
               <Bell size={16} />
-              Aktivieren
+              {t("activate")}
             </Button>
             <Button
               fullWidth
@@ -349,45 +356,43 @@ export default function PushSetupPage() {
               disabled={!isSubscribed}
             >
               <BellOff size={16} />
-              Deaktivieren
+              {t("deactivate")}
             </Button>
           </div>
         </StepCard>
 
         {/* Schritt 4 — Webhook-URL */}
-        <StepCard number={4} title="Webhook-URL konfigurieren" status={stepStatuses[3]}>
+        <StepCard number={4} title={t("step4Title")} status={stepStatuses[3]}>
           <div className="flex items-start gap-2 rounded-xl border border-blue-700/30 bg-blue-900/10 p-3">
             <Link2 size={14} className="mt-0.5 flex-shrink-0 text-blue-400" />
             <p className="text-xs text-blue-300/90">
-              Diese URL ist dein persoenlicher Webhook-Endpunkt. Nur Anfragen mit deinem Token werden
-              akzeptiert.
+              {t("webhookInfo")}
             </p>
           </div>
           {webhookToken ? (
             <WebhookUrlBox token={webhookToken} />
           ) : (
             <p className="text-xs text-slate-500">
-              Die Webhook-URL wird nach dem Aktivieren der Notifications angezeigt.
+              {t("webhookNoToken")}
             </p>
           )}
         </StepCard>
 
         {/* Schritt 5 — Test */}
-        <StepCard number={5} title="Test-Notification senden" status={stepStatuses[4]}>
+        <StepCard number={5} title={t("step5Title")} status={stepStatuses[4]}>
           <p className="text-xs text-slate-500">
-            Sendet ein Test-Event vom Typ{" "}
-            <span className="font-mono text-slate-300">build.failed</span> direkt an deinen Browser.
+            {t("testDescription", { eventType: "build.failed" })}
           </p>
           <Button fullWidth onClick={handleSendTest} loading={testLoading} disabled={!canSendTest}>
             <Send size={16} />
-            Test-Notification senden
+            {t("sendTest")}
           </Button>
 
           {testResult?.ok && (
             <div className="flex items-start gap-2 rounded-xl border border-green-700/40 bg-green-900/20 p-3">
               <CheckCircle size={16} className="mt-0.5 text-green-400" />
               <p className="text-xs text-green-300">
-                Notification gesendet ({testResult.sent}/{testResult.total}). Schau auf Gerät oder Browser.
+                {t("notificationSent", { sent: testResult.sent ?? 0, total: testResult.total ?? 0 })}
               </p>
             </div>
           )}
@@ -395,7 +400,7 @@ export default function PushSetupPage() {
           {testResult && !testResult.ok && (
             <div className="flex items-start gap-2 rounded-xl border border-red-700/40 bg-red-900/20 p-3">
               <AlertCircle size={16} className="mt-0.5 text-red-400" />
-              <p className="text-xs text-red-300">{testResult.error ?? "Senden fehlgeschlagen"}</p>
+              <p className="text-xs text-red-300">{testResult.error ?? t("sendFailed")}</p>
             </div>
           )}
         </StepCard>

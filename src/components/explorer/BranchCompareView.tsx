@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { GitBranch, GitCompare } from "lucide-react";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -24,13 +25,14 @@ export function BranchCompareView({
   diff?: BranchDiff | null;
   loading: boolean;
 }) {
+  const t = useTranslations("explorer");
   if (loading) return <PageLoader />;
   if (!diff)
     return (
       <EmptyState
         icon={GitCompare}
-        title="Branch auswählen"
-        description="Tippe auf das Vergleich-Symbol neben einem Branch"
+        title={t("selectBranchTitle")}
+        description={t("selectBranchDesc")}
       />
     );
 
@@ -45,8 +47,8 @@ export function BranchCompareView({
       </div>
 
       <div className="text-xs text-slate-500">
-        {diff.commits.length} Commit{diff.commits.length !== 1 ? "s" : ""} voraus &middot;{" "}
-        {diff.changes.length} Datei{diff.changes.length !== 1 ? "en" : ""} geändert
+        {t("commitsAhead", { count: diff.commits.length })} &middot;{" "}
+        {t("filesChanged", { count: diff.changes.length })}
       </div>
 
       {diff.changes.length > 0 && (

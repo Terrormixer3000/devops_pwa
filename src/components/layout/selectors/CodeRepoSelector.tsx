@@ -1,6 +1,7 @@
 "use client";
 
 import { GitBranch } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { SelectionSheet } from "@/components/ui/SelectionSheet";
 import { useRepositoryStore } from "@/lib/stores/repositoryStore";
 
@@ -12,6 +13,7 @@ import { useRepositoryStore } from "@/lib/stores/repositoryStore";
 export function CodeRepoSelector() {
   const { repositories, favorites, toggleFavorite, setSingleRepo, clearSelection, selectedRepositories } =
     useRepositoryStore();
+  const t = useTranslations("selectors");
 
   const selectedRepo = selectedRepositories[0];
 
@@ -21,8 +23,7 @@ export function CodeRepoSelector() {
     sublabel: r.project?.name,
   }));
 
-  // Label: ausgewaehltes Repo oder Hinweis
-  const buttonLabel = selectedRepo?.name ?? "Repo waehlen";
+  const buttonLabel = selectedRepo?.name ?? t("chooseRepo");
 
   const handleToggle = (id: string) => {
     const repo = repositories.find((r) => r.id === id);
@@ -33,7 +34,7 @@ export function CodeRepoSelector() {
     <SelectionSheet
       buttonLabel={buttonLabel}
       buttonIcon={<GitBranch size={13} className="text-blue-400" />}
-      sheetTitle="Repository auswaehlen"
+      sheetTitle={t("repoSheet")}
       items={items}
       selectedIds={selectedRepo ? [selectedRepo.id] : []}
       onToggle={handleToggle}
@@ -41,7 +42,7 @@ export function CodeRepoSelector() {
       multiSelect={false}
       favoriteIds={favorites}
       onToggleFavorite={toggleFavorite}
-      emptyMessage="Keine Repositories gefunden"
+      emptyMessage={t("noReposFound")}
     />
   );
 }

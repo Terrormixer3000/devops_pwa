@@ -5,6 +5,7 @@
  * und zeigt den aktuellen Abonnementsstatus an.
  */
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import Link from "next/link";
 import { AppBar } from "@/components/layout/AppBar";
@@ -51,44 +52,6 @@ interface EventConfig {
   color: string;
 }
 
-const EVENTS: EventConfig[] = [
-  {
-    type: "build.failed",
-    label: "Build fehlgeschlagen",
-    description: "CI Pipeline #42 ist fehlgeschlagen",
-    icon: <XCircle size={18} />,
-    color: "text-red-400",
-  },
-  {
-    type: "build.succeeded",
-    label: "Build erfolgreich",
-    description: "CI Pipeline #43 abgeschlossen",
-    icon: <CheckCircle size={18} />,
-    color: "text-green-400",
-  },
-  {
-    type: "pr.reviewer",
-    label: "PR Review angefragt",
-    description: "Du wurdest als Reviewer hinzugefuegt",
-    icon: <GitPullRequest size={18} />,
-    color: "text-blue-400",
-  },
-  {
-    type: "pr.comment",
-    label: "PR-Kommentar",
-    description: "Neuer Kommentar auf deinem PR",
-    icon: <MessageSquare size={18} />,
-    color: "text-purple-400",
-  },
-  {
-    type: "release.approval",
-    label: "Release-Approval",
-    description: "Freigabe fuer Production ausstehend",
-    icon: <Rocket size={18} />,
-    color: "text-amber-400",
-  },
-];
-
 // Status-Badge fuer eine Subscription
 /** Zeigt den aktuellen Status eines Push-Abonnements (aktiv/inaktiv/Fehler). */
 function SubscriptionStatus({
@@ -100,11 +63,12 @@ function SubscriptionStatus({
   permission: PushPermissionState;
   supportStatus: PushSupportStatus;
 }) {
+  const t = useTranslations("push");
   if (supportStatus === "unsupported") {
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-700/60 text-slate-400">
         <BellOff size={12} />
-        Nicht unterstützt
+        {t("notSupported")}
       </span>
     );
   }
@@ -112,7 +76,7 @@ function SubscriptionStatus({
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-900/40 text-amber-400">
         <AlertCircle size={12} />
-        Einrichtung nötig
+        {t("setupNeeded")}
       </span>
     );
   }
@@ -120,7 +84,7 @@ function SubscriptionStatus({
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-900/40 text-red-400">
         <XCircle size={12} />
-        Erlaubnis verweigert
+        {t("permissionDenied")}
       </span>
     );
   }
@@ -128,14 +92,14 @@ function SubscriptionStatus({
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-900/40 text-green-400">
         <CheckCircle size={12} />
-        Aktiv
+        {t("active")}
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-700/60 text-slate-400">
       <BellOff size={12} />
-      Deaktiviert
+      {t("notSubscribed")}
     </span>
   );
 }
@@ -143,6 +107,8 @@ function SubscriptionStatus({
 // Ergebnis-Anzeige nach einem Test-Versand
 /** Banner mit Ergebnis des zuletzt gesendeten Push-Tests (Erfolg/Fehler). */
 function ResultBanner({ result }: { result: TestResult | null }) {
+  const t = useTranslations("push");
+  const tc = useTranslations("common");
   if (!result) return null;
 
   if (result.ok) {
@@ -151,7 +117,7 @@ function ResultBanner({ result }: { result: TestResult | null }) {
         <CheckCircle size={18} className="text-green-400 flex-shrink-0 mt-0.5" />
         <div className="min-w-0">
           <p className="text-sm font-medium text-green-300">
-            Notification gesendet ({result.sent}/{result.total})
+            {t("notificationSent", { sent: result.sent ?? 0, total: result.total ?? 0 })}
           </p>
           {result.notification && (
             <p className="text-xs text-green-400/70 mt-0.5 truncate">
@@ -167,7 +133,7 @@ function ResultBanner({ result }: { result: TestResult | null }) {
     <div className="flex items-start gap-3 p-3.5 bg-red-900/25 border border-red-700/40 rounded-xl">
       <XCircle size={18} className="text-red-400 flex-shrink-0 mt-0.5" />
       <div className="min-w-0">
-        <p className="text-sm font-medium text-red-300">Fehler</p>
+        <p className="text-sm font-medium text-red-300">{tc("error")}</p>
         <p className="text-xs text-red-400/70 mt-0.5">{result.error}</p>
       </div>
     </div>
@@ -179,6 +145,45 @@ function ResultBanner({ result }: { result: TestResult | null }) {
 /** Testseite fuer Push-Benachrichtigungen mit Abonnement-Verwaltung und Test-Ausloesung. */
 export default function PushTestPage() {
   const { settings } = useSettingsStore();
+  const t = useTranslations("push");
+
+  const EVENTS: EventConfig[] = [
+    {
+      type: "build.failed",
+      label: t("buildFailed"),
+      description: t("eventBuildFailedDesc"),
+      icon: <XCircle size={18} />,
+      color: "text-red-400",
+    },
+    {
+      type: "build.succeeded",
+      label: t("buildSuccess"),
+      description: t("eventBuildSuccessDesc"),
+      icon: <CheckCircle size={18} />,
+      color: "text-green-400",
+    },
+    {
+      type: "pr.reviewer",
+      label: t("prReviewRequest"),
+      description: t("eventPrReviewerDesc"),
+      icon: <GitPullRequest size={18} />,
+      color: "text-blue-400",
+    },
+    {
+      type: "pr.comment",
+      label: t("prComment"),
+      description: t("eventPrCommentDesc"),
+      icon: <MessageSquare size={18} />,
+      color: "text-purple-400",
+    },
+    {
+      type: "release.approval",
+      label: t("releasePending"),
+      description: t("eventReleaseApprovalDesc"),
+      icon: <Rocket size={18} />,
+      color: "text-amber-400",
+    },
+  ];
 
   const {
     supportStatus,
@@ -197,13 +202,13 @@ export default function PushTestPage() {
   // Test-Notification senden
   const handleTest = async (eventType: TestEventType) => {
     if (!settings?.organization || !settings?.project) {
-      setLastResult({ ok: false, error: "Bitte zuerst Organisation und Projekt in den Einstellungen konfigurieren." });
+      setLastResult({ ok: false, error: t("configureHint") });
       setLastTestedEvent(eventType);
       return;
     }
 
     if (!currentUser) {
-      setLastResult({ ok: false, error: "Azure DevOps Benutzer konnte nicht ermittelt werden." });
+      setLastResult({ ok: false, error: t("noUserError") });
       setLastTestedEvent(eventType);
       return;
     }
@@ -232,7 +237,7 @@ export default function PushTestPage() {
         setLastResult(data as TestResult);
       }
     } catch (err) {
-      setLastResult({ ok: false, error: err instanceof Error ? err.message : "Netzwerkfehler" });
+      setLastResult({ ok: false, error: err instanceof Error ? err.message : t("networkError") });
     } finally {
       setLoadingEvent(null);
     }
@@ -248,7 +253,7 @@ export default function PushTestPage() {
   if (pushStateLoading) {
     return (
       <div className="min-h-screen">
-        <AppBar title="Push-Test" />
+        <AppBar title={t("testTitle")} />
         <PageLoader />
       </div>
     );
@@ -257,15 +262,14 @@ export default function PushTestPage() {
   if (!webhookToken) {
     return (
       <div className="min-h-screen">
-        <AppBar title="Push-Test" />
+        <AppBar title={t("testTitle")} />
 
         <div className="px-4 py-4 max-w-lg mx-auto">
           <section className="space-y-4 rounded-2xl border border-blue-700/30 bg-slate-800/40 p-4">
             <div className="space-y-1">
-              <h2 className="text-base font-semibold text-slate-100">Wizard zuerst abschließen</h2>
+              <h2 className="text-base font-semibold text-slate-100">{t("wizardFirst")}</h2>
               <p className="text-sm text-slate-400">
-                Die Testansicht wird erst freigeschaltet, nachdem der Push-Wizard vollständig
-                durchlaufen wurde und eine Webhook-URL für diesen Browser gespeichert ist.
+                {t("wizardFirstDesc")}
               </p>
             </div>
 
@@ -274,15 +278,14 @@ export default function PushTestPage() {
               className="flex items-center justify-between gap-3 rounded-xl border border-blue-700/40 bg-blue-900/15 p-3.5 text-left transition-colors hover:bg-blue-900/25"
             >
               <div className="space-y-0.5">
-                <p className="text-sm font-medium text-blue-300">Zum Push-Wizard</p>
-                <p className="text-xs text-blue-400/70">Einrichtung abschließen und Webhook-URL erzeugen</p>
+                <p className="text-sm font-medium text-blue-300">{t("goToWizard")}</p>
+                <p className="text-xs text-blue-400/70">{t("goToWizardDesc")}</p>
               </div>
               <ChevronRight size={16} className="flex-shrink-0 text-blue-400" />
             </Link>
 
             <p className="text-xs text-slate-500">
-              Danach kannst du auf dieser Seite echte Test-Events für deinen gespeicherten Browser
-              auslösen.
+              {t("unlockHint")}
             </p>
           </section>
         </div>
@@ -292,7 +295,7 @@ export default function PushTestPage() {
 
   return (
     <div className="min-h-screen">
-      <AppBar title="Push-Test" />
+      <AppBar title={t("testTitle")} />
 
       <div className="px-4 py-4 space-y-5 max-w-lg mx-auto">
 
@@ -300,7 +303,7 @@ export default function PushTestPage() {
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
-              1 — Subscription
+              {t("subscriptionSectionTitle")}
             </h2>
             <SubscriptionStatus
               isSubscribed={isSubscribed}
@@ -312,32 +315,32 @@ export default function PushTestPage() {
           {/* Org/Projekt Info */}
           <div className="p-3.5 bg-slate-800/50 border border-slate-700/60 rounded-xl space-y-1">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-500">Organisation</span>
+              <span className="text-slate-500">{t("orgLabel")}</span>
               <span className="text-slate-300 font-mono">
-                {settings?.organization || <span className="text-red-400">nicht gesetzt</span>}
+                {settings?.organization || <span className="text-red-400">{t("notSet")}</span>}
               </span>
             </div>
             <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-500">Projekt</span>
+              <span className="text-slate-500">{t("projectLabel")}</span>
               <span className="text-slate-300 font-mono">
-                {settings?.project || <span className="text-red-400">nicht gesetzt</span>}
+                {settings?.project || <span className="text-red-400">{t("notSet")}</span>}
               </span>
             </div>
             <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-500">Modus</span>
+              <span className="text-slate-500">{t("mode")}</span>
               <span className={settings?.demoMode ? "text-amber-400" : "text-slate-300"}>
-                {settings?.demoMode ? "Demo" : "Live"}
+                {settings?.demoMode ? t("modeDemo") : t("modeLive")}
               </span>
             </div>
             <div className="flex items-center justify-between gap-4 text-xs">
-              <span className="text-slate-500">Azure User</span>
+              <span className="text-slate-500">{t("azureUserLabel")}</span>
               <span className="text-slate-300 font-mono text-right truncate">
-                {currentUser ? currentUser.displayName : <span className="text-amber-400">wird geladen</span>}
+                {currentUser ? currentUser.displayName : <span className="text-amber-400">{t("userLoading")}</span>}
               </span>
             </div>
             {currentUser && (
               <div className="flex items-center justify-between gap-4 text-xs">
-                <span className="text-slate-500">User ID</span>
+                <span className="text-slate-500">{t("userIdLabel")}</span>
                 <span className="text-slate-300 font-mono text-right truncate">{currentUser.id}</span>
               </div>
             )}
@@ -351,7 +354,7 @@ export default function PushTestPage() {
             <div className="flex items-start gap-2.5 p-3 bg-amber-900/20 border border-amber-700/40 rounded-xl">
               <AlertCircle size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-amber-300">
-                Organisation und Projekt muessen in den Einstellungen konfiguriert sein.
+                {t("configureHint")}
               </p>
             </div>
           )}
@@ -363,8 +366,8 @@ export default function PushTestPage() {
               className="flex items-center justify-between gap-3 w-full rounded-xl border border-blue-700/40 bg-blue-900/15 p-3.5 text-left transition-colors hover:bg-blue-900/25"
             >
               <div className="space-y-0.5">
-                <p className="text-sm font-medium text-blue-300">Notifications noch nicht eingerichtet</p>
-                <p className="text-xs text-blue-400/70">Zum Einrichtungs-Wizard wechseln</p>
+                <p className="text-sm font-medium text-blue-300">{t("notSetupYet")}</p>
+                <p className="text-xs text-blue-400/70">{t("goToWizardShort")}</p>
               </div>
               <ChevronRight size={16} className="flex-shrink-0 text-blue-400" />
             </Link>
@@ -379,7 +382,7 @@ export default function PushTestPage() {
             <div className="flex items-start gap-2.5 p-3 bg-red-900/20 border border-red-700/40 rounded-xl">
               <XCircle size={16} className="text-red-400 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-red-300">
-                Notifications wurden blockiert. Bitte in den Browser-Einstellungen wieder erlauben.
+                {t("permissionDeniedHint")}
               </p>
             </div>
           )}
@@ -390,14 +393,14 @@ export default function PushTestPage() {
         {/* Schritt 2: Events testen */}
         <section className="space-y-3">
           <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
-            2 — Event simulieren
+            {t("eventsSectionTitle")}
           </h2>
 
           {!canTest && (
             <div className="flex items-start gap-2.5 p-3 bg-slate-800/40 border border-slate-700/50 rounded-xl">
               <AlertCircle size={16} className="text-slate-500 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-slate-500">
-                Notifications muessen zuerst aktiviert sein um Events zu testen.
+                {t("testDisabledHint")}
               </p>
             </div>
           )}
@@ -447,24 +450,28 @@ export default function PushTestPage() {
         {/* Info: Wie der Test funktioniert */}
         <section className="space-y-2">
           <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
-            Wie es funktioniert
+            {t("howItWorksTitle")}
           </h2>
           <div className="p-4 bg-slate-800/30 rounded-xl space-y-3 text-xs text-slate-500">
             <div className="flex gap-2.5">
               <span className="flex-shrink-0 w-5 h-5 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 font-mono font-bold">1</span>
-              <p>Notifications aktivieren → Browser fragt nach Erlaubnis → Subscription wird auf dem Server gespeichert</p>
+              <p>{t("howItWorks1")}</p>
             </div>
             <div className="flex gap-2.5">
               <span className="flex-shrink-0 w-5 h-5 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 font-mono font-bold">2</span>
-              <p>Event-Button antippen → Server sendet eine echte Web Push Notification ueber den VAPID-Schluessel</p>
+              <p>{t("howItWorks2")}</p>
             </div>
             <div className="flex gap-2.5">
               <span className="flex-shrink-0 w-5 h-5 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 font-mono font-bold">3</span>
-              <p>Notification erscheint — auch wenn die App im Hintergrund oder geschlossen ist (nur bei installierter PWA auf iOS)</p>
+              <p>{t("howItWorks3")}</p>
             </div>
             <div className="flex gap-2.5">
               <span className="flex-shrink-0 w-5 h-5 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 font-mono font-bold">4</span>
-              <p>Im echten Betrieb ersetzt Azure DevOps Schritt 2 — Service Hooks senden Events automatisch an <span className="font-mono text-slate-400">/api/push/webhook</span></p>
+              <p>
+                {t.rich("howItWorks4", {
+                  path: () => <span className="font-mono text-slate-400">/api/push/webhook</span>,
+                })}
+              </p>
             </div>
           </div>
         </section>

@@ -1,9 +1,10 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { AlertTriangle, CheckCircle, ChevronDown, ChevronRight, Clock, FileText, Loader, MinusCircle, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
-import { STATUS_META, formatDuration, parseLogId, getRecordStatus } from "@/lib/utils/timelineUtils";
+import { STATUS_META, formatDuration, parseLogId, getRecordStatus, getTimelineStatusLabel } from "@/lib/utils/timelineUtils";
 import type { TimelineViewNode, TimelineSummary, TimelineStatus } from "@/lib/utils/timelineUtils";
 import type { TimelineRecord } from "@/types";
 
@@ -19,15 +20,16 @@ export function getStatusIcon(status: TimelineStatus) {
 
 /** Zusammenfassungskarten pro Stage/Status der Build-Timeline. */
 export function JobsSummaryCards({ summary }: { summary: TimelineSummary }) {
+  const t = useTranslations("timeline");
   return (
     <div className="grid grid-cols-2 gap-2">
       {[
-        { label: "Jobs", value: summary.totalJobs, className: "text-slate-100" },
-        { label: "Running", value: summary.runningJobs, className: "text-blue-400" },
-        { label: "Fehler", value: summary.failedJobs, className: "text-red-400" },
-        { label: "Erfolgreich", value: summary.succeededJobs, className: "text-green-400" },
-        { label: "Tasks", value: summary.totalTasks, className: "text-slate-200" },
-        { label: "Pending", value: summary.pendingTasks, className: "text-slate-500" },
+        { label: t("jobs"), value: summary.totalJobs, className: "text-slate-100" },
+        { label: t("running"), value: summary.runningJobs, className: "text-blue-400" },
+        { label: t("failed"), value: summary.failedJobs, className: "text-red-400" },
+        { label: t("success"), value: summary.succeededJobs, className: "text-green-400" },
+        { label: t("tasks"), value: summary.totalTasks, className: "text-slate-200" },
+        { label: t("pending"), value: summary.pendingTasks, className: "text-slate-500" },
       ].map((card) => (
         <div key={card.label} className="rounded-xl border border-slate-700/60 bg-slate-800/40 px-3 py-2.5">
           <p className={`text-base font-semibold ${card.className}`}>{card.value}</p>
@@ -62,6 +64,7 @@ function TimelineGroupNode({
   depth: number;
   onOpenLog: (logId: number, taskName: string) => void;
 }) {
+  const t = useTranslations("timeline");
   const hasChildren = node.children.length > 0;
   const [expanded, setExpanded] = useState(node.status === "running" || node.status === "failed");
   const meta = STATUS_META[node.status];
@@ -90,7 +93,7 @@ function TimelineGroupNode({
               )}
             </div>
           </div>
-          <Badge variant={meta.badge}>{meta.label}</Badge>
+          <Badge variant={meta.badge}>{getTimelineStatusLabel(node.status, t)}</Badge>
           {hasChildren ? (expanded ? <ChevronDown size={15} className="mt-0.5 text-slate-500 flex-shrink-0" /> : <ChevronRight size={15} className="mt-0.5 text-slate-500 flex-shrink-0" />) : null}
         </div>
         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-800">
@@ -161,9 +164,10 @@ export function LogSelector({
   logRecords: TimelineRecord[];
   onSelect: (logId: number, name: string) => void;
 }) {
+  const t = useTranslations("timeline");
   return (
     <div className="space-y-2">
-      <p className="text-xs text-slate-500 mb-3">Log eines Schritts auswählen:</p>
+      <p className="text-xs text-slate-500 mb-3">{t("selectLog")}:</p>
       {logRecords.map((record) => {
         const logId = parseLogId(record);
         if (!logId) return null;
@@ -176,7 +180,7 @@ export function LogSelector({
           >
             <FileText size={14} className={`${meta.textClass} flex-shrink-0`} />
             <span className="text-sm text-slate-100 truncate flex-1">{record.name}</span>
-            <Badge variant={meta.badge}>{meta.label}</Badge>
+            <Badge variant={meta.badge}>{getTimelineStatusLabel(getRecordStatus(record), t)}</Badge>
           </button>
         );
       })}

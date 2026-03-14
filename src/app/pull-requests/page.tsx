@@ -25,19 +25,12 @@ import { usePRRepoStore } from "@/lib/stores/selectionStore";
 import { PRRepoSelector } from "@/components/layout/selectors/RepoSelector";
 import { PRStatus, PullRequest } from "@/types";
 import { GitPullRequest, ThumbsUp, Clock, GitMerge, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { usePullToRefresh } from "@/lib/hooks/usePullToRefresh";
 import { timeAgo } from "@/lib/utils/timeAgo";
 import { stripRefPrefix } from "@/lib/utils/gitUtils";
 
-// Status-Filter Optionen
-const STATUS_OPTIONS: { label: string; value: PRStatus }[] = [
-  { label: "Aktiv", value: "active" },
-  { label: "Abgeschlossen", value: "completed" },
-  { label: "Aufgegeben", value: "abandoned" },
-  { label: "Alle", value: "all" },
-];
-
-/** Uebersicht aller Pull Requests mit Status- und Repository-Filter. */
+// Status-Filter Optionen — moved inside component to use translations
 export default function PullRequestsPage() {
   const [status, setStatus] = useState<PRStatus>("active");
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -46,6 +39,13 @@ export default function PullRequestsPage() {
   const { client } = useAzureClient();
   const router = useRouter();
   const qc = useQueryClient();
+  const t = useTranslations("pullRequests");
+  const STATUS_OPTIONS: { label: string; value: PRStatus }[] = [
+    { label: t("active"), value: "active" },
+    { label: t("completed"), value: "completed" },
+    { label: t("abandoned"), value: "abandoned" },
+    { label: t("all"), value: "all" },
+  ];
   // Tab-spezifische Repo-Auswahl (leer = alle Repos laden)
   const { selectedIds: selectedRepoIds } = usePRRepoStore();
 
@@ -82,7 +82,7 @@ export default function PullRequestsPage() {
 
   const createPullRequestMutation = useMutation({
     mutationFn: (payload: CreatePullRequestPayload) => {
-      if (!client || !settings) throw new Error("Kein Client");
+      if (!client || !settings) throw new Error(t("noClient"));
       const { repoId, ...request } = payload;
       return pullRequestsService.create(client, settings.project, repoId, request);
     },
@@ -95,7 +95,7 @@ export default function PullRequestsPage() {
 
   return (
     <div className="min-h-screen">
-      <AppBar title="Pull Requests" rightSlot={<PRRepoSelector />} />
+      <AppBar title={t("title")} rightSlot={<PRRepoSelector />} />
 
       {/* Status-Filter Tabs */}
       <TabBar
@@ -112,18 +112,18 @@ export default function PullRequestsPage() {
         {repositories.length === 0 ? (
           <EmptyState
             icon={GitPullRequest}
-            title="Keine Repositories konfiguriert"
-            description="Konfiguriere erst ein Azure DevOps Projekt in den Einstellungen"
+            title={t("noReposConfigured")}
+            description={t("noReposConfiguredDesc")}
           />
         ) : isLoading ? (
           <PageLoader />
         ) : error ? (
-          <ErrorMessage message="Fehler beim Laden der Pull Requests" error={error} onRetry={refetch} />
+          <ErrorMessage message={t("loadError")} error={error} onRetry={refetch} />
         ) : prs.length === 0 ? (
           <EmptyState
             icon={GitPullRequest}
-            title="Keine Pull Requests"
-            description={`Keine ${status === "active" ? "aktiven" : ""} Pull Requests gefunden`}
+            title={t("noPullRequests")}
+            description={t("noPullRequestsDesc")}
           />
         ) : (
           <div className="divide-y divide-slate-800/50">
@@ -143,10 +143,10 @@ export default function PullRequestsPage() {
         }}
         className="fixed right-4 z-50 flex items-center gap-2 rounded-full bg-blue-600 px-4 py-3 text-sm font-medium text-white shadow-lg shadow-blue-900/40 transition-colors hover:bg-blue-500"
         style={{ bottom: "var(--fab-bottom-offset)" }}
-        aria-label="Neuen Pull Request erstellen"
+        aria-label={t("newPR")}
       >
         <Plus size={18} />
-        Neuer Pull Request
+        {t("newPR")}
       </button>
 
       <CreatePullRequestModal
@@ -166,6 +166,7 @@ export default function PullRequestsPage() {
 
 // Einzelner PR-Listeneintrag
 function PRListItem({ pr, multiRepo }: { pr: PullRequest & { _repoName?: string }; multiRepo: boolean }) {
+  const t = useTranslations("pullRequests");
   const sourceBranch = stripRefPrefix(pr.sourceRefName);
   const targetBranch = stripRefPrefix(pr.targetRefName);
 
@@ -208,10 +209,10 @@ function PRListItem({ pr, multiRepo }: { pr: PullRequest & { _repoName?: string 
         <span className="text-xs text-slate-500">{pr.createdBy.displayName}</span>
 
         {/* Badges */}
-        {pr.isDraft && <Badge variant="muted" size="sm">Draft</Badge>}
+        {pr.isDraft && <Badge variant="muted" size="sm">{t("draft")}</Badge>}
         {pr.status !== "active" && (
           <Badge variant={statusVariant[pr.status] || "default"} size="sm">
-            {pr.status === "completed" ? "Merged" : pr.status}
+            {pr.status === "completed" ? t("merged") : pr.status}
           </Badge>
         )}
 
@@ -225,7 +226,7 @@ function PRListItem({ pr, multiRepo }: { pr: PullRequest & { _repoName?: string 
         {waitingCount > 0 && (
           <div className="flex items-center gap-1 text-xs text-yellow-400">
             <Clock size={11} />
-            <span>{waitingCount} warten</span>
+            <span>{t("waitingCount", { count: waitingCount })}</span>
           </div>
         )}
       </div>

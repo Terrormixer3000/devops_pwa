@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { History } from "lucide-react";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -18,6 +19,7 @@ export function FileHistoryView({
   loading: boolean;
   onSelectCommit: (c: Commit) => void;
 }) {
+  const t = useTranslations("explorer");
   if (loading) return <PageLoader />;
 
   return (
@@ -29,7 +31,7 @@ export function FileHistoryView({
         </p>
       </div>
       {commits.length === 0 ? (
-        <EmptyState icon={History} title="Keine Commits gefunden" />
+        <EmptyState icon={History} title={t("noCommitsFound")} />
       ) : (
         <div className="divide-y divide-slate-800/50">
           {commits.map((commit) => (

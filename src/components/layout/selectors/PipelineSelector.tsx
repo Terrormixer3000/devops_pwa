@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { PlayCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { SelectionSheet, SelectionItem } from "@/components/ui/SelectionSheet";
 import { usePipelineDefStore, usePipelineFavStore } from "@/lib/stores/selectionStore";
 import { Pipeline } from "@/types";
@@ -22,6 +23,7 @@ interface Props {
 export function PipelineSelector({ pipelines, loading }: Props) {
   const { selectedIds, toggle, clear, load } = usePipelineDefStore();
   const { favoriteIds, toggleFavorite, load: loadFavs } = usePipelineFavStore();
+  const t = useTranslations("selectors");
 
   // Gespeicherte Auswahl und Favoriten beim ersten Mount laden
   useEffect(() => { load(); loadFavs(); }, [load, loadFavs]);
@@ -32,19 +34,18 @@ export function PipelineSelector({ pipelines, loading }: Props) {
     sublabel: p.folder && p.folder !== "\\" ? p.folder : undefined,
   }));
 
-  // Label: Zusammenfassung der ausgewaehlten Pipelines
   const buttonLabel = selectionLabel(
     selectedIds,
-    "Alle Pipelines",
+    t("allPipelines"),
     pipelines.find((p) => String(p.id) === selectedIds[0])?.name,
-    `${selectedIds.length} Pipelines`,
+    t("multiplePipelines", { count: selectedIds.length }),
   );
 
   return (
     <SelectionSheet
       buttonLabel={buttonLabel}
       buttonIcon={<PlayCircle size={13} className="text-green-400" />}
-      sheetTitle="Pipelines auswaehlen"
+      sheetTitle={t("pipelinesSheet")}
       items={items}
       loading={loading}
       selectedIds={selectedIds}
@@ -53,7 +54,7 @@ export function PipelineSelector({ pipelines, loading }: Props) {
       multiSelect={true}
       favoriteIds={favoriteIds}
       onToggleFavorite={toggleFavorite}
-      emptyMessage="Keine Pipelines gefunden"
+      emptyMessage={t("noPipelinesFound")}
     />
   );
 }

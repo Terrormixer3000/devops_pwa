@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { AlertCircle } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -35,8 +36,9 @@ export function PRReviewerModal({
   onAdd: (reviewerId: string, isRequired: boolean) => void;
   onClose: () => void;
 }) {
+  const t = useTranslations("prReviewer");
   return (
-    <Modal open={open} onClose={onClose} title="Reviewer hinzufügen">
+    <Modal open={open} onClose={onClose} title={t("title")}>
       <div className="space-y-3">
         {reviewerError && (
           <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-red-950/40 border border-red-800/50">
@@ -48,7 +50,7 @@ export function PRReviewerModal({
           type="text"
           value={reviewerSearch}
           onChange={(e) => { onChangeSearch(e.target.value); onSelectMember(null); }}
-          placeholder="Name suchen…"
+          placeholder={t("searchPlaceholder")}
           className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-blue-500"
         />
         <div className="max-h-56 overflow-y-auto space-y-1">
@@ -80,7 +82,7 @@ export function PRReviewerModal({
                         : "border-slate-600 text-slate-400 hover:text-slate-200"
                     }`}
                   >
-                    {pendingIsRequired ? "Pflicht" : "Optional"}
+                    {pendingIsRequired ? t("required") : t("optional")}
                   </button>
                   <Button
                     size="sm"
@@ -94,7 +96,7 @@ export function PRReviewerModal({
             </div>
           ))}
           {availableMembers.length === 0 && (
-            <p className="text-sm text-slate-500 text-center py-3">Keine Mitglieder gefunden</p>
+            <p className="text-sm text-slate-500 text-center py-3">{t("noMembersFound")}</p>
           )}
         </div>
       </div>
