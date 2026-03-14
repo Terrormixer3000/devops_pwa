@@ -1,5 +1,5 @@
 import { AxiosInstance } from "axios";
-import { ReleaseDefinition, Release, ReleaseApproval, AzureListResponse } from "@/types";
+import { ReleaseDefinition, Release, ReleaseApproval, ReleaseStageConfig, AzureListResponse } from "@/types";
 import { isDemoClient } from "@/lib/api/client";
 import { demoApi } from "@/lib/mocks/demoData";
 
@@ -150,6 +150,122 @@ export const releasesService = {
     const res = await vsrmClient.patch<ReleaseApproval>(
       `/${project}/_apis/release/approvals/${approvalId}?api-version=7.1`,
       { status: "rejected", comments: comments || "" }
+    );
+    return res.data;
+  },
+
+  /** Erstellt eine neue Classic Release-Pipeline-Definition. */
+  async createDefinition(
+    vsrmClient: AxiosInstance,
+    project: string,
+    payload: {
+      name: string;
+      description?: string;
+      stages: ReleaseStageConfig[];
+      releaseNameFormat?: string;
+      artifact?: {
+        definitionId: number;
+        definitionName: string;
+        projectId: string;
+        projectName: string;
+      };
+    }
+  ): Promise<ReleaseDefinition> {
+    if (isDemoClient(vsrmClient)) {
+      return demoApi.releases.createDefinition(
+        payload.name,
+        payload.description,
+        payload.stages.map((s) => s.name)
+      );
+    }
+
+    const format = payload.releaseNameFormat || "Release-$(rev:r)";
+
+    /** Baut den Approval-Block fuer pre- oder post-deployment aus der Stage-Konfiguration. */
+    const buildApprovals = (config: ReleaseStageConfig["preApprovals"]) => {
+      if (config.isAutomated) {
+        return {
+          approvals: [{ rank: 1, isAutomated: true, isNotificationOn: false }],
+          approvalOptions: { requiredApproverCount: 0, releaseCreatorCanBeApprover: false },
+        };
+      }
+      return {
+        approvals: config.approvers.map((approver, i) => ({
+          rank: i + 1,
+          isAutomated: false,
+          isNotificationOn: true,
+          approver: { uniqueName: approver },
+        })),
+        approvalOptions: {
+          requiredApproverCount: config.approvers.length,
+          releaseCreatorCanBeApprover: false,
+        },
+      };
+    };
+
+    // Jede Stage wird mit Tasks, Approvals und Agent-Spezifikation befuellt
+    const environments = payload.stages.map((stage, index) => ({
+      name: stage.name,
+      rank: index + 1,
+      variables: {},
+      variableGroups: [],
+      preDeployApprovals: buildApprovals(stage.preApprovals),
+      postDeployApprovals: buildApprovals(stage.postApprovals),
+      deployPhases: [
+        {
+          deploymentInput: {
+            parallelExecution: { parallelExecutionType: "none" },
+            agentSpecification: { identifier: stage.agentSpec },
+            skipArtifactsDownload: false,
+            timeoutInMinutes: 0,
+            demands: [],
+            enableAccessToken: false,
+            type: 1,
+          },
+          rank: 1,
+          phaseType: "agentBasedDeployment",
+          name: "Agentauftrag",
+          workflowTasks: stage.tasks.map((task) => ({
+            taskId: task.taskId,
+            version: task.version,
+            name: task.name,
+            enabled: task.enabled,
+            inputs: task.inputs,
+          })),
+        },
+      ],
+      retentionPolicy: { daysToKeep: 30, releasesToKeep: 3, retainBuild: true },
+    }));
+
+    // Artifact nur hinzufuegen wenn angegeben
+    const artifacts = payload.artifact
+      ? [
+          {
+            type: "Build",
+            alias: `_${payload.artifact.definitionName}`,
+            isPrimary: true,
+            definitionReference: {
+              definition: { id: String(payload.artifact.definitionId), name: payload.artifact.definitionName },
+              project: { id: payload.artifact.projectId, name: payload.artifact.projectName },
+              defaultVersionType: { id: "latestType", name: "Latest" },
+            },
+          },
+        ]
+      : [];
+
+    const res = await vsrmClient.post<ReleaseDefinition>(
+      `/${project}/_apis/release/definitions?api-version=7.1`,
+      {
+        name: payload.name,
+        description: payload.description || "",
+        variables: {},
+        variableGroups: [],
+        environments,
+        artifacts,
+        triggers: [],
+        releaseNameFormat: format,
+        isDraft: false,
+      }
     );
     return res.data;
   },

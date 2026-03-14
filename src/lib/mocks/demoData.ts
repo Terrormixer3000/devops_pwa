@@ -2002,6 +2002,26 @@ export const demoApi = {
       return withDemoState((state) => updateApprovalState(state, approvalId, "rejected", comments));
     },
 
+    createDefinition(name: string, description?: string, stages: string[] = ["Production"]): ReleaseDefinition {
+      return withDemoState((state) => {
+        const maxId = state.releaseDefinitions.reduce((acc, d) => Math.max(acc, d.id), 0);
+        const newDef: ReleaseDefinition = {
+          id: maxId + 1,
+          name,
+          description,
+          createdBy: { id: "0", displayName: "Demo" },
+          modifiedOn: new Date().toISOString(),
+          environments: stages.map((stageName, index) => ({
+            id: (maxId + 1) * 10 + index + 1,
+            name: stageName,
+            rank: index + 1,
+          })),
+        };
+        state.releaseDefinitions.push(newDef);
+        return newDef;
+      });
+    },
+
     getEnvironmentLogs(releaseId: number, environmentId: number): string {
       return [
         `[2025-03-06T10:00:00Z] Deploy-Agent: Initialisierung gestartet`,

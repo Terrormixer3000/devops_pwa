@@ -48,8 +48,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${inter.variable} font-sans bg-slate-900 text-slate-100 antialiased`}>
         <Providers>
           <OfflineBanner />
-          {/* Hauptinhalt: oben feste AppBar, unten feste Bottom-Nav mit iPhone-Safe-Area */}
-          <main className="min-h-screen" style={{ paddingTop: "var(--app-bar-height)", paddingBottom: "var(--bottom-nav-height)" }}>
+          {/* Hauptinhalt scrollt innerhalb des eingefrorenen body, damit position:fixed
+              auf dem iPhone in der installierten App wirklich fixiert bleibt. */}
+          <main
+            className="absolute inset-0 overflow-y-auto"
+            style={{ paddingTop: "var(--app-bar-height)", paddingBottom: "var(--bottom-nav-height)" }}
+          >
             {children}
           </main>
           <BottomNav />
