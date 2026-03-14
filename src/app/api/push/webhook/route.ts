@@ -14,7 +14,7 @@ import {
   getWebPushErrorStatusCode,
   isExpiredSubscriptionError,
 } from "@/lib/server/webPush";
-import type { AzureServiceHookPayload, WebhookNotificationPayload } from "@/types";
+import type { AzureServiceHookPayload, PushEventType, WebhookNotificationPayload } from "@/types";
 
 export const runtime = "nodejs";
 
@@ -82,7 +82,10 @@ function extractOrgProject(payload: AzureServiceHookPayload): { org: string; pro
  * Uebersetzt einen Azure DevOps Service Hook Event-Typ in eine lesbare Notification.
  * Gibt null zurueck wenn der Event-Typ nicht unterstuetzt wird.
  */
-function buildNotification(payload: AzureServiceHookPayload): WebhookNotificationPayload | null {
+function buildNotification(payload: AzureServiceHookPayload): {
+  eventType: PushEventType;
+  notification: WebhookNotificationPayload;
+} | null {
   const { eventType, resource } = payload;
 
   switch (eventType) {
@@ -95,18 +98,24 @@ function buildNotification(payload: AzureServiceHookPayload): WebhookNotificatio
 
       if (resource.result === "failed" || resource.result === "partiallySucceeded") {
         return {
-          title: "Build fehlgeschlagen",
-          body: `${label} ist fehlgeschlagen`,
-          tag: `build-${buildTagId}`,
-          url: resource.id ? `/pipelines/${resource.id}` : "/pipelines",
+          eventType: "build.failed",
+          notification: {
+            title: "Build fehlgeschlagen",
+            body: `${label} ist fehlgeschlagen`,
+            tag: `build-${buildTagId}`,
+            url: resource.id ? `/pipelines/${resource.id}` : "/pipelines",
+          },
         };
       }
       if (resource.result === "succeeded") {
         return {
-          title: "Build erfolgreich",
-          body: `${label} wurde erfolgreich abgeschlossen`,
-          tag: `build-${buildTagId}`,
-          url: resource.id ? `/pipelines/${resource.id}` : "/pipelines",
+          eventType: "build.succeeded",
+          notification: {
+            title: "Build erfolgreich",
+            body: `${label} wurde erfolgreich abgeschlossen`,
+            tag: `build-${buildTagId}`,
+            url: resource.id ? `/pipelines/${resource.id}` : "/pipelines",
+          },
         };
       }
       return null;
@@ -118,10 +127,13 @@ function buildNotification(payload: AzureServiceHookPayload): WebhookNotificatio
       const prId = resource.pullRequestId;
       const repoId = resource.repository?.id ?? resource.repository?.name ?? "";
       return {
-        title: "Review angefragt",
-        body: `Du wurdest als Reviewer hinzugefuegt: ${prTitle}`,
-        tag: `pr-reviewer-${prId ?? Date.now()}`,
-        url: prId && repoId ? `/pull-requests/${repoId}/${prId}` : "/pull-requests",
+        eventType: "pr.reviewer",
+        notification: {
+          title: "Review angefragt",
+          body: `Du wurdest als Reviewer hinzugefuegt: ${prTitle}`,
+          tag: `pr-reviewer-${prId ?? Date.now()}`,
+          url: prId && repoId ? `/pull-requests/${repoId}/${prId}` : "/pull-requests",
+        },
       };
     }
 
@@ -132,10 +144,13 @@ function buildNotification(payload: AzureServiceHookPayload): WebhookNotificatio
       const repoId = resource.repository?.id ?? resource.repository?.name ?? "";
       const preview = resource.comment?.content?.replace(/\s+/g, " ").trim().slice(0, 80) ?? "";
       return {
-        title: "Neuer PR-Kommentar",
-        body: preview ? `${prTitle}: "${preview}"` : prTitle,
-        tag: `pr-comment-${prId ?? Date.now()}-${Date.now()}`,
-        url: prId && repoId ? `/pull-requests/${repoId}/${prId}` : "/pull-requests",
+        eventType: "pr.comment",
+        notification: {
+          title: "Neuer PR-Kommentar",
+          body: preview ? `${prTitle}: "${preview}"` : prTitle,
+          tag: `pr-comment-${prId ?? Date.now()}-${Date.now()}`,
+          url: prId && repoId ? `/pull-requests/${repoId}/${prId}` : "/pull-requests",
+        },
       };
     }
 
@@ -145,12 +160,15 @@ function buildNotification(payload: AzureServiceHookPayload): WebhookNotificatio
       const envName = resource.approval?.releaseEnvironment?.name ?? resource.releaseEnvironment?.name ?? "";
       const releaseId = resource.release?.id ?? resource.approval?.release?.id;
       return {
-        title: "Approval ausstehend",
-        body: envName
-          ? `${releaseName} wartet auf Freigabe fuer ${envName}`
-          : `${releaseName} wartet auf deine Freigabe`,
-        tag: `approval-${releaseId ?? Date.now()}`,
-        url: releaseId ? `/releases/${releaseId}` : "/releases",
+        eventType: "release.approval",
+        notification: {
+          title: "Approval ausstehend",
+          body: envName
+            ? `${releaseName} wartet auf Freigabe fuer ${envName}`
+            : `${releaseName} wartet auf deine Freigabe`,
+          tag: `approval-${releaseId ?? Date.now()}`,
+          url: releaseId ? `/releases/${releaseId}` : "/releases",
+        },
       };
     }
 
@@ -218,8 +236,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   // Notification erzeugen
-  const notification = buildNotification(payload);
-  if (!notification) {
+  const resolvedNotification = buildNotification(payload);
+  if (!resolvedNotification) {
     // Event wird nicht unterstuetzt — 200 zurueckgeben damit Azure DevOps nicht erneut sendet
     return NextResponse.json({ ok: true, skipped: true });
   }
@@ -244,13 +262,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const webPush = getWebPushClient();
 
   const subscriptions = getSubscriptionsForUsers(target.org, target.project, targetAzureUserIds);
-  const uniqueSubscriptions = dedupeSubscriptionsByEndpoint(subscriptions);
+  const uniqueSubscriptions = dedupeSubscriptionsByEndpoint(subscriptions).filter(
+    (subscription) => subscription.eventPreferences[resolvedNotification.eventType]
+  );
 
   if (uniqueSubscriptions.length === 0) {
     return NextResponse.json({ ok: true, sent: 0, matchedUsers: targetAzureUserIds.length });
   }
 
-  const notificationPayload = JSON.stringify(notification);
+  const notificationPayload = JSON.stringify(resolvedNotification.notification);
   let sent = 0;
 
   // Alle Subscriptions benachrichtigen; abgelaufene (410 Gone) automatisch entfernen

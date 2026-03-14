@@ -25,16 +25,11 @@ import {
   getWebPushErrorStatusCode,
   isExpiredSubscriptionError,
 } from "@/lib/server/webPush";
-import type { WebhookNotificationPayload } from "@/types";
+import type { PushEventType, WebhookNotificationPayload } from "@/types";
 
 export const runtime = "nodejs";
 
-type TestEventType =
-  | "build.failed"
-  | "build.succeeded"
-  | "pr.reviewer"
-  | "pr.comment"
-  | "release.approval";
+type TestEventType = PushEventType;
 
 const TEST_NOTIFICATIONS: Record<TestEventType, WebhookNotificationPayload> = {
   "build.failed": {
@@ -114,13 +109,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const webPush = getWebPushClient();
 
   const subscriptions = getSubscriptionsForUsers(org, project, [azureUserId]);
-  const uniqueSubscriptions = dedupeSubscriptionsByEndpoint(subscriptions);
+  const uniqueSubscriptions = dedupeSubscriptionsByEndpoint(subscriptions).filter(
+    (subscription) => subscription.eventPreferences[eventType]
+  );
 
   if (uniqueSubscriptions.length === 0) {
     return NextResponse.json(
       {
         ok: false,
-        error: "Keine Subscription fuer diesen Azure DevOps User gefunden. Bitte Notifications mit diesem Account aktivieren.",
+        error: "Keine aktive Subscription mit diesem Benachrichtigungstyp gefunden. Bitte Notifications aktivieren oder den Event-Typ in den Einstellungen einschalten.",
       },
       { status: 404 }
     );

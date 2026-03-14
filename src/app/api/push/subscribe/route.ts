@@ -5,9 +5,10 @@ import { NextRequest, NextResponse } from "next/server";
  * POST: Speichert eine neue PushSubscription inkl. Webhook-Token.
  * DELETE: Entfernt eine bestehende PushSubscription anhand des Endpoints.
  */
-import { upsertSubscription, removeSubscription } from "@/lib/server/subscriptionDb";
+import { getSubscriptionByEndpoint, upsertSubscription, removeSubscription } from "@/lib/server/subscriptionDb";
 import { generateWebhookToken, isSecureSubscriptionEndpoint, normalizeText } from "@/lib/server/pushRouteUtils";
-import type { PushSubscriptionRecord } from "@/types";
+import type { PushEventPreferences, PushSubscriptionRecord } from "@/types";
+import { normalizePushEventPreferences } from "@/lib/utils/pushEventPreferences";
 
 export const runtime = "nodejs";
 
@@ -54,6 +55,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const project = normalizeText((body as { project?: string })?.project);
   const azureUserId = normalizeText((body as { azureUserId?: string })?.azureUserId);
   const displayName = normalizeText((body as { displayName?: string })?.displayName);
+  const existingRecord = subscription ? getSubscriptionByEndpoint(subscription.endpoint) : null;
+  const eventPreferences = normalizePushEventPreferences(
+    (body as { eventPreferences?: Partial<PushEventPreferences> })?.eventPreferences
+      ?? existingRecord?.eventPreferences
+  );
 
   if (!subscription) {
     return NextResponse.json({ error: "Unvollstaendige Subscription-Daten" }, { status: 400 });
@@ -69,7 +75,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const webhookToken = generateWebhookToken();
+  const webhookToken = existingRecord?.webhookToken ?? generateWebhookToken();
 
   const record: PushSubscriptionRecord = {
     endpoint: subscription.endpoint,
@@ -82,6 +88,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     azureUserId,
     displayName: displayName || "Unbekannter Benutzer",
     createdAt: new Date().toISOString(),
+    eventPreferences,
     webhookToken,
   };
 

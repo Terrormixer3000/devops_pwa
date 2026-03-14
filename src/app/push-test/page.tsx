@@ -9,6 +9,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import Link from "next/link";
 import { AppBar } from "@/components/layout/AppBar";
+import { BackLink } from "@/components/ui/BackButton";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { usePushState } from "@/lib/hooks/usePushState";
@@ -28,13 +29,9 @@ import {
   ChevronRight,
   Loader2,
 } from "lucide-react";
+import type { PushEventType } from "@/types";
 
-type TestEventType =
-  | "build.failed"
-  | "build.succeeded"
-  | "pr.reviewer"
-  | "pr.comment"
-  | "release.approval";
+type TestEventType = PushEventType;
 
 interface TestResult {
   ok: boolean;
@@ -253,7 +250,16 @@ export default function PushTestPage() {
   if (pushStateLoading) {
     return (
       <div className="min-h-screen">
-        <AppBar title={t("testTitle")} />
+        <AppBar
+          title={(
+            <div className="flex min-w-0 items-center gap-2">
+              <BackLink href="/settings" size="compact" />
+              <span className="truncate text-[18px] font-semibold tracking-[-0.01em] text-slate-100">
+                {t("testTitle")}
+              </span>
+            </div>
+          )}
+        />
         <PageLoader />
       </div>
     );
@@ -262,24 +268,33 @@ export default function PushTestPage() {
   if (!webhookToken) {
     return (
       <div className="min-h-screen">
-        <AppBar title={t("testTitle")} />
+        <AppBar
+          title={(
+            <div className="flex min-w-0 items-center gap-2">
+              <BackLink href="/settings" size="compact" />
+              <span className="truncate text-[18px] font-semibold tracking-[-0.01em] text-slate-100">
+                {t("testTitle")}
+              </span>
+            </div>
+          )}
+        />
 
         <div className="px-4 py-4 max-w-lg mx-auto">
           <section className="space-y-4 rounded-2xl border border-blue-700/30 bg-slate-800/40 p-4">
             <div className="space-y-1">
-              <h2 className="text-base font-semibold text-slate-100">{t("wizardFirst")}</h2>
+              <h2 className="text-base font-semibold text-slate-100">{t("settingsFirst")}</h2>
               <p className="text-sm text-slate-400">
-                {t("wizardFirstDesc")}
+                {t("settingsFirstDesc")}
               </p>
             </div>
 
             <Link
-              href="/push-setup"
+              href="/settings"
               className="flex items-center justify-between gap-3 rounded-xl border border-blue-700/40 bg-blue-900/15 p-3.5 text-left transition-colors hover:bg-blue-900/25"
             >
               <div className="space-y-0.5">
-                <p className="text-sm font-medium text-blue-300">{t("goToWizard")}</p>
-                <p className="text-xs text-blue-400/70">{t("goToWizardDesc")}</p>
+                <p className="text-sm font-medium text-blue-300">{t("goToSettings")}</p>
+                <p className="text-xs text-blue-400/70">{t("goToSettingsDesc")}</p>
               </div>
               <ChevronRight size={16} className="flex-shrink-0 text-blue-400" />
             </Link>
@@ -295,7 +310,16 @@ export default function PushTestPage() {
 
   return (
     <div className="min-h-screen">
-      <AppBar title={t("testTitle")} />
+      <AppBar
+        title={(
+          <div className="flex min-w-0 items-center gap-2">
+            <BackLink href="/settings" size="compact" />
+            <span className="truncate text-[18px] font-semibold tracking-[-0.01em] text-slate-100">
+              {t("testTitle")}
+            </span>
+          </div>
+        )}
+      />
 
       <div className="px-4 py-4 space-y-5 max-w-lg mx-auto">
 
@@ -359,15 +383,15 @@ export default function PushTestPage() {
             </div>
           )}
 
-          {/* CTA: Nicht abonniert → Wizard */}
+          {/* CTA: Nicht abonniert → Settings */}
           {supportStatus === "supported" && !isSubscribed && permission !== "denied" && (
             <Link
-              href="/push-setup"
+              href="/settings"
               className="flex items-center justify-between gap-3 w-full rounded-xl border border-blue-700/40 bg-blue-900/15 p-3.5 text-left transition-colors hover:bg-blue-900/25"
             >
               <div className="space-y-0.5">
                 <p className="text-sm font-medium text-blue-300">{t("notSetupYet")}</p>
-                <p className="text-xs text-blue-400/70">{t("goToWizardShort")}</p>
+                <p className="text-xs text-blue-400/70">{t("goToSettingsShort")}</p>
               </div>
               <ChevronRight size={16} className="flex-shrink-0 text-blue-400" />
             </Link>
@@ -409,12 +433,14 @@ export default function PushTestPage() {
             {EVENTS.map((event) => {
               const isLoading = loadingEvent === event.type;
               const wasLast = lastTestedEvent === event.type;
+              const isEventEnabled = settings?.pushEventPreferences?.[event.type] ?? true;
+              const canTriggerEvent = canTest && isEventEnabled;
 
               return (
                 <button
                   key={event.type}
                   onClick={() => handleTest(event.type)}
-                  disabled={!canTest || loadingEvent !== null}
+                  disabled={!canTriggerEvent || loadingEvent !== null}
                   className="w-full flex items-center gap-3 p-3.5 bg-slate-800/50 border border-slate-700/60 rounded-xl text-left transition-colors hover:bg-slate-700/60 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.99]"
                 >
                   <span className={`flex-shrink-0 ${event.color}`}>
@@ -422,7 +448,9 @@ export default function PushTestPage() {
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-slate-200">{event.label}</p>
-                    <p className="text-xs text-slate-500 truncate">{event.description}</p>
+                    <p className="text-xs text-slate-500 truncate">
+                      {isEventEnabled ? event.description : t("eventDisabledInSettings")}
+                    </p>
                   </div>
                   {wasLast && lastResult && !isLoading && (
                     <span className="flex-shrink-0">

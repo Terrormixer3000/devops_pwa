@@ -6,6 +6,17 @@ export type ThemeMode = "dark" | "light";
 /** Sprache der App-Oberflaeche. */
 export type Locale = "de" | "en";
 
+/** Bekannte Push-Benachrichtigungstypen der App. */
+export type PushEventType =
+  | "build.failed"
+  | "build.succeeded"
+  | "pr.reviewer"
+  | "pr.comment"
+  | "release.approval";
+
+/** Aktivierte/deaktivierte Push-Benachrichtigungstypen pro Browser. */
+export type PushEventPreferences = Record<PushEventType, boolean>;
+
 /** Gesamte App-Konfiguration, die im localStorage gespeichert wird. */
 export interface AppSettings {
   organization: string;
@@ -14,6 +25,7 @@ export interface AppSettings {
   demoMode: boolean;
   theme: ThemeMode;
   locale?: Locale;
+  pushEventPreferences: PushEventPreferences;
 }
 
 // ─── Repository ─────────────────────────────────────────────────────────────
@@ -341,6 +353,8 @@ export interface PushSubscriptionRecord {
   /** Anzeigename — nur fuer Debugging/Admin, hat keinen Einfluss auf die Filterung. */
   displayName: string;
   createdAt: string;
+  /** Aktivierte Benachrichtigungstypen fuer genau diese Browser-Subscription. */
+  eventPreferences: PushEventPreferences;
   /** Zufaelliger 64-stelliger Hex-Token (256 Bit Entropie) — wird als ?t=<token> in der
    *  Webhook-URL verwendet. Authentifiziert eingehende Azure DevOps Service Hooks. */
   webhookToken: string;

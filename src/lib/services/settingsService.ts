@@ -1,4 +1,5 @@
 import { AppSettings } from "@/types";
+import { DEFAULT_PUSH_EVENT_PREFERENCES } from "@/lib/utils/pushEventPreferences";
 
 /**
  * Browser-seitiger Service zum Lesen, Schreiben und Loeschen der App-Einstellungen.
@@ -14,6 +15,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   pat: "",
   demoMode: false,
   theme: "dark",
+  pushEventPreferences: DEFAULT_PUSH_EVENT_PREFERENCES,
 };
 
 export const settingsService = {

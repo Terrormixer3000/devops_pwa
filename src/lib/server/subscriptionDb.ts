@@ -23,6 +23,7 @@ import fs from "fs";
 import path from "path";
 import { timingSafeEqual } from "node:crypto";
 import type { PushSubscriptionRecord } from "@/types";
+import { normalizePushEventPreferences } from "@/lib/utils/pushEventPreferences";
 
 const DB_PATH = path.join(process.cwd(), "data", "subscriptions.json");
 
@@ -56,6 +57,7 @@ function normalizeRecord(record: PushSubscriptionRecord): PushSubscriptionRecord
     project: normalizeSegment(record.project),
     azureUserId: normalizeAzureUserId(record.azureUserId),
     displayName: record.displayName.trim() || "Unbekannter Benutzer",
+    eventPreferences: normalizePushEventPreferences(record.eventPreferences),
     // webhookToken unveraendert lassen — er wird als Auth-Credential genutzt
     webhookToken: record.webhookToken,
   };
@@ -117,6 +119,19 @@ export function getSubscriptionsForUsers(
   });
 
   return dedupeByEndpoint(recordsFromUserKeys);
+}
+
+export function getSubscriptionByEndpoint(endpoint: string): PushSubscriptionRecord | null {
+  const normalizedEndpoint = normalizeEndpoint(endpoint);
+  const db = readDb();
+
+  for (const subscription of Object.values(db).flat()) {
+    if (normalizeEndpoint(subscription.endpoint) === normalizedEndpoint) {
+      return normalizeRecord(subscription);
+    }
+  }
+
+  return null;
 }
 
 /**

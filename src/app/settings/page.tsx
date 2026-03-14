@@ -12,10 +12,17 @@ import { demoSettings } from "@/lib/mocks/demoData";
 import { identityService, type AzureCurrentUser } from "@/lib/services/identityService";
 import { pushService } from "@/lib/services/pushService";
 import { useTranslations } from "next-intl";
-import { ExternalLink, ListChecks, FlaskConical } from "lucide-react";
-import type { AppSettings, ThemeMode, Locale } from "@/types";
+import { DEFAULT_PUSH_EVENT_PREFERENCES } from "@/lib/utils/pushEventPreferences";
+import type { AppSettings, PushEventPreferences, PushEventType, ThemeMode, Locale } from "@/types";
 
-const EMPTY_SETTINGS: AppSettings = { organization: "", project: "", pat: "", demoMode: false, theme: "dark" };
+const EMPTY_SETTINGS: AppSettings = {
+  organization: "",
+  project: "",
+  pat: "",
+  demoMode: false,
+  theme: "dark",
+  pushEventPreferences: DEFAULT_PUSH_EVENT_PREFERENCES,
+};
 
 /** Einstellungsseite für Azure-DevOps-Verbindungsparameter und App-weite Optionen. */
 export default function SettingsPage() {
@@ -42,7 +49,14 @@ export default function SettingsPage() {
     const pat = form.pat || settings?.pat;
     const demoMode = form.demoMode ?? settings?.demoMode ?? false;
     if (!org || !project || (!pat && !demoMode)) { setCurrentUser(null); return; }
-    const client = createAzureClient({ organization: org, project, pat: pat || "", demoMode, theme: form.theme });
+    const client = createAzureClient({
+      organization: org,
+      project,
+      pat: pat || "",
+      demoMode,
+      theme: form.theme,
+      pushEventPreferences: settings?.pushEventPreferences ?? DEFAULT_PUSH_EVENT_PREFERENCES,
+    });
     identityService.getCurrentUser(client).then(setCurrentUser).catch(() => setCurrentUser(null));
   }, [form.demoMode, form.organization, form.pat, form.project, form.theme, settings]);
 
@@ -113,7 +127,15 @@ export default function SettingsPage() {
     try {
       const subscription = await pushService.subscribe();
       if (!currentUser) throw new Error(t("noUserError"));
-      await pushService.registerSubscription(subscription, form.organization || settings?.organization || "", form.project || settings?.project || "", currentUser.id, currentUser.displayName);
+      const { webhookToken: token } = await pushService.registerSubscription(
+        subscription,
+        form.organization || settings?.organization || "",
+        form.project || settings?.project || "",
+        currentUser.id,
+        currentUser.displayName,
+        form.pushEventPreferences
+      );
+      pushService.storeToken(token);
       await refreshPushState();
     } catch (err) {
       setPushError(err instanceof Error ? err.message : t("activationFailed"));
@@ -130,6 +152,46 @@ export default function SettingsPage() {
       await refreshPushState();
     } catch (err) {
       setPushError(err instanceof Error ? err.message : t("deactivationFailed"));
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  const handleTogglePushEvent = async (eventType: PushEventType) => {
+    const nextPreferences: PushEventPreferences = {
+      ...form.pushEventPreferences,
+      [eventType]: !form.pushEventPreferences[eventType],
+    };
+
+    setForm((prev) => ({ ...prev, pushEventPreferences: nextPreferences }));
+    setSettings({
+      ...(settings || EMPTY_SETTINGS),
+      pushEventPreferences: nextPreferences,
+    });
+
+    if (!isSubscribed) return;
+
+    const organization = form.organization || settings?.organization || "";
+    const project = form.project || settings?.project || "";
+    if (!organization || !project || !currentUser) return;
+
+    setPushLoading(true);
+    setPushError("");
+    try {
+      const subscription = await pushService.getExistingSubscription();
+      if (!subscription) return;
+      const { webhookToken: token } = await pushService.registerSubscription(
+        subscription,
+        organization,
+        project,
+        currentUser.id,
+        currentUser.displayName,
+        nextPreferences
+      );
+      pushService.storeToken(token);
+      await refreshPushState();
+    } catch (err) {
+      setPushError(err instanceof Error ? err.message : t("preferencesUpdateFailed"));
     } finally {
       setPushLoading(false);
     }
@@ -172,41 +234,11 @@ export default function SettingsPage() {
           pushError={pushError}
           currentUser={currentUser}
           canSubscribe={canSubscribe}
+          pushEventPreferences={form.pushEventPreferences}
           onSubscribe={handlePushSubscribe}
           onUnsubscribe={handlePushUnsubscribe}
+          onToggleEventPreference={handleTogglePushEvent}
         />
-
-        {/* Einrichtung */}
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">{t("setupSection")}</h2>
-          <a
-            href="/push-setup"
-            className="flex items-center gap-3 p-4 bg-slate-800/50 border border-slate-700/60 rounded-xl transition-colors hover:bg-slate-700/60 active:scale-[0.99]"
-          >
-            <ListChecks size={18} className="text-blue-400 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-200">{t("startPushWizard")}</p>
-              <p className="text-xs text-slate-500">{t("setupPushWizardDesc")}</p>
-            </div>
-            <ExternalLink size={14} className="flex-shrink-0 text-slate-600" />
-          </a>
-        </section>
-
-        {/* Entwickler */}
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">{t("developerSection")}</h2>
-          <a
-            href="/push-test"
-            className="flex items-center gap-3 p-4 bg-slate-800/50 border border-slate-700/60 rounded-xl transition-colors hover:bg-slate-700/60 active:scale-[0.99]"
-          >
-            <FlaskConical size={18} className="text-purple-400 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-200">{t("testPushNotifications")}</p>
-              <p className="text-xs text-slate-500">{t("testPushDesc")}</p>
-            </div>
-            <ExternalLink size={14} className="flex-shrink-0 text-slate-600" />
-          </a>
-        </section>
       </div>
     </div>
   );
