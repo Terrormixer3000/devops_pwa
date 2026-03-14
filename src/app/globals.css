@@ -212,13 +212,27 @@ html[data-theme="light"] {
   -webkit-tap-highlight-color: transparent;
 }
 
+/*
+ * iOS-PWA-Fix: body und html duerfen nicht selbst scrollen.
+ * Nur der <main>-Container scrollt – dadurch bleiben alle `position: fixed`-
+ * Elemente (AppBar, BottomNav, FABs) auf dem iPhone in der installierten App
+ * wirklich fixiert und scrollen nicht mit dem Inhalt mit.
+ */
+html {
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+}
+
 body {
+  height: 100%;
   /* Azure DevOps Basis-Hintergrund mit sanfter Tiefenstaffelung wie bei iOS-Glasflaechen */
   background:
     radial-gradient(circle at top, rgba(43, 136, 216, 0.08), transparent 28%),
     linear-gradient(180deg, #201f1d 0%, #1b1a19 38%, #161514 100%);
   color: #f3f2f1;
   overscroll-behavior: none;
+  overflow: hidden;
 }
 
 html[data-theme="light"] body {
