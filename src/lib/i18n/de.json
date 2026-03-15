@@ -90,7 +90,14 @@
       "noLogs": "Keine Task-Logs verfügbar",
       "noArtifacts": "Keine Artefakte",
       "noLogContent": "Kein Log-Inhalt",
-      "loadError": "Build konnte nicht geladen werden"
+      "loadError": "Build konnte nicht geladen werden",
+      "editYaml": "YAML bearbeiten"
+    },
+    "yamlEditor": {
+      "title": "YAML-Editor",
+      "notYamlPipeline": "Diese Pipeline verwendet keine YAML-Datei.",
+      "yamlLoadError": "YAML konnte nicht geladen werden.",
+      "branchesLoadError": "Branches konnten nicht geladen werden."
     }
   },
   "buildStatus": {

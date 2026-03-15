@@ -71,7 +71,7 @@ function TimelineGroupNode({
 
   return (
     <section
-      className={`rounded-xl border border-slate-700/70 bg-slate-900/55 overflow-hidden ${depth === 0 ? "shadow-[0_8px_24px_rgba(2,6,23,0.22)]" : ""}`}
+      className={`rounded-xl border border-slate-700/70 bg-slate-900/55 overflow-hidden ${depth === 0 ? "shadow-[0_8px_24px_rgba(2,6,23,0.22)] [html[data-theme='light']_&]:shadow-sm" : ""}`}
       style={{ marginLeft: depth > 0 ? depth * 12 : 0 }}
     >
       <button
