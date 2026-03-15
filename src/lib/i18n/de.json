@@ -479,9 +479,18 @@
     "confirmClear": "Alle Einstellungen löschen?",
     "connectionFailedFallback": "Verbindung fehlgeschlagen",
     "noUserError": "Azure DevOps Benutzer konnte nicht ermittelt werden. Bitte zuerst Verbindung testen.",
+    "saveFailed": "Einstellungen konnten nicht gespeichert werden",
     "activationFailed": "Aktivierung fehlgeschlagen",
     "deactivationFailed": "Deaktivierung fehlgeschlagen",
-    "preferencesUpdateFailed": "Benachrichtigungstypen konnten nicht aktualisiert werden"
+    "preferencesUpdateFailed": "Benachrichtigungstypen konnten nicht aktualisiert werden",
+    "projects": "Projekte",
+    "activeProject": "Aktiv",
+    "addProject": "Projekt hinzufügen",
+    "projectPlaceholderManual": "Projektname eingeben",
+    "discoverProjects": "Projekte entdecken",
+    "discoveringProjects": "Projekte werden geladen…",
+    "noProjectsDiscovered": "Keine weiteren Projekte gefunden",
+    "projectSwitcher": "Projekt wechseln"
   },
   "push": {
     "title": "Benachrichtigungen",
