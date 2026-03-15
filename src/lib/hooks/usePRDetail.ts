@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { useAzureClient } from "@/lib/hooks/useAzureClient";
 import { pullRequestsService } from "@/lib/services/pullRequestsService";
@@ -33,10 +34,12 @@ export function usePRDetail(repoId: string, prIdNum: number) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [pendingReviewer, setPendingReviewer] = useState<{ id: string; displayName: string } | null>(null);
   const [pendingIsRequired, setPendingIsRequired] = useState(false);
+  const [abandonModal, setAbandonModal] = useState(false);
 
   const { settings } = useSettingsStore();
   const { client } = useAzureClient();
   const qc = useQueryClient();
+  const router = useRouter();
 
   const { data: pr, isLoading, error } = useQuery({
     queryKey: ["pr", repoId, prIdNum, settings?.project, settings?.demoMode],
@@ -316,6 +319,20 @@ export function usePRDetail(repoId: string, prIdNum: number) {
     onError: (err: Error) => setCompleteError(err.message || t("blockerMergeFailed")),
   });
 
+  // PR aufgeben (abandon)
+  const abandonMutation = useMutation({
+    mutationFn: () => {
+      if (!client || !settings) throw new Error("Kein Client");
+      return pullRequestsService.abandonPR(client, settings.project, repoId, prIdNum);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pr", repoId, prIdNum] });
+      setAbandonModal(false);
+      router.back();
+    },
+    onError: (err: Error) => setActionError(err.message),
+  });
+
   // Merge-Blocker ableiten
   const mergeBlockers: string[] = [];
   if (pr) {
@@ -373,6 +390,7 @@ export function usePRDetail(repoId: string, prIdNum: number) {
     actionError, setActionError,
     pendingReviewer, setPendingReviewer,
     pendingIsRequired, setPendingIsRequired,
+    abandonModal, setAbandonModal,
     // Queries
     pr, isLoading, error,
     currentUser, policies, threads, iterations, changes, teamMembers,
@@ -388,5 +406,6 @@ export function usePRDetail(repoId: string, prIdNum: number) {
     addCommentMutation, updateThreadStatusMutation, editCommentMutation,
     replyToThreadMutation, addReviewerMutation, removeReviewerMutation,
     deleteCommentMutation, voteMutation, autoCompleteMutation, completeMutation,
+    abandonMutation,
   };
 }

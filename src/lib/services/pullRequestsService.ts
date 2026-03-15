@@ -345,6 +345,23 @@ export const pullRequestsService = {
     );
   },
 
+  /** Setzt den Status eines PRs auf 'abandoned'. */
+  async abandonPR(
+    client: AxiosInstance,
+    project: string,
+    repoId: string,
+    prId: number
+  ): Promise<void> {
+    if (isDemoClient(client)) {
+      return Promise.resolve();
+    }
+
+    await client.patch(
+      `/${project}/_apis/git/repositories/${repoId}/pullrequests/${prId}?api-version=7.1`,
+      { status: "abandoned" }
+    );
+  },
+
   /** Eigenen Kommentar loeschen. */
   async deleteComment(
     client: AxiosInstance,

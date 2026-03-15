@@ -53,6 +53,17 @@
       "workItems": "Work Items"
     }
   },
+  "prs": {
+    "abandon": "PR aufgeben",
+    "abandonConfirm": "Diesen Pull Request wirklich aufgeben? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "policies": "Richtlinien",
+    "policyApproved": "Erfolgreich",
+    "policyRejected": "Abgelehnt",
+    "policyRunning": "Läuft",
+    "policyNotApplicable": "Nicht anwendbar",
+    "policyQueued": "Ausstehend",
+    "policyRequired": "Pflicht"
+  },
   "pipelines": {
     "title": "Pipelines",
     "runs": "Runs",
@@ -64,6 +75,10 @@
     "loadError": "Builds konnten nicht geladen werden",
     "noClient": "Kein Client",
     "buildLoadError": "Build konnte nicht geladen werden",
+    "cancelBuild": "Build abbrechen",
+    "variables": "Variablen",
+    "noVariables": "Keine überschreibbaren Variablen",
+    "secretVariable": "Geheimvariable",
     "buildDetail": {
       "title": "Build Details",
       "overview": "Übersicht",
