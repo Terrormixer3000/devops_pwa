@@ -160,18 +160,6 @@ export function PushNotificationsSection({
         </div>
       )}
 
-      {pushSupportStatus === "supported" && !isSubscribed && (
-        <Link
-          href="/push-test"
-          className="flex items-center justify-between gap-3 rounded-xl border border-slate-700/60 bg-slate-800/40 p-4 transition-colors hover:bg-slate-700/60 active:scale-[0.99]"
-        >
-          <div className="space-y-0.5">
-            <p className="text-sm font-medium text-slate-200">{t("testTitle")}</p>
-            <p className="text-xs text-slate-500">{t("testPageLockedHint")}</p>
-          </div>
-          <ChevronRight size={16} className="flex-shrink-0 text-slate-500" />
-        </Link>
-      )}
     </section>
   );
 }
