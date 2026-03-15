@@ -313,7 +313,7 @@ export function usePRDetail(repoId: string, prIdNum: number) {
   const completeMutation = useMutation({
     mutationFn: () => {
       if (!client || !settings || !pr) throw new Error("Kein Client");
-      return pullRequestsService.complete(client, settings.project, repoId, prIdNum, pr.sourceRefName, deleteSourceBranch, mergeStrategy);
+      return pullRequestsService.complete(client, settings.project, repoId, prIdNum, pr.lastMergeSourceCommit?.commitId ?? "", deleteSourceBranch, mergeStrategy);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["pr", repoId, prIdNum] }); setCompleteModal(false); setCompleteError(null); },
     onError: (err: Error) => setCompleteError(err.message || t("blockerMergeFailed")),
