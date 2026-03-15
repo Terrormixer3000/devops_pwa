@@ -2,11 +2,14 @@
 
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { stripRefPrefix } from "@/lib/utils/gitUtils";
+import { pipelinesService } from "@/lib/services/pipelinesService";
 import type { Pipeline } from "@/types";
-import { GitBranch, Info, Play, Plus, X } from "lucide-react";
+import type { AxiosInstance } from "axios";
+import { Eye, EyeOff, GitBranch, Info, Play, Plus, X } from "lucide-react";
 
 const QUICK_BRANCHES = ["main", "develop", "release/2026.03", "hotfix/urgent-fix"];
 
@@ -32,15 +35,39 @@ interface StartPipelineModalProps {
   pipeline: Pipeline | null;
   isPending: boolean;
   error: string | null;
+  client: AxiosInstance | null;
+  project: string;
   onClose: () => void;
   onStart: (branchRef: string, params: Record<string, string>) => void;
 }
 
-/** Modal zum Starten einer Pipeline mit Branch-Auswahl und optionalen Parametern. */
-export function StartPipelineModal({ open, pipeline, isPending, error, onClose, onStart }: StartPipelineModalProps) {
+/** Modal zum Starten einer Pipeline mit Branch-Auswahl, YAML-Variablen und optionalen Parametern. */
+export function StartPipelineModal({ open, pipeline, isPending, error, client, project, onClose, onStart }: StartPipelineModalProps) {
   const t = useTranslations("startPipeline");
+  const tPipelines = useTranslations("pipelines");
   const [branch, setBranch] = useState("main");
   const [params, setParams] = useState<PipelineParam[]>([]);
+  // Ueberschreibbare YAML-Variablen und ihre Werte
+  const [varValues, setVarValues] = useState<Record<string, string>>({});
+  // Sichtbarkeit von Secret-Variablen
+  const [visibleSecrets, setVisibleSecrets] = useState<Record<string, boolean>>({});
+
+  // Build-Definition laden um ueberschreibbare Variablen zu ermitteln
+  const { data: buildDef } = useQuery({
+    queryKey: ["build-definition", pipeline?.id, project, open],
+    queryFn: () =>
+      client && pipeline
+        ? pipelinesService.getBuildDefinition(client, project, pipeline.id)
+        : Promise.resolve({ variables: {}, process: {} }),
+    enabled: !!client && !!pipeline && open,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Ueberschreibbare Variablen aus der Definition filtern
+  const overridableVars = Object.entries(buildDef?.variables || {}).filter(
+    ([, v]) => v.allowOverride === true
+  );
+
 
   const normalized = normalizeBranch(branch);
   const branchError = getBranchError(normalized, t);
@@ -51,18 +78,27 @@ export function StartPipelineModal({ open, pipeline, isPending, error, onClose, 
     if (isPending) return;
     setBranch("main");
     setParams([]);
+    setVarValues({});
+    setVisibleSecrets({});
     onClose();
   };
 
   const handleStart = () => {
     if (!canStart) return;
+    // Manuelle Parameter zusammenführen
     const paramMap: Record<string, string> = {};
     for (const p of params) {
       if (p.key.trim()) paramMap[p.key.trim()] = p.value;
     }
+    // YAML-Variablen hinzufügen (überschreiben manuelle Parameter bei Namenskollision)
+    for (const [key, value] of Object.entries(varValues)) {
+      if (value !== "") paramMap[key] = value;
+    }
     onStart(branchRef, Object.keys(paramMap).length > 0 ? paramMap : {});
     setBranch("main");
     setParams([]);
+    setVarValues({});
+    setVisibleSecrets({});
   };
 
   return (
@@ -117,6 +153,43 @@ export function StartPipelineModal({ open, pipeline, isPending, error, onClose, 
           )}
         </div>
 
+        {/* YAML-Variablen (ueberschreibbar) */}
+        {overridableVars.length > 0 && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-300">{tPipelines("variables")}</label>
+            <div className="space-y-2">
+              {overridableVars.map(([key, meta]) => (
+                <div key={key} className="space-y-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-slate-400 font-mono flex-1">{key}</span>
+                    {meta.isSecret && (
+                      <span className="text-[10px] text-slate-500">{tPipelines("secretVariable")}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type={meta.isSecret && !visibleSecrets[key] ? "password" : "text"}
+                      value={varValues[key] ?? (meta.value || "")}
+                      onChange={(e) => setVarValues((prev) => ({ ...prev, [key]: e.target.value }))}
+                      placeholder={meta.isSecret ? "••••••••" : (meta.value || "")}
+                      className="flex-1 min-w-0 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    />
+                    {meta.isSecret && (
+                      <button
+                        type="button"
+                        onClick={() => setVisibleSecrets((prev) => ({ ...prev, [key]: !prev[key] }))}
+                        className="p-1.5 text-slate-500 hover:text-slate-300 transition-colors"
+                      >
+                        {visibleSecrets[key] ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Pipeline-Parameter */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -165,7 +238,7 @@ export function StartPipelineModal({ open, pipeline, isPending, error, onClose, 
 
         <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 px-3 py-2.5">
           <p className="flex items-start gap-2 text-xs text-blue-200">
-            <Info size={14} className="mt-0.5 flex-shrink-0 text-blue-300" />
+            <Info size={14} className="mt-0.5 shrink-0 text-blue-300" />
             {t("infoText")}
           </p>
         </div>

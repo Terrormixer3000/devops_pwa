@@ -17,6 +17,8 @@ import { PRVoteModal } from "@/components/pr/PRVoteModal";
 import { PRCompleteModal } from "@/components/pr/PRCompleteModal";
 import { PRReviewerModal } from "@/components/pr/PRReviewerModal";
 import { timeAgo } from "@/lib/utils/timeAgo";
+import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
 import {
   ChevronLeft,
   ThumbsUp,
@@ -29,6 +31,7 @@ import {
   Clock,
   User,
   X,
+  Trash2,
 } from "lucide-react";
 
 type Tab = "uebersicht" | "dateien" | "kommentare" | "commits";
@@ -42,6 +45,8 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
   const tPR = useTranslations("pullRequests");
   const tTabs = useTranslations("pullRequests.tabs");
   const tAct = useTranslations("pullRequests.actions");
+  const tPrs = useTranslations("prs");
+  const tCommon = useTranslations("common");
 
   const BackLink = (
     <Link
@@ -90,30 +95,39 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
 
         {/* Aktionsknöpfe */}
         {pr.status === "active" && (
-          <div className="flex rounded-2xl border border-slate-700/50 bg-slate-800/60 overflow-hidden">
+          <>
+            <div className="flex rounded-2xl border border-slate-700/50 bg-slate-800/60 overflow-hidden">
+              <button
+                onClick={() => h.setApproveModal(true)}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-700/50 hover:text-slate-100 transition-colors"
+              >
+                <ThumbsUp size={14} /> {tAct("approve")}
+              </button>
+              <div className="w-px bg-slate-700/50 flex-shrink-0" />
+              <button
+                onClick={() => h.voteMutation.mutate(-10)}
+                disabled={h.voteMutation.isPending}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-700/50 hover:text-red-400 transition-colors disabled:opacity-40"
+              >
+                <ThumbsDown size={14} /> {tAct("reject")}
+              </button>
+              <div className="w-px bg-slate-700/50 flex-shrink-0" />
+              <button
+                onClick={() => h.setCompleteModal(true)}
+                disabled={h.mergeBlockers.length > 0}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-700/50 hover:text-blue-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <GitMerge size={14} /> {tAct("complete")}
+              </button>
+            </div>
+            {/* PR aufgeben */}
             <button
-              onClick={() => h.setApproveModal(true)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-700/50 hover:text-slate-100 transition-colors"
+              onClick={() => h.setAbandonModal(true)}
+              className="mt-2 flex items-center gap-1.5 text-xs text-red-500/70 hover:text-red-400 transition-colors"
             >
-              <ThumbsUp size={14} /> {tAct("approve")}
+              <Trash2 size={12} /> {tPrs("abandon")}
             </button>
-            <div className="w-px bg-slate-700/50 flex-shrink-0" />
-            <button
-              onClick={() => h.voteMutation.mutate(-10)}
-              disabled={h.voteMutation.isPending}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-700/50 hover:text-red-400 transition-colors disabled:opacity-40"
-            >
-              <ThumbsDown size={14} /> {tAct("reject")}
-            </button>
-            <div className="w-px bg-slate-700/50 flex-shrink-0" />
-            <button
-              onClick={() => h.setCompleteModal(true)}
-              disabled={h.mergeBlockers.length > 0}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-700/50 hover:text-blue-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <GitMerge size={14} /> {tAct("complete")}
-            </button>
-          </div>
+          </>
         )}
       </div>
 
@@ -253,6 +267,33 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
         onAdd={(reviewerId, isRequired) => h.addReviewerMutation.mutate({ reviewerId, isRequired })}
         onClose={() => { h.setReviewerModalOpen(false); h.setReviewerSearch(""); h.setPendingReviewer(null); }}
       />
+
+      {/* Abandon-Bestätigungs-Modal */}
+      <Modal
+        open={h.abandonModal}
+        onClose={() => h.setAbandonModal(false)}
+        title={tPrs("abandon")}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-300">{tPrs("abandonConfirm")}</p>
+          <Button
+            fullWidth
+            variant="danger"
+            loading={h.abandonMutation.isPending}
+            onClick={() => h.abandonMutation.mutate()}
+          >
+            <Trash2 size={16} /> {tPrs("abandon")}
+          </Button>
+          <Button
+            fullWidth
+            variant="ghost"
+            onClick={() => h.setAbandonModal(false)}
+            disabled={h.abandonMutation.isPending}
+          >
+            {tCommon("cancel")}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

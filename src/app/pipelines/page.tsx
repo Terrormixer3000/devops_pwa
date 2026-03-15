@@ -272,6 +272,8 @@ export default function PipelinesPage() {
         pipeline={startModal}
         isPending={startMutation.isPending}
         error={startMutation.error ? (startMutation.error as Error).message : null}
+        client={client}
+        project={settings?.project || ""}
         onClose={() => {
           if (!startMutation.isPending) {
             startMutation.reset();
