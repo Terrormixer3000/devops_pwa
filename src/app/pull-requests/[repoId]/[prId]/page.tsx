@@ -92,8 +92,8 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
           <span className="truncate max-w-[130px] bg-slate-800 px-2 py-0.5 rounded">{h.targetBranch}</span>
         </div>
 
-        {/* Ersteller, Datum und Repository */}
-        <div className="flex items-center gap-3 text-xs text-slate-500 mb-4">
+        {/* Ersteller und Datum */}
+        <div className="flex items-center gap-3 text-xs text-slate-500 mb-1">
           <div className="flex items-center gap-1">
             <User size={12} />
             <span>{pr.createdBy.displayName}</span>
@@ -102,10 +102,11 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
             <Clock size={12} />
             <span>{timeAgo(pr.creationDate)}</span>
           </div>
-          <div className="flex items-center gap-1">
-            <GitFork size={12} />
-            <span>{pr.repository.name}</span>
-          </div>
+        </div>
+        {/* Repository */}
+        <div className="flex items-center gap-1 text-xs text-slate-500 mb-4">
+          <GitFork size={12} />
+          <span>{pr.repository.name}</span>
         </div>
 
         {/* Aktionsknöpfe */}
