@@ -90,7 +90,14 @@
       "noLogs": "No task logs available",
       "noArtifacts": "No artifacts",
       "noLogContent": "No log content",
-      "loadError": "Could not load build"
+      "loadError": "Could not load build",
+      "editYaml": "Edit YAML"
+    },
+    "yamlEditor": {
+      "title": "YAML Editor",
+      "notYamlPipeline": "This pipeline does not use a YAML file.",
+      "yamlLoadError": "Failed to load YAML file.",
+      "branchesLoadError": "Failed to load branches."
     }
   },
   "buildStatus": {

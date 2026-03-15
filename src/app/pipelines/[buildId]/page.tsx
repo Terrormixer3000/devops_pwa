@@ -11,13 +11,14 @@ import { stripRefPrefix } from "@/lib/utils/gitUtils";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Badge } from "@/components/ui/Badge";
-import { BackActionButton, BackLink } from "@/components/ui/BackButton";
+import { BackActionButton } from "@/components/ui/BackButton";
+import Link from "next/link";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { useAzureClient } from "@/lib/hooks/useAzureClient";
 import { pipelinesService } from "@/lib/services/pipelinesService";
 import { buildTimelineView, parseLogId, getBuildStatusVariant, getBuildStatusLabel, EMPTY_TIMELINE_RECORDS } from "@/lib/utils/timelineUtils";
 import { JobsSummaryCards, TimelineNodeSection, LogSelector } from "@/components/pipelines/TimelineView";
-import { Loader, RotateCcw, StopCircle, Download } from "lucide-react";
+import { Loader, RotateCcw, StopCircle, Download, ChevronLeft, FileCode } from "lucide-react";
 
 type Tab = "uebersicht" | "log" | "artefakte";
 
@@ -90,22 +91,28 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
   const tc = useTranslations("common");
   const tBuildStatus = useTranslations("buildStatus");
 
-  if (isLoading) return <div className="min-h-screen"><AppBar title={tBd("title")} /><PageLoader /></div>;
-  if (error || !build) return <div className="min-h-screen"><AppBar title={tBd("title")} /><ErrorMessage message={tBd("loadError")} error={error} /></div>;
+  const PipelineBackLink = (
+    <Link
+      href="/pipelines"
+      className="flex items-center gap-0.5 text-[18px] font-semibold tracking-[-0.01em] text-slate-100 active:opacity-70 transition-opacity"
+    >
+      <ChevronLeft size={26} className="-ml-1.5" />
+      {tPipelines("title")}
+    </Link>
+  );
+
+  if (isLoading) return <div className="min-h-screen"><AppBar title={PipelineBackLink} hideProjectChip /><PageLoader /></div>;
+  if (error || !build) return <div className="min-h-screen"><AppBar title={PipelineBackLink} hideProjectChip /><ErrorMessage message={tBd("loadError")} error={error} /></div>;
 
   const handleOpenLog = (logId: number, name: string) => { setSelectedLog({ logId, name }); setActiveTab("log"); };
 
   return (
     <div className="min-h-screen">
-      <AppBar title={tBd("title")} />
-
-      <div className="px-4 pt-4">
-        <BackLink href="/pipelines" label={tPipelines("title")} className="mb-3" />
-      </div>
+      <AppBar title={PipelineBackLink} hideProjectChip />
 
       {/* Build-Kopfbereich */}
       <div className="px-4 pb-4 border-b border-slate-800">
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-2 pt-4">
           <h1 className="text-base font-semibold text-slate-100 flex-1">{build.definition.name}</h1>
           <Badge variant={getBuildStatusVariant(build.result || build.status)}>{getBuildStatusLabel(build.result || build.status, tBuildStatus)}</Badge>
         </div>
@@ -134,6 +141,12 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
               {tBd("cancel")}
             </button>
           )}
+          <Link href={`/pipelines/${buildId}/yaml`}>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-700/40 hover:bg-slate-700/70 text-slate-300 rounded-lg text-xs font-medium transition-colors">
+              <FileCode size={12} />
+              {tBd("editYaml")}
+            </span>
+          </Link>
         </div>
         {actionError && <p className="text-xs text-red-400 mt-2">{actionError}</p>}
       </div>

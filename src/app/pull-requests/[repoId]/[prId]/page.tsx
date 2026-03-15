@@ -58,14 +58,14 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
     </Link>
   );
 
-  if (h.isLoading) return <div className="min-h-screen"><AppBar title={BackLink} /><PageLoader /></div>;
-  if (h.error || !h.pr) return <div className="min-h-screen"><AppBar title={BackLink} /><ErrorMessage message={tPR("prLoadError")} error={h.error} /></div>;
+  if (h.isLoading) return <div className="min-h-screen"><AppBar title={BackLink} hideProjectChip /><PageLoader /></div>;
+  if (h.error || !h.pr) return <div className="min-h-screen"><AppBar title={BackLink} hideProjectChip /><ErrorMessage message={tPR("prLoadError")} error={h.error} /></div>;
 
   const pr = h.pr;
 
   return (
     <div className="min-h-screen">
-      <AppBar title={BackLink} />
+      <AppBar title={BackLink} hideProjectChip />
 
       {/* PR-Kopfbereich */}
       <div className="px-4 pb-4 border-b border-slate-800">
