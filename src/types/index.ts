@@ -381,6 +381,36 @@ export interface AzureIdentityRef {
 
 // ─── Work Items ───────────────────────────────────────────────────────────────
 
+/** Einzelner Kommentar zu einem Work Item. */
+export interface WorkItemComment {
+  id: number;
+  text: string;
+  createdBy: { displayName: string; uniqueName: string };
+  createdDate: string;
+  modifiedDate?: string;
+}
+
+/** Sprint-/Iterations-Eintrag aus den Team-Settings. */
+export interface WorkItemIteration {
+  id: string;
+  name: string;
+  path: string;
+  attributes: {
+    startDate?: string;
+    finishDate?: string;
+    timeFrame: "past" | "current" | "future";
+  };
+}
+
+/** JSON-Patch-Operation fuer Work-Item-Updates (RFC 6902). */
+export interface JsonPatchOperation {
+  op: "add" | "replace" | "remove";
+  path: string;
+  value?: unknown;
+}
+
+
+
 /** Bekannte Work-Item-Typen in Azure DevOps. */
 export type WorkItemType = "Bug" | "Task" | "User Story" | "Feature" | "Epic" | "Issue";
 
