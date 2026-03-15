@@ -9,8 +9,9 @@
   --app-bar-content-height: 3.35rem;
   --app-bar-offset: 0px;
   --app-bar-bottom-padding: 0rem;
+  --offline-banner-height: 0px;
   --app-bar-height: calc(
-    var(--safe-area-top-effective) + var(--app-bar-content-height) + var(--app-bar-bottom-padding)
+    var(--offline-banner-height) + var(--safe-area-top-effective) + var(--app-bar-content-height) + var(--app-bar-bottom-padding)
   );
   --bottom-nav-content-height: 3.35rem;
   --bottom-nav-offset: 0.55rem;

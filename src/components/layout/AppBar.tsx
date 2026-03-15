@@ -9,7 +9,7 @@ interface Props {
 
 export function AppBar({ title, rightSlot }: Props) {
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 border-b border-slate-700/70 bg-slate-900/84 shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-2xl">
+    <header className="fixed left-0 right-0 z-40 border-b border-slate-700/70 bg-slate-900/84 shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-2xl" style={{ top: "var(--offline-banner-height, 0px)" }}>
       <div
         className="px-4"
         style={{

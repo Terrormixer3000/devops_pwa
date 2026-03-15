@@ -6,6 +6,7 @@ import { Providers } from "@/components/layout/Providers";
 import type { Locale } from "@/types";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { OfflineBanner } from "@/components/ui/OfflineBanner";
+import { DesktopWarning } from "@/components/ui/DesktopWarning";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const APPLE_TOUCH_ICON = "/apple-touch-icon.png";
@@ -54,6 +55,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className={`${inter.variable} font-sans bg-slate-900 text-slate-100 antialiased`}>
         <Providers initialLocale={initialLocale}>
           <OfflineBanner />
+          <DesktopWarning />
           {/* Hauptinhalt: oben feste AppBar, unten feste Bottom-Nav mit iPhone-Safe-Area */}
           <main className="min-h-screen" style={{ paddingTop: "var(--app-bar-height)", paddingBottom: "var(--bottom-nav-height)" }}>
             {children}
