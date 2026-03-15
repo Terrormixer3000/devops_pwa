@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { History, Pencil, X } from "lucide-react";
+import { History, Pencil, X, Trash2, Pen } from "lucide-react";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { ImageViewer } from "@/components/ui/ImageViewer";
 import { MarkdownViewer } from "@/components/ui/MarkdownViewer";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
 import { isImagePath, isMarkdownPath } from "@/lib/utils/fileTypes";
 import { buildImageTextRepresentation } from "@/lib/utils/imageText";
 
@@ -24,6 +26,8 @@ export function FileViewer({
   onEditCancel,
   onEditChange,
   onRequestCommit,
+  onDeleteFile,
+  onRenameFile,
 }: {
   content: string;
   imageDataUrl?: string | null;
@@ -37,9 +41,14 @@ export function FileViewer({
   onEditCancel?: () => void;
   onEditChange?: (content: string) => void;
   onRequestCommit?: () => void;
+  onDeleteFile?: () => void;
+  onRenameFile?: (newPath: string) => void;
 }) {
   const t = useTranslations("explorer");
   const [mode, setMode] = useState<"preview" | "text">("preview");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [newFileName, setNewFileName] = useState("");
 
   if (loading) return <PageLoader />;
   if (error) return <ErrorMessage message={error} />;
@@ -55,7 +64,7 @@ export function FileViewer({
     <div>
       <div className="px-4 py-2 bg-slate-800/50 border-b border-slate-800 flex items-center justify-between">
         <p className="text-xs font-mono text-slate-400 truncate flex-1 min-w-0">{path}</p>
-        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+        <div className="flex items-center gap-2 shrink-0 ml-2">
           {onOpenHistory && !editMode && (
             <button
               onClick={() => onOpenHistory(path)}
@@ -72,6 +81,24 @@ export function FileViewer({
               className="flex items-center gap-1 text-xs text-slate-500 hover:text-yellow-400 transition-colors"
             >
               <Pencil size={14} />
+            </button>
+          )}
+          {!editMode && onRenameFile && (
+            <button
+              onClick={() => { setNewFileName(path.split("/").pop() || ""); setRenameOpen(true); }}
+              title={t("renameFile")}
+              className="flex items-center gap-1 text-xs text-slate-500 hover:text-blue-400 transition-colors"
+            >
+              <Pen size={14} />
+            </button>
+          )}
+          {!editMode && onDeleteFile && (
+            <button
+              onClick={() => setDeleteConfirmOpen(true)}
+              title={t("deleteFile")}
+              className="flex items-center gap-1 text-xs text-slate-500 hover:text-red-400 transition-colors"
+            >
+              <Trash2 size={14} />
             </button>
           )}
           {editMode && (
@@ -138,6 +165,66 @@ export function FileViewer({
       ) : (
         <CodeTable lines={lines} />
       )}
+
+      {/* Löschen-Bestätigungsdialog */}
+      <Modal
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        title={t("deleteFile")}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-300">{t("confirmDelete")}</p>
+          <p className="text-xs text-slate-500 font-mono">{path}</p>
+          <Button
+            fullWidth
+            variant="danger"
+            onClick={() => { setDeleteConfirmOpen(false); onDeleteFile?.(); }}
+          >
+            <Trash2 size={16} /> {t("deleteFile")}
+          </Button>
+          <Button fullWidth variant="ghost" onClick={() => setDeleteConfirmOpen(false)}>
+            {t("cancel")}
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Umbenennen-Sheet */}
+      <Modal
+        open={renameOpen}
+        onClose={() => setRenameOpen(false)}
+        title={t("renameFile")}
+      >
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-slate-300">{t("newName")}</label>
+            <input
+              type="text"
+              value={newFileName}
+              onChange={(e) => setNewFileName(e.target.value)}
+              autoCapitalize="none"
+              autoCorrect="off"
+              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm font-mono"
+            />
+          </div>
+          <Button
+            fullWidth
+            disabled={!newFileName.trim() || newFileName.trim() === path.split("/").pop()}
+            onClick={() => {
+              if (!newFileName.trim()) return;
+              // Verzeichnispfad beibehalten, nur Dateiname aendern
+              const dir = path.includes("/") ? path.substring(0, path.lastIndexOf("/")) : "";
+              const newPath = dir ? `${dir}/${newFileName.trim()}` : `/${newFileName.trim()}`;
+              setRenameOpen(false);
+              onRenameFile?.(newPath);
+            }}
+          >
+            {t("renameFile")}
+          </Button>
+          <Button fullWidth variant="ghost" onClick={() => setRenameOpen(false)}>
+            {t("cancel")}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }
