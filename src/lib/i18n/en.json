@@ -98,6 +98,11 @@
       "notYamlPipeline": "This pipeline does not use a YAML file.",
       "yamlLoadError": "Failed to load YAML file.",
       "branchesLoadError": "Failed to load branches."
+    },
+    "definition": {
+      "title": "Pipeline",
+      "recentRuns": "Recent runs",
+      "noRuns": "No runs yet"
     }
   },
   "buildStatus": {
@@ -437,7 +442,6 @@
     "releasesLoadError": "Failed to load releases",
     "start": "Start",
     "details": "Details",
-    "details": "Details",
     "releaseDetail": {
       "title": "Release details",
       "loadError": "Could not load release",
@@ -539,6 +543,9 @@
     "activationFailed": "Activation failed",
     "deactivationFailed": "Deactivation failed",
     "preferencesUpdateFailed": "Could not update notification types",
+    "preferencesSyncUnavailable": "Could not sync notification types. Please verify organization, project, and user again.",
+    "missingWebhookToken": "The stored webhook token for this browser is missing. Please disable push briefly and enable it again.",
+    "subscriptionMissing": "The browser subscription for this browser could not be found.",
     "projects": "Projects",
     "activeProject": "Active",
     "addProject": "Add project",
@@ -551,7 +558,7 @@
   "push": {
     "title": "Notifications",
     "setupPush": "Set up push notifications",
-    "setupPushDesc": "Enable notifications directly here, then manually enter the generated webhook URL in Azure DevOps.",
+    "setupPushDesc": "Enable notifications directly here, then manually enter this browser's personal webhook URL in Azure DevOps.",
     "pushNotifications": "Push notifications",
     "activeDesc": "Active — you will be notified of relevant events",
     "assignedTo": "Assigned to",
@@ -591,7 +598,7 @@
     "permissionDeniedHint": "Browser permission was denied. Please allow it again in browser settings.",
     "activate": "Activate",
     "deactivate": "Deactivate",
-    "webhookInfo": "This URL is your personal webhook endpoint. Only requests with your token are accepted.",
+    "webhookInfo": "This URL belongs to this browser/device. Only requests with this token are accepted.",
     "webhookNoToken": "The webhook URL will appear after activating notifications.",
     "testDescription": "Sends a test event of type {eventType} directly to your browser.",
     "sendTest": "Send test notification",
@@ -613,7 +620,7 @@
     "modeLive": "Live",
     "notSetupYet": "Notifications not set up yet",
     "goToSettingsShort": "Enable in settings",
-    "testDisabledHint": "Notifications must be activated first to test events.",
+    "testDisabledHint": "Tests require an active subscription for this browser. In production, the test API also needs explicit enablement.",
     "typeEnabled": "Enabled for this browser",
     "typeDisabled": "Disabled for this browser",
     "testPageHint": "Opens the test page for real push events to this browser.",
@@ -634,13 +641,14 @@
     "howItWorks1": "Enable notifications → Browser asks for permission → Subscription is saved on the server",
     "howItWorks2": "Tap an event button → Server sends a real Web Push notification via the VAPID key",
     "howItWorks3": "Notification appears — even when the app is in the background or closed (only with installed PWA on iOS)",
-    "howItWorks4": "In production, Azure DevOps replaces step 2 — Service Hooks automatically send events to {path}",
+    "howItWorks4": "In production, Azure DevOps replaces step 2 — Service Hooks automatically send events to the personal browser URL at {path}",
     "eventBuildFailedDesc": "CI Pipeline #42 failed",
-    "eventBuildSuccessDesc": "CI Pipeline #43 completed",
+    "eventBuildSuccessDesc": "CI Pipeline #43 completed successfully",
     "eventPrReviewerDesc": "You were added as a reviewer",
     "eventPrCommentDesc": "New comment on your PR",
-    "eventReleaseApprovalDesc": "Approval for Production pending",
-    "networkError": "Network error"
+    "eventReleaseApprovalDesc": "Approval for Production is pending",
+    "networkError": "Network error",
+    "missingWebhookToken": "The stored webhook token for this browser is missing. Please enable push again in settings."
   },
   "selectionSheet": {
     "favorites": "Favorites",
@@ -692,7 +700,7 @@
     "copied": "Copied",
     "ok": "OK",
     "urlTitle": "Your webhook URL",
-    "configHint": "Enter this URL in Azure DevOps under {path}. This URL authenticates webhooks for your account.",
+    "configHint": "Enter this URL in Azure DevOps under {path}. This URL authenticates webhooks only for this browser/device.",
     "configPath": "Project settings → Service Hooks → Web Hooks",
     "eventTypes": "Configure the following event types in Azure DevOps:",
     "eventList": "Build completed · Pull request reviewer(s) updated · Pull request commented on · Release deployment approval pending"
