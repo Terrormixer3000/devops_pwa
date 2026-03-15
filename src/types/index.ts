@@ -66,6 +66,7 @@ export interface PullRequest {
   reviewers: Reviewer[];
   repository: { id: string; name: string; project: { name: string } };
   url: string;
+  lastMergeSourceCommit?: { commitId: string };
   completionOptions?: {
     mergeStrategy?: string;
     deleteSourceBranch?: boolean;
