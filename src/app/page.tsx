@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Zap, Eye, HardDrive, Shield, ArrowRight } from "lucide-react";
+import { Zap, Eye, HardDrive, Shield, Bell, ArrowRight } from "lucide-react";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 
 export default function Home() {
@@ -79,12 +79,18 @@ export default function Home() {
 
       {/* Datenschutz */}
       <section className="mb-10">
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Shield size={16} className="text-green-400 shrink-0" />
-            <span className="text-sm font-semibold text-slate-200">{t("privacyTitle")}</span>
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col gap-3">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Shield size={16} className="text-green-400 shrink-0" />
+              <span className="text-sm font-semibold text-slate-200">{t("privacyTitle")}</span>
+            </div>
+            <p className="text-sm text-slate-400 leading-relaxed">{t("privacyDesc")}</p>
           </div>
-          <p className="text-sm text-slate-400 leading-relaxed">{t("privacyDesc")}</p>
+          <div className="border-t border-slate-800 pt-3 flex gap-2">
+            <Bell size={15} className="text-slate-500 shrink-0 mt-0.5" />
+            <p className="text-sm text-slate-500 leading-relaxed">{t("privacyPushNote")}</p>
+          </div>
         </div>
       </section>
 

@@ -661,7 +661,8 @@
     "step2": "Organisation, Projekt und PAT in den Einstellungen eingeben",
     "step3": "Fertig – alle Daten werden direkt von Azure DevOps geladen",
     "privacyTitle": "Datenschutz",
-    "privacyDesc": "Dein PAT und alle Zugangsdaten werden ausschließlich lokal im Browser (localStorage) gespeichert. Es gibt keinen Backend-Server, kein Tracking und keine Analytics. Alle API-Aufrufe gehen direkt an dev.azure.com.",
+    "privacyDesc": "Dein PAT und alle Zugangsdaten werden ausschließlich lokal im Browser gespeichert. Alle API-Aufrufe gehen direkt an dev.azure.com – kein Tracking, keine Analytics.",
+    "privacyPushNote": "Optionale Push-Benachrichtigungen erfordern einen eigenen Server (Self-Hosting). Dabei werden Webhook-Events von Azure DevOps an deinen Server weitergeleitet – keine Daten gehen an Dritte.",
     "cta": "Jetzt einrichten"
   }
 }
