@@ -26,7 +26,7 @@ interface TabBarProps {
 export function TabBar({ tabs, activeKey, onChange, variant = "pill", className }: TabBarProps) {
   if (variant === "underline") {
     return (
-      <div className={`${className ?? "sticky-below-appbar"} overflow-x-hidden bg-slate-900/95 border-b border-slate-800 backdrop-blur-md`}>
+      <div className={`${className ?? "sticky-below-appbar"} overflow-x-hidden bg-slate-900/95 border-b border-slate-800 backdrop-blur-md [html[data-theme='light']_&]:border-slate-300`}>
         <div className="overflow-x-auto hide-scrollbar">
           <div className="flex min-w-full w-max px-4">
             {tabs.map(({ key, label, icon }) => (
@@ -36,7 +36,7 @@ export function TabBar({ tabs, activeKey, onChange, variant = "pill", className 
                 className={`flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                   activeKey === key
                     ? "border-blue-500 text-blue-400"
-                    : "border-transparent text-slate-500 hover:text-slate-300"
+                    : "border-transparent text-slate-500 hover:text-slate-300 [html[data-theme='light']_&]:hover:text-slate-600"
                 }`}
               >
                 {icon}
@@ -51,7 +51,7 @@ export function TabBar({ tabs, activeKey, onChange, variant = "pill", className 
 
   // pill variant (default)
   return (
-    <div className="fixed-below-appbar bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-2">
+    <div className="fixed-below-appbar bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-2 [html[data-theme='light']_&]:border-slate-300">
       <div className="flex gap-1 overflow-x-auto hide-scrollbar">
         {tabs.map(({ key, label }) => (
           <button
@@ -60,7 +60,7 @@ export function TabBar({ tabs, activeKey, onChange, variant = "pill", className 
             className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
               activeKey === key
                 ? "bg-blue-600 text-white"
-                : "bg-slate-800 text-slate-400 hover:text-slate-200"
+                : "bg-slate-800 text-slate-400 hover:text-slate-200 [html[data-theme='light']_&]:hover:text-slate-600"
             }`}
           >
             {label}
