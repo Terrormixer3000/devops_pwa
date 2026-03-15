@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Temporaere Git-Worktrees fuer parallele Agent-Ausfuehrung
+    ".claude/**",
     // Service Worker Dateien laufen im SW-Scope (generiert/manuell), nicht im App-Code-Lint.
     "public/sw-custom.js",
     "public/sw.js",
