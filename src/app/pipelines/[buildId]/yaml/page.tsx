@@ -39,7 +39,7 @@ export default function PipelineYamlEditPage({ params }: { params: Promise<{ bui
   const tYaml = useTranslations("pipelines.yamlEditor");
   const tBd = useTranslations("pipelines.buildDetail");
 
-  // Build laden fuer Repository-ID und Definition-ID
+  // Stufe 1: Build und Definition laden
   const { data: build, isLoading: buildLoading, error: buildError } = useQuery({
     queryKey: ["build", buildIdNum, settings?.project, settings?.demoMode],
     queryFn: () => client && settings ? pipelinesService.getBuild(client, settings.project, buildIdNum) : Promise.reject(new Error(tBd("loadError"))),
@@ -49,7 +49,6 @@ export default function PipelineYamlEditPage({ params }: { params: Promise<{ bui
   const repoId = build?.repository.id ?? "";
   const defaultBranch = build ? stripRefPrefix(build.sourceBranch) : "";
 
-  // Build-Definition laden fuer yamlFilename
   const { data: definition, isLoading: defLoading, error: defError } = useQuery({
     queryKey: ["build-definition", build?.definition.id, settings?.project, settings?.demoMode],
     queryFn: () => client && settings && build ? pipelinesService.getBuildDefinition(client, settings.project, build.definition.id) : Promise.reject(new Error(tBd("loadError"))),
@@ -58,14 +57,13 @@ export default function PipelineYamlEditPage({ params }: { params: Promise<{ bui
 
   const yamlFilename = definition?.process?.yamlFilename ?? null;
 
-  // Branches laden fuer Branch-Auswahl im Commit-Modal
+  // Stufe 2: Branches und Dateiinhalt (nur wenn yamlFilename bekannt)
   const { data: branches, isLoading: branchesLoading, error: branchesError } = useQuery({
     queryKey: ["repo-branches", repoId, settings?.project, settings?.demoMode],
     queryFn: () => client && settings && repoId ? repositoriesService.getBranches(client, settings.project, repoId) : Promise.resolve([]),
-    enabled: !!client && !!settings && !!repoId,
+    enabled: !!client && !!settings && !!repoId && !!yamlFilename,
   });
 
-  // YAML-Dateiinhalt laden
   const { data: fileContent, isLoading: fileLoading, error: fileError } = useQuery({
     queryKey: ["yaml-file-content", repoId, yamlFilename, defaultBranch, settings?.project, settings?.demoMode],
     queryFn: () => client && settings && repoId && yamlFilename
@@ -74,10 +72,10 @@ export default function PipelineYamlEditPage({ params }: { params: Promise<{ bui
     enabled: !!client && !!settings && !!repoId && !!yamlFilename && !!defaultBranch,
   });
 
-  // Editor initialisieren sobald Dateiinhalt geladen
+  // Editor mit geladenem Inhalt befuellen (einmalig)
   useEffect(() => {
-    if (editorHydrated || !fileContent) return;
-    setEditorContent(fileContent);
+    if (editorHydrated || fileContent === undefined) return;
+    setEditorContent(fileContent ?? "");
     setEditorHydrated(true);
   }, [editorHydrated, fileContent]);
 
@@ -96,15 +94,12 @@ export default function PipelineYamlEditPage({ params }: { params: Promise<{ bui
       setCommitError("Konfiguration unvollständig.");
       return;
     }
-
     setCommitPending(true);
     setCommitError(null);
-
     try {
       if (request.targetKind === "existing") {
         const targetBranchRef = branches?.find((b) => b.name === request.branchName);
         if (!targetBranchRef) throw new Error(`Branch "${request.branchName}" nicht gefunden.`);
-
         await repositoriesService.pushFileChange(
           client, settings.project, repoId,
           request.branchName, targetBranchRef.objectId,
@@ -112,7 +107,6 @@ export default function PipelineYamlEditPage({ params }: { params: Promise<{ bui
           undefined, "edit"
         );
       } else {
-        // Neuer Branch: parentCommitId ist die objectId des Default-Branch
         const defaultBranchRef = branches?.find((b) => b.name === defaultBranch);
         await repositoriesService.pushFileChange(
           client, settings.project, repoId,
@@ -121,8 +115,6 @@ export default function PipelineYamlEditPage({ params }: { params: Promise<{ bui
           defaultBranchRef?.objectId, "edit"
         );
       }
-
-      // Optionaler Pull Request
       if (request.createPR && request.branchName !== defaultBranch) {
         const pr = await pullRequestsService.create(client, settings.project, repoId, {
           title: request.prTitle || request.commitMessage,
@@ -132,7 +124,6 @@ export default function PipelineYamlEditPage({ params }: { params: Promise<{ bui
         router.push(`/pull-requests/${repoId}/${pr.pullRequestId}`);
         return;
       }
-
       router.back();
     } catch (error) {
       setCommitError(extractErrorMessage(error, "Commit fehlgeschlagen."));
@@ -141,25 +132,15 @@ export default function PipelineYamlEditPage({ params }: { params: Promise<{ bui
     }
   };
 
-  const isLoading = buildLoading || defLoading || branchesLoading || fileLoading || !editorHydrated;
-  const loadError = buildError || defError || branchesError || fileError;
-
-  // AppBar-Titel mit Zurück-Navigation
-  const appBarTitle = build ? (
+  // AppBar-Titel mit Zurueck-Navigation
+  const backLabel = build?.definition.name ?? t("title");
+  const appBarTitle = (
     <Link
       href={`/pipelines/${buildId}`}
       className="flex items-center gap-0.5 text-[18px] font-semibold tracking-[-0.01em] text-slate-100 active:opacity-70 transition-opacity"
     >
       <ChevronLeft size={26} className="-ml-1.5" />
-      {build.definition.name}
-    </Link>
-  ) : (
-    <Link
-      href={`/pipelines/${buildId}`}
-      className="flex items-center gap-0.5 text-[18px] font-semibold tracking-[-0.01em] text-slate-100 active:opacity-70 transition-opacity"
-    >
-      <ChevronLeft size={26} className="-ml-1.5" />
-      {t("title")}
+      {backLabel}
     </Link>
   );
 
@@ -169,7 +150,7 @@ export default function PipelineYamlEditPage({ params }: { params: Promise<{ bui
       size="sm"
       onClick={() => { setCommitError(null); setCommitModalOpen(true); }}
       loading={commitPending}
-      disabled={commitPending || isLoading || !editorHydrated}
+      disabled={commitPending || !editorHydrated}
       className="rounded-full border-blue-500/20 bg-blue-600/10 px-3 text-blue-100 shadow-none hover:bg-blue-600/15"
     >
       <Save size={16} />
@@ -177,34 +158,42 @@ export default function PipelineYamlEditPage({ params }: { params: Promise<{ bui
     </Button>
   );
 
-  if (isLoading && !loadError) {
+  // Stufe 1 laden
+  if (buildLoading || defLoading) {
+    return <div className="min-h-screen"><AppBar title={appBarTitle} hideProjectChip /><PageLoader /></div>;
+  }
+
+  // Stufe 1 Fehler
+  if (buildError || defError) {
     return (
       <div className="min-h-screen">
         <AppBar title={appBarTitle} hideProjectChip />
-        <PageLoader />
+        <div className="px-4 pt-4"><ErrorMessage message={tBd("loadError")} error={buildError ?? defError} /></div>
       </div>
     );
   }
 
-  // Classic-Pipeline: kein YAML-Dateiname
-  if (!isLoading && definition && !yamlFilename) {
+  // Keine YAML-Datei (Classic-Pipeline)
+  if (definition && !yamlFilename) {
     return (
       <div className="min-h-screen">
         <AppBar title={appBarTitle} hideProjectChip />
-        <div className="px-4 pt-4">
-          <ErrorMessage message={tYaml("notYamlPipeline")} />
-        </div>
+        <div className="px-4 pt-4"><ErrorMessage message={tYaml("notYamlPipeline")} /></div>
       </div>
     );
   }
 
-  if (loadError) {
+  // Stufe 2 laden
+  if (branchesLoading || fileLoading || !editorHydrated) {
+    return <div className="min-h-screen"><AppBar title={appBarTitle} hideProjectChip /><PageLoader /></div>;
+  }
+
+  // Stufe 2 Fehler
+  if (branchesError || fileError) {
     return (
       <div className="min-h-screen">
         <AppBar title={appBarTitle} hideProjectChip />
-        <div className="px-4 pt-4">
-          <ErrorMessage message={tYaml("yamlLoadError")} error={loadError} />
-        </div>
+        <div className="px-4 pt-4"><ErrorMessage message={tYaml("yamlLoadError")} error={branchesError ?? fileError} /></div>
       </div>
     );
   }
@@ -214,7 +203,7 @@ export default function PipelineYamlEditPage({ params }: { params: Promise<{ bui
       <AppBar title={appBarTitle} rightSlot={appBarCommitButton} hideProjectChip />
 
       {/* Datei-Info-Leiste */}
-      <div className="px-4 pt-4 pb-3 border-b border-slate-800 flex items-center gap-3">
+      <div className="px-4 py-2.5 border-b border-slate-800 flex items-center gap-3">
         <FileCode2 size={14} className="text-blue-400 flex-shrink-0" />
         <p className="text-xs font-mono text-slate-400 flex-1 truncate">{yamlFilename}</p>
         <span className="inline-flex items-center gap-1 text-xs text-slate-500">
