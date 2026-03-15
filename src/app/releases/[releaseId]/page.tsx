@@ -73,12 +73,12 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
     enabled: !!vsrmClient && !!settings && !!selectedEnvId && activeTab === "logs",
   });
 
-  if (isLoading) return <div className="min-h-screen"><AppBar title={trd("title")} /><PageLoader /></div>;
-  if (error || !release) return <div className="min-h-screen"><AppBar title={trd("title")} /><ErrorMessage message={trd("loadError")} error={error} /></div>;
+  if (isLoading) return <div className="min-h-screen"><AppBar title={trd("title")} hideProjectChip /><PageLoader /></div>;
+  if (error || !release) return <div className="min-h-screen"><AppBar title={trd("title")} hideProjectChip /><ErrorMessage message={trd("loadError")} error={error} /></div>;
 
   return (
     <div className="min-h-screen">
-      <AppBar title={trd("title")} />
+      <AppBar title={trd("title")} hideProjectChip />
 
       {/* Zurueck */}
       <div className="px-4 pt-4">

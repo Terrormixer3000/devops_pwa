@@ -462,7 +462,7 @@ export default function PipelineYamlEditorPage() {
   if (!draft) {
     return (
       <div className="min-h-screen">
-        <AppBar title={appBarTitle} />
+        <AppBar title={appBarTitle} hideProjectChip />
         <PageLoader />
       </div>
     );
@@ -471,7 +471,7 @@ export default function PipelineYamlEditorPage() {
   if (branchesLoading) {
     return (
       <div className="min-h-screen">
-        <AppBar title={appBarTitle} />
+        <AppBar title={appBarTitle} hideProjectChip />
         <PageLoader />
       </div>
     );
@@ -480,7 +480,7 @@ export default function PipelineYamlEditorPage() {
   if (branchesError || !defaultBranchRef) {
     return (
       <div className="min-h-screen">
-        <AppBar title={appBarTitle} />
+        <AppBar title={appBarTitle} hideProjectChip />
         <div className="px-4 pt-4">
           <ErrorMessage
             message="Default-Branch konnte nicht geladen werden."
@@ -497,7 +497,7 @@ export default function PipelineYamlEditorPage() {
   if (existingYamlLoading || !editorHydrated) {
     return (
       <div className="min-h-screen">
-        <AppBar title={appBarTitle} />
+        <AppBar title={appBarTitle} hideProjectChip />
         <PageLoader />
       </div>
     );
@@ -506,7 +506,7 @@ export default function PipelineYamlEditorPage() {
   if (existingYamlError) {
     return (
       <div className="min-h-screen">
-        <AppBar title={appBarTitle} />
+        <AppBar title={appBarTitle} hideProjectChip />
         <div className="px-4 pt-4">
           <ErrorMessage
             message="YAML-Datei konnte nicht geladen werden."
@@ -522,7 +522,7 @@ export default function PipelineYamlEditorPage() {
 
   return (
     <div className="min-h-screen">
-      <AppBar title={appBarTitle} rightSlot={appBarCommitButton} />
+      <AppBar title={appBarTitle} rightSlot={appBarCommitButton} hideProjectChip />
 
       <div className="mx-auto max-w-4xl space-y-4 px-4 pb-6 pt-4">
         {retryAction && (

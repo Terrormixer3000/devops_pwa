@@ -65,8 +65,8 @@ export default function WorkItemDetailPage({ params }: { params: Promise<{ workI
     </button>
   );
 
-  if (h.isLoading) return <div className="min-h-screen"><AppBar title={BackButton} /><PageLoader /></div>;
-  if (h.error || !h.workItem) return <div className="min-h-screen"><AppBar title={BackButton} /><ErrorMessage message={t("loadError")} error={h.error} /></div>;
+  if (h.isLoading) return <div className="min-h-screen"><AppBar title={BackButton} hideProjectChip /><PageLoader /></div>;
+  if (h.error || !h.workItem) return <div className="min-h-screen"><AppBar title={BackButton} hideProjectChip /><ErrorMessage message={t("loadError")} error={h.error} /></div>;
 
   const item = h.workItem;
   const title = item.fields["System.Title"];
@@ -85,7 +85,7 @@ export default function WorkItemDetailPage({ params }: { params: Promise<{ workI
 
   return (
     <div className="min-h-screen">
-      <AppBar title={BackButton} />
+      <AppBar title={BackButton} hideProjectChip />
 
       {/* Kopfbereich: ID, Typ, Titel */}
       <div className="px-4 pb-4 border-b border-slate-800 pt-4">
