@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, FileCode2, GitBranch, Save } from "lucide-react";
 import Link from "next/link";
+import Editor from "react-simple-code-editor";
+import Prism from "prismjs";
+import "prismjs/components/prism-yaml";
 import { AppBar } from "@/components/layout/AppBar";
 import { PipelineYamlCommitModal, type PipelineYamlCommitRequest } from "@/components/pipelines/PipelineYamlCommitModal";
 import { Button } from "@/components/ui/Button";
@@ -20,6 +23,11 @@ import { extractErrorMessage } from "@/lib/utils/errorUtils";
 import { useTranslations } from "next-intl";
 
 const NEW_BRANCH_OLD_OBJECT_ID = "0000000000000000000000000000000000000000";
+
+/** YAML-Code mit Prism hervorheben. */
+function highlightYaml(code: string): string {
+  return Prism.highlight(code, Prism.languages.yaml, "yaml");
+}
 
 /** Editor-Seite zum Bearbeiten der YAML-Datei einer bestehenden Pipeline. */
 export default function PipelineYamlEditPage({ params }: { params: Promise<{ buildId: string }> }) {
@@ -212,16 +220,27 @@ export default function PipelineYamlEditPage({ params }: { params: Promise<{ bui
         </span>
       </div>
 
-      {/* YAML-Editor */}
-      <textarea
-        className="flex-1 w-full resize-none border-0 bg-slate-950 p-4 font-mono text-xs text-slate-200 focus:outline-none leading-relaxed"
-        style={{ minHeight: "65vh" }}
-        value={editorContent}
-        onChange={(e) => setEditorContent(e.target.value)}
-        spellCheck={false}
-        autoCapitalize="none"
-        autoCorrect="off"
-      />
+      {/* YAML-Editor mit Syntax Highlighting */}
+      <div className="flex-1 prism-yaml overflow-auto" style={{ minHeight: "65vh" }}>
+        <Editor
+          value={editorContent}
+          onValueChange={setEditorContent}
+          highlight={highlightYaml}
+          padding={16}
+          spellCheck={false}
+          autoCapitalize="none"
+          autoCorrect="off"
+          style={{
+            fontFamily: "'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace",
+            fontSize: 12,
+            lineHeight: 1.6,
+            backgroundColor: "transparent",
+            color: "#e2e8f0",
+            minHeight: "100%",
+          }}
+          textareaClassName="focus:outline-none"
+        />
+      </div>
 
       {commitModalOpen && (
         <PipelineYamlCommitModal
