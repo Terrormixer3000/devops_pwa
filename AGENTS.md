@@ -313,6 +313,13 @@ All methods follow the `isDemoClient(client)` pattern:
 - Commit messages must be written in **English**.
 - Do not add Claude or any AI tool as a co-author.
 
+## Branching Strategy
+
+- Active development happens on the **`develop`** branch.
+- `main` is the release branch — only merged into from `develop`, never committed to directly.
+- Open a pull request from `develop` → `main` to cut a new release.
+- Always make sure you are on `develop` before starting new work.
+
 ---
 
 ## When Making Changes
