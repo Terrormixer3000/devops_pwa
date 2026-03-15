@@ -1,5 +1,26 @@
 @import "tailwindcss";
 
+:root,
+html[data-theme="dark"] {
+  --badge-success-bg: rgb(20 83 45 / 0.4);
+  --badge-success-text: #86efac;
+  --badge-danger-bg: rgb(127 29 29 / 0.4);
+  --badge-danger-text: #fca5a5;
+  --badge-info-bg: rgb(30 58 138 / 0.4);
+  --badge-info-text: #93c5fd;
+  --badge-warning-bg: rgb(120 53 15 / 0.4);
+  --badge-warning-text: #fcd34d;
+  --badge-purple-bg: rgb(88 28 135 / 0.4);
+  --badge-purple-text: #d8b4fe;
+
+  --diff-add-bg: rgba(0, 255, 100, 0.08);
+  --diff-remove-bg: rgba(255, 60, 60, 0.08);
+  --diff-add-gutter: rgba(0, 255, 100, 0.12);
+  --diff-remove-gutter: rgba(255, 60, 60, 0.12);
+
+  --bottom-nav-bg: rgba(15, 23, 42, 0.92);
+}
+
 :root {
   /* Im Browser sollen die Safe-Areas standardmaessig nicht zusaetzlich aufgeschlagen werden. */
   --safe-area-top-effective: 0px;
@@ -180,19 +201,19 @@ html[data-theme="light"] {
   scrollbar-width: none;
 }
 
-/* Diff-Farben fuer Code-Unterschiede */
+/* Diff-Farben fuer Code-Unterschiede (via CSS-Variablen theme-adaptiv) */
 .diff-add {
-  background-color: rgba(34, 197, 94, 0.12);
+  background-color: var(--diff-add-bg);
 }
 .diff-delete {
-  background-color: rgba(239, 68, 68, 0.12);
+  background-color: var(--diff-remove-bg);
 }
 .diff-add-line-num {
-  background-color: rgba(34, 197, 94, 0.2);
+  background-color: var(--diff-add-gutter);
   color: rgba(34, 197, 94, 0.8);
 }
 .diff-delete-line-num {
-  background-color: rgba(239, 68, 68, 0.2);
+  background-color: var(--diff-remove-gutter);
   color: rgba(239, 68, 68, 0.8);
 }
 
@@ -316,9 +337,27 @@ html[data-theme="light"] header.fixed.z-40 {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06) !important;
 }
 
-/* BottomNav im Light Mode: helles Frosted-Glass-Styling */
+/* BottomNav und Badge-Varianten im Light Mode */
 html[data-theme="light"] {
-  --bottom-nav-bg: rgba(242, 244, 248, 0.88);
+  --bottom-nav-bg: rgba(255, 255, 255, 0.92);
+
+  /* Badge-Varianten fuer Light Mode */
+  --badge-success-bg: rgb(220 252 231 / 0.9);
+  --badge-success-text: #166534;
+  --badge-danger-bg: rgb(254 226 226 / 0.9);
+  --badge-danger-text: #991b1b;
+  --badge-info-bg: rgb(219 234 254 / 0.9);
+  --badge-info-text: #1e40af;
+  --badge-warning-bg: rgb(254 243 199 / 0.9);
+  --badge-warning-text: #92400e;
+  --badge-purple-bg: rgb(243 232 255 / 0.9);
+  --badge-purple-text: #6b21a8;
+
+  /* Diff-Viewer fuer Light Mode */
+  --diff-add-bg: rgba(0, 180, 60, 0.12);
+  --diff-remove-bg: rgba(220, 40, 40, 0.10);
+  --diff-add-gutter: rgba(0, 180, 60, 0.18);
+  --diff-remove-gutter: rgba(220, 40, 40, 0.15);
 }
 
 html[data-theme="light"] nav.fixed .pointer-events-auto {

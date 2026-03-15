@@ -48,7 +48,7 @@ export function Modal({ open, onClose, title, description, children }: Props) {
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-50 bg-black/55 backdrop-blur-md" />
         <Drawer.Content
-          className="fixed left-0 right-0 bottom-0 z-50 flex flex-col rounded-t-[2rem] border border-slate-700/70 bg-slate-900 shadow-[0_-14px_40px_rgba(0,0,0,0.34)]"
+          className="fixed left-0 right-0 bottom-0 z-50 flex flex-col rounded-t-[2rem] border border-slate-700/70 bg-slate-900 shadow-[0_-14px_40px_rgba(0,0,0,0.34)] [html[data-theme='light']_&]:border-slate-300 [html[data-theme='light']_&]:shadow-[0_-14px_40px_rgba(0,0,0,0.12)]"
           style={{
             maxHeight: "calc(var(--selection-sheet-max-height) + var(--bottom-nav-height))",
           }}
@@ -59,12 +59,12 @@ export function Modal({ open, onClose, title, description, children }: Props) {
           </div>
 
           {title && (
-            <div className="flex items-center justify-between border-b border-slate-800/80 px-4 py-2.5 shrink-0">
+            <div className="flex items-center justify-between border-b border-slate-800/80 px-4 py-2.5 shrink-0 [html[data-theme='light']_&]:border-slate-300/80">
               <Drawer.Title className="text-[15px] font-semibold tracking-[-0.01em] text-slate-100">
                 {title}
               </Drawer.Title>
               <Drawer.Close asChild>
-                <button className="rounded-full bg-slate-800/80 p-2 text-slate-400 transition-colors hover:bg-slate-700/80">
+                <button className="rounded-full bg-slate-800/80 p-2 text-slate-400 transition-colors hover:bg-slate-700/80 [html[data-theme='light']_&]:bg-slate-200/80 [html[data-theme='light']_&]:text-slate-600 [html[data-theme='light']_&]:hover:bg-slate-300/80">
                   <X size={16} />
                 </button>
               </Drawer.Close>
