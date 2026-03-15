@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, FileCode2, GitBranch, Save } from "lucide-react";
 import Link from "next/link";
-import Editor from "react-simple-code-editor";
 import Prism from "prismjs";
 import "prismjs/components/prism-yaml";
 import { AppBar } from "@/components/layout/AppBar";
@@ -24,9 +23,49 @@ import { useTranslations } from "next-intl";
 
 const NEW_BRANCH_OLD_OBJECT_ID = "0000000000000000000000000000000000000000";
 
-/** YAML-Code mit Prism hervorheben. */
+/** YAML-Code mit Prism hervorheben (gibt HTML-String zurueck). */
 function highlightYaml(code: string): string {
   return Prism.highlight(code, Prism.languages.yaml, "yaml");
+}
+
+/** Editor mit Syntax Highlighting: transparentes Textarea ueber hervorgehobenem Pre. */
+function YamlEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  // Leerzeile am Ende damit Cursor in letzter Zeile korrekt positioniert wird
+  const highlighted = highlightYaml(value) + "\n";
+
+  const sharedStyle: React.CSSProperties = {
+    fontFamily: "'SF Mono', 'Fira Code', 'Roboto Mono', monospace",
+    fontSize: 12,
+    lineHeight: "1.6",
+    padding: 16,
+    margin: 0,
+    border: "none",
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-all",
+    tabSize: 2,
+  };
+
+  return (
+    <div className="relative flex-1" style={{ minHeight: "65vh" }}>
+      {/* Highlighted-Hintergrund */}
+      <pre
+        aria-hidden
+        className="prism-yaml absolute inset-0 overflow-auto pointer-events-none text-slate-200"
+        style={sharedStyle}
+        dangerouslySetInnerHTML={{ __html: highlighted }}
+      />
+      {/* Eingabe-Textarea (transparenter Text, sichtbarer Cursor) */}
+      <textarea
+        className="absolute inset-0 w-full h-full resize-none bg-transparent text-transparent caret-white focus:outline-none"
+        style={sharedStyle}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        spellCheck={false}
+        autoCapitalize="none"
+        autoCorrect="off"
+      />
+    </div>
+  );
 }
 
 /** Editor-Seite zum Bearbeiten der YAML-Datei einer bestehenden Pipeline. */
@@ -221,26 +260,7 @@ export default function PipelineYamlEditPage({ params }: { params: Promise<{ bui
       </div>
 
       {/* YAML-Editor mit Syntax Highlighting */}
-      <div className="flex-1 prism-yaml overflow-auto" style={{ minHeight: "65vh" }}>
-        <Editor
-          value={editorContent}
-          onValueChange={setEditorContent}
-          highlight={highlightYaml}
-          padding={16}
-          spellCheck={false}
-          autoCapitalize="none"
-          autoCorrect="off"
-          style={{
-            fontFamily: "'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace",
-            fontSize: 12,
-            lineHeight: 1.6,
-            backgroundColor: "transparent",
-            color: "#e2e8f0",
-            minHeight: "100%",
-          }}
-          textareaClassName="focus:outline-none"
-        />
-      </div>
+      <YamlEditor value={editorContent} onChange={setEditorContent} />
 
       {commitModalOpen && (
         <PipelineYamlCommitModal
