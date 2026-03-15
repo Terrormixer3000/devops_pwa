@@ -52,7 +52,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="apple-touch-icon" sizes="180x180" href={APPLE_TOUCH_ICON} />
       </head>
-      <body className={`${inter.variable} font-sans bg-slate-900 text-slate-100 antialiased`}>
+      <body className={`${inter.variable} font-sans bg-slate-900 text-slate-100 antialiased`} suppressHydrationWarning>
         <Providers initialLocale={initialLocale}>
           <OfflineBanner />
           <DesktopWarning />
