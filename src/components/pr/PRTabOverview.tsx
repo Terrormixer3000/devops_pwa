@@ -1,7 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { AlertCircle, UserPlus, X, ShieldCheck } from "lucide-react";
+import {
+  AlertCircle, UserPlus, X, ShieldCheck,
+  CheckCircle2, XCircle, Clock, Minus, ChevronDown, ChevronUp,
+} from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { VoteBadge } from "./VoteBadge";
 import type { PullRequest } from "@/types";
 
@@ -25,7 +30,18 @@ export function PRTabOverview({
   onRemoveReviewer: (reviewerId: string) => void;
 }) {
   const t = useTranslations("prOverview");
+  const tPrs = useTranslations("prs");
   const isActive = pr.status === "active";
+
+  // Richtlinien-Abschnitt standardmaessig ausgeklappt wenn es blockierende Ablehnungen gibt
+  const hasBlockingRejection = (policies || []).some(
+    (p) => p.isRequired && p.status === "rejected"
+  );
+  const allApproved =
+    (policies || []).length > 0 &&
+    (policies || []).every((p) => p.status === "approved" || p.status === "notApplicable");
+  const [policiesExpanded, setPoliciesExpanded] = useState(hasBlockingRejection || !allApproved);
+
   return (
     <div className="space-y-4">
       {/* Merge-Blocker */}
@@ -33,7 +49,7 @@ export function PRTabOverview({
         <div className="rounded-xl bg-red-950/40 border border-red-800/50 px-3 py-2.5 space-y-1">
           {mergeBlockers.map((msg, i) => (
             <p key={i} className="text-xs text-red-400 flex items-start gap-1.5">
-              <AlertCircle size={12} className="flex-shrink-0 mt-0.5" />
+              <AlertCircle size={12} className="shrink-0 mt-0.5" />
               {msg}
             </p>
           ))}
@@ -74,7 +90,7 @@ export function PRTabOverview({
                     <button
                       onClick={() => onToggleReviewerRequired(r.id, !r.isRequired)}
                       title={r.isRequired ? t("setOptional") : t("setRequired")}
-                      className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors flex-shrink-0 ${
+                      className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors shrink-0 ${
                         r.isRequired
                           ? "border-red-700/60 text-red-400 hover:bg-red-900/30"
                           : "border-slate-600 text-slate-500 hover:text-slate-300"
@@ -84,7 +100,7 @@ export function PRTabOverview({
                     </button>
                     <button
                       onClick={() => onRemoveReviewer(r.id)}
-                      className="p-1 text-slate-600 hover:text-red-400 transition-colors flex-shrink-0"
+                      className="p-1 text-slate-600 hover:text-red-400 transition-colors shrink-0"
                       title={t("removeReviewer")}
                     >
                       <X size={13} />
@@ -100,36 +116,59 @@ export function PRTabOverview({
         </div>
       )}
 
-      {/* Policy Checks */}
+      {/* Richtlinien (aufklappbar) */}
       {policies && policies.length > 0 && (
         <div>
-          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
-            <ShieldCheck size={12} /> {t("policyChecks")}
-          </h3>
-          <div className="space-y-1.5">
-            {policies.map((policy) => {
-              const statusMap: Record<string, { label: string; cls: string }> = {
-                approved: { label: t("policyApproved"), cls: "text-green-400" },
-                rejected: { label: t("policyRejected"), cls: "text-red-400" },
-                queued: { label: t("policyQueued"), cls: "text-yellow-400" },
-                running: { label: t("policyRunning"), cls: "text-blue-400" },
-                notApplicable: { label: t("policyNotApplicable"), cls: "text-slate-500" },
-              };
-              const s = statusMap[policy.status] || { label: policy.status, cls: "text-slate-400" };
-              return (
-                <div
-                  key={policy.id}
-                  className="flex items-center justify-between px-3 py-2 bg-slate-800/50 rounded-lg"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    {policy.isRequired && <span className="text-red-400 text-xs">*</span>}
-                    <span className="text-xs text-slate-300 truncate">{policy.displayName}</span>
+          {/* Kopfzeile mit Aufklapp-Schalter */}
+          <button
+            onClick={() => setPoliciesExpanded((v) => !v)}
+            className="w-full flex items-center justify-between mb-2 group"
+          >
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+              <ShieldCheck size={12} /> {tPrs("policies")}
+            </h3>
+            <span className="text-slate-500 group-hover:text-slate-400 transition-colors">
+              {policiesExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </span>
+          </button>
+          {policiesExpanded && (
+            <div className="space-y-1.5">
+              {policies.map((policy) => {
+                // Status-Icon je nach Policy-Status
+                const statusIcon = {
+                  approved: <CheckCircle2 size={14} className="text-green-400 shrink-0" />,
+                  rejected: <XCircle size={14} className="text-red-400 shrink-0" />,
+                  running: <LoadingSpinner size="sm" />,
+                  queued: <Clock size={14} className="text-yellow-400 shrink-0" />,
+                  notApplicable: <Minus size={14} className="text-slate-500 shrink-0" />,
+                }[policy.status] ?? <Minus size={14} className="text-slate-500 shrink-0" />;
+
+                const statusLabel = {
+                  approved: tPrs("policyApproved"),
+                  rejected: tPrs("policyRejected"),
+                  running: tPrs("policyRunning"),
+                  queued: tPrs("policyQueued"),
+                  notApplicable: tPrs("policyNotApplicable"),
+                }[policy.status] ?? policy.status;
+
+                return (
+                  <div
+                    key={policy.id}
+                    className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 rounded-lg"
+                  >
+                    {statusIcon}
+                    <span className="text-xs text-slate-300 flex-1 truncate">{policy.displayName}</span>
+                    {policy.isRequired && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded border border-red-700/60 text-red-400 shrink-0">
+                        {tPrs("policyRequired")}
+                      </span>
+                    )}
+                    <span className="text-xs text-slate-500 shrink-0">{statusLabel}</span>
                   </div>
-                  <span className={`text-xs font-medium flex-shrink-0 ml-2 ${s.cls}`}>{s.label}</span>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
