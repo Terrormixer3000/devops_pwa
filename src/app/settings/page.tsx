@@ -176,29 +176,42 @@ export default function SettingsPage() {
     }
   };
 
+  const persistPushPreferences = (nextPreferences: PushEventPreferences) => {
+    const nextForm = { ...form, pushEventPreferences: nextPreferences };
+    setForm(nextForm);
+    saveNow(nextForm);
+  };
+
   const handleTogglePushEvent = async (eventType: PushEventType) => {
     const nextPreferences: PushEventPreferences = {
       ...form.pushEventPreferences,
       [eventType]: !form.pushEventPreferences[eventType],
     };
 
-    setForm((prev) => ({ ...prev, pushEventPreferences: nextPreferences }));
-    setSettings({
-      ...(settings || EMPTY_SETTINGS),
-      pushEventPreferences: nextPreferences,
-    });
-
-    if (!isSubscribed) return;
+    if (!isSubscribed) {
+      persistPushPreferences(nextPreferences);
+      return;
+    }
 
     const organization = form.organization || settings?.organization || "";
     const project = form.project || settings?.project || "";
-    if (!organization || !project || !currentUser) return;
+    if (!organization || !project || !currentUser) {
+      setPushError(t("preferencesSyncUnavailable"));
+      return;
+    }
+
+    if (!webhookToken) {
+      setPushError(t("missingWebhookToken"));
+      return;
+    }
 
     setPushLoading(true);
     setPushError("");
     try {
       const subscription = await pushService.getExistingSubscription();
-      if (!subscription) return;
+      if (!subscription) {
+        throw new Error(t("subscriptionMissing"));
+      }
       const { webhookToken: token } = await pushService.registerSubscription(
         subscription,
         organization,
@@ -208,6 +221,7 @@ export default function SettingsPage() {
         nextPreferences
       );
       pushService.storeToken(token);
+      persistPushPreferences(nextPreferences);
       await refreshPushState();
     } catch (err) {
       setPushError(err instanceof Error ? err.message : t("preferencesUpdateFailed"));

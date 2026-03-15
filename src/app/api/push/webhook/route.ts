@@ -3,11 +3,12 @@ import { NextRequest, NextResponse } from "next/server";
 /**
  * Webhook-Route fuer Azure DevOps Service Hooks.
  * Empfaengt Events (Build, PR, Release), uebersetzt sie in Push-Benachrichtigungen
- * und sendet sie an alle berechtigten Abonnenten.
- * Auth: Query-Parameter `?t=<webhookToken>` (pro Nutzer, 256-Bit-Entropie).
+ * und sendet sie nur an die zum Token gehoerige Browser-Subscription,
+ * sofern das Event diesen Nutzer wirklich betrifft.
+ * Auth: Query-Parameter `?t=<webhookToken>` (pro Browser-Subscription, 256-Bit-Entropie).
  */
-import { dedupeSubscriptionsByEndpoint, normalizeText } from "@/lib/server/pushRouteUtils";
-import { getSubscriptionByToken, getSubscriptionsForUsers, removeSubscription } from "@/lib/server/subscriptionDb";
+import { normalizeText } from "@/lib/server/pushRouteUtils";
+import { getSubscriptionByToken, removeSubscription } from "@/lib/server/subscriptionDb";
 import {
   ensureWebPushConfigured,
   getWebPushClient,
@@ -100,8 +101,8 @@ function buildNotification(payload: AzureServiceHookPayload): {
         return {
           eventType: "build.failed",
           notification: {
-            title: "Build fehlgeschlagen",
-            body: `${label} ist fehlgeschlagen`,
+            title: "Build failed",
+            body: `${label} failed`,
             tag: `build-${buildTagId}`,
             url: resource.id ? `/pipelines/${resource.id}` : "/pipelines",
           },
@@ -111,8 +112,8 @@ function buildNotification(payload: AzureServiceHookPayload): {
         return {
           eventType: "build.succeeded",
           notification: {
-            title: "Build erfolgreich",
-            body: `${label} wurde erfolgreich abgeschlossen`,
+            title: "Build succeeded",
+            body: `${label} completed successfully`,
             tag: `build-${buildTagId}`,
             url: resource.id ? `/pipelines/${resource.id}` : "/pipelines",
           },
@@ -129,8 +130,8 @@ function buildNotification(payload: AzureServiceHookPayload): {
       return {
         eventType: "pr.reviewer",
         notification: {
-          title: "Review angefragt",
-          body: `Du wurdest als Reviewer hinzugefuegt: ${prTitle}`,
+          title: "Review requested",
+          body: `You were added as a reviewer: ${prTitle}`,
           tag: `pr-reviewer-${prId ?? Date.now()}`,
           url: prId && repoId ? `/pull-requests/${repoId}/${prId}` : "/pull-requests",
         },
@@ -146,7 +147,7 @@ function buildNotification(payload: AzureServiceHookPayload): {
       return {
         eventType: "pr.comment",
         notification: {
-          title: "Neuer PR-Kommentar",
+          title: "New PR comment",
           body: preview ? `${prTitle}: "${preview}"` : prTitle,
           tag: `pr-comment-${prId ?? Date.now()}-${Date.now()}`,
           url: prId && repoId ? `/pull-requests/${repoId}/${prId}` : "/pull-requests",
@@ -162,10 +163,10 @@ function buildNotification(payload: AzureServiceHookPayload): {
       return {
         eventType: "release.approval",
         notification: {
-          title: "Approval ausstehend",
+          title: "Approval pending",
           body: envName
-            ? `${releaseName} wartet auf Freigabe fuer ${envName}`
-            : `${releaseName} wartet auf deine Freigabe`,
+            ? `${releaseName} is waiting for approval for ${envName}`
+            : `${releaseName} is waiting for your approval`,
           tag: `approval-${releaseId ?? Date.now()}`,
           url: releaseId ? `/releases/${releaseId}` : "/releases",
         },
@@ -225,14 +226,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const token = req.nextUrl.searchParams.get("t") ?? "";
   const tokenOwner = getSubscriptionByToken(token);
   if (!tokenOwner) {
-    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let payload: AzureServiceHookPayload;
   try {
     payload = await req.json();
   } catch {
-    return NextResponse.json({ error: "Ungueltiger Request-Body" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
   // Notification erzeugen
@@ -245,7 +246,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // Org + Projekt aus Payload extrahieren
   const target = extractOrgProject(payload);
   if (!target) {
-    console.warn("[webhook] Konnte Org/Projekt nicht aus Payload extrahieren:", payload.eventType);
+    console.warn("[webhook] Could not extract org/project from payload:", payload.eventType);
+    return NextResponse.json({ ok: true, skipped: true });
+  }
+
+  if (tokenOwner.org !== target.org || tokenOwner.project !== target.project) {
     return NextResponse.json({ ok: true, skipped: true });
   }
 
@@ -254,28 +259,27 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: true, sent: 0, matchedUsers: 0, skipped: true });
   }
 
+  if (!targetAzureUserIds.includes(tokenOwner.azureUserId)) {
+    return NextResponse.json({ ok: true, sent: 0, matchedUsers: 0, skipped: true });
+  }
+
   const pushConfig = ensureWebPushConfigured();
   if (!pushConfig.ok) {
-    console.error("[webhook] Web Push ist nicht konfiguriert:", pushConfig.error);
+    console.error("[webhook] Web Push is not configured:", pushConfig.error);
     return NextResponse.json({ ok: false, error: pushConfig.error }, { status: 500 });
   }
   const webPush = getWebPushClient();
 
-  const subscriptions = getSubscriptionsForUsers(target.org, target.project, targetAzureUserIds);
-  const uniqueSubscriptions = dedupeSubscriptionsByEndpoint(subscriptions).filter(
-    (subscription) => subscription.eventPreferences[resolvedNotification.eventType]
-  );
-
-  if (uniqueSubscriptions.length === 0) {
-    return NextResponse.json({ ok: true, sent: 0, matchedUsers: targetAzureUserIds.length });
+  if (!tokenOwner.eventPreferences[resolvedNotification.eventType]) {
+    return NextResponse.json({ ok: true, sent: 0, matchedUsers: 1, skipped: true });
   }
 
   const notificationPayload = JSON.stringify(resolvedNotification.notification);
   let sent = 0;
 
-  // Alle Subscriptions benachrichtigen; abgelaufene (410 Gone) automatisch entfernen
+  // Notify the token owner's subscription and remove expired ones automatically.
   await Promise.allSettled(
-    uniqueSubscriptions.map(async (sub) => {
+    [tokenOwner].map(async (sub) => {
       try {
         await webPush.sendNotification(
           {
@@ -289,12 +293,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       } catch (err) {
         const status = getWebPushErrorStatusCode(err);
         if (isExpiredSubscriptionError(err)) {
-          // Subscription ist abgelaufen oder ungueltig -> aus DB entfernen
-          console.info("[webhook] Abgelaufene Subscription entfernt:", sub.endpoint.slice(-20));
+          console.info("[webhook] Removed expired subscription:", sub.endpoint.slice(-20));
           removeSubscription(sub.endpoint);
         } else {
           const suffix = status ? ` (${status})` : "";
-          console.error(`[webhook] Sendefehler fuer Subscription${suffix}:`, err);
+          console.error(`[webhook] Failed to send to subscription${suffix}:`, err);
         }
       }
     })
@@ -303,7 +306,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   return NextResponse.json({
     ok: true,
     sent,
-    total: uniqueSubscriptions.length,
-    matchedUsers: targetAzureUserIds.length,
+    total: 1,
+    matchedUsers: 1,
   });
 }

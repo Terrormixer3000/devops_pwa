@@ -65,14 +65,14 @@ async function waitForServiceWorkerRegistration(timeoutMs = 4000): Promise<Servi
   try {
     await navigator.serviceWorker.register("/sw.js", { scope: "/" });
   } catch (error) {
-    console.error("[push] Service Worker Registrierung fehlgeschlagen:", error);
+    console.error("[push] Service worker registration failed:", error);
   }
 
   const timeoutPromise = new Promise<never>((_, reject) => {
     window.setTimeout(() => {
       reject(
         new Error(
-          "Kein aktiver Service Worker gefunden. Pruefe /sw.js im Browser, fuehre einen Hard-Reload aus und entferne alte Service-Worker-Registrierungen."
+          "No active service worker found. Check /sw.js in the browser, do a hard reload, and remove old service worker registrations."
         )
       );
     }, timeoutMs);
@@ -165,7 +165,7 @@ export const pushService = {
    */
   async subscribe(): Promise<PushSubscription> {
     if (!this.isSupported()) {
-      throw new Error("Web Push wird von diesem Browser nicht unterstuetzt.");
+      throw new Error("Web Push is not supported by this browser.");
     }
 
     let permission = Notification.permission;
@@ -173,12 +173,12 @@ export const pushService = {
       permission = await Notification.requestPermission();
     }
     if (permission !== "granted") {
-      throw new Error("Notification-Erlaubnis verweigert.");
+      throw new Error("Notification permission denied.");
     }
 
     const vapidPublicKey = normalizeText(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
     if (!vapidPublicKey) {
-      throw new Error("VAPID Public Key nicht konfiguriert (NEXT_PUBLIC_VAPID_PUBLIC_KEY).");
+      throw new Error("VAPID public key is not configured (NEXT_PUBLIC_VAPID_PUBLIC_KEY).");
     }
     const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
 
@@ -222,12 +222,13 @@ export const pushService = {
         azureUserId: normalizeText(azureUserId),
         displayName: normalizeText(displayName),
         eventPreferences,
+        token: normalizeText(this.getStoredToken() ?? ""),
       }),
     });
 
     if (!response.ok) {
       const message = await readErrorMessage(response);
-      throw new Error(`Subscription-Registrierung fehlgeschlagen: ${message}`);
+      throw new Error(`Subscription registration failed: ${message}`);
     }
 
     const data = (await response.json()) as { ok: boolean; webhookToken: string };
@@ -242,6 +243,7 @@ export const pushService = {
     const subscription = await this.getExistingSubscription();
     if (!subscription) return;
     const endpoint = normalizeText(subscription.endpoint);
+    const token = normalizeText(this.getStoredToken() ?? "");
     const errors: string[] = [];
 
     // Server und Browser beide aufraeumen; Fehler sammeln statt fruehzeitig abzubrechen.
@@ -249,24 +251,24 @@ export const pushService = {
       const response = await fetch("/api/push/subscribe", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ endpoint }),
+        body: JSON.stringify({ endpoint, token }),
         keepalive: true,
       });
       if (!response.ok) {
         const message = await readErrorMessage(response);
-        errors.push(`Server-Reset fehlgeschlagen: ${message}`);
+        errors.push(`Server cleanup failed: ${message}`);
       }
     } catch (err) {
-      errors.push(`Server-Reset fehlgeschlagen: ${err instanceof Error ? err.message : String(err)}`);
+      errors.push(`Server cleanup failed: ${err instanceof Error ? err.message : String(err)}`);
     }
 
     try {
       const unsubscribed = await subscription.unsubscribe();
       if (!unsubscribed) {
-        errors.push("Browser konnte die Subscription nicht entfernen.");
+        errors.push("Browser could not remove the subscription.");
       }
     } catch (err) {
-      errors.push(`Browser-Reset fehlgeschlagen: ${err instanceof Error ? err.message : String(err)}`);
+      errors.push(`Browser cleanup failed: ${err instanceof Error ? err.message : String(err)}`);
     }
 
     if (errors.length > 0) {
