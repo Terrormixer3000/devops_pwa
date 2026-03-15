@@ -40,10 +40,10 @@ export function DeliveryTitleSelector({ current }: Props) {
       buttonLabel={currentOption.label}
       trigger={(
         <button
-          className="flex max-w-[10rem] items-center gap-1.5 rounded-2xl px-1 py-1 text-left text-slate-100 transition-colors hover:text-blue-300"
+          className="flex max-w-[10rem] items-center gap-1 rounded-lg px-0 py-0 text-left text-slate-100 transition-colors hover:text-blue-300"
         >
-          <span className="truncate text-[18px] font-semibold tracking-[-0.01em]">{currentOption.label}</span>
-          <ChevronDown size={16} className="flex-shrink-0 text-slate-400" />
+          <span className="truncate text-[17px] font-semibold tracking-[-0.01em] leading-snug">{currentOption.label}</span>
+          <ChevronDown size={14} className="flex-shrink-0 text-slate-400" />
         </button>
       )}
       sheetTitle={t("title")}

@@ -1,5 +1,7 @@
 "use client";
 
+import { ProjectChip } from "./ProjectChip";
+
 /** Props fuer die AppBar. */
 // AppBar: obere Leiste mit Seitentitel und optionalem rechten Slot fuer den Tab-spezifischen Selektor
 interface Props {
@@ -18,13 +20,14 @@ export function AppBar({ title, rightSlot }: Props) {
         }}
       >
         <div className="flex h-[var(--app-bar-content-height)] items-center gap-3">
-          {/* Seitentitel oder titelspezifischer Selector */}
-          <div className="min-w-0 flex-1">
+          {/* Seitentitel oder titelspezifischer Selector, darunter optionaler Projekt-Chip */}
+          <div className="min-w-0 flex-1 flex flex-col justify-center items-start">
             {typeof title === "string" ? (
-              <h1 className="truncate text-[18px] font-semibold tracking-[-0.01em] text-slate-100">{title}</h1>
+              <h1 className="w-full truncate text-[17px] font-semibold tracking-[-0.01em] text-slate-100 leading-snug">{title}</h1>
             ) : (
               title
             )}
+            <ProjectChip />
           </div>
 
           {/* Tab-spezifischer Selektor (z.B. Repo, Pipeline, Release) */}

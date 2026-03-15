@@ -21,6 +21,8 @@ export type PushEventPreferences = Record<PushEventType, boolean>;
 export interface AppSettings {
   organization: string;
   project: string;
+  /** Liste aller gespeicherter Projekte; project ist das aktive davon. */
+  availableProjects?: string[];
   pat: string;
   demoMode: boolean;
   theme: ThemeMode;

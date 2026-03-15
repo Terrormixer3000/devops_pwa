@@ -281,9 +281,17 @@ The app uses `next-intl` for all user-facing text. Translation files live in `sr
 
 ## Settings (`src/app/settings/page.tsx` + `src/components/settings/`)
 
-- Page is ~210 lines; JSX split into two section components.
-- `ConnectionSettings.tsx` — theme + Azure DevOps config form + PAT link + test result + action buttons
+- Page uses **autosave**: text fields (org, PAT) debounce 600 ms; toggles and project actions save immediately. No explicit save button.
+- `ConnectionSettings.tsx` — theme + Azure DevOps config form + PAT link + project list + test result + clear button
 - `PushNotificationsSection.tsx` — push toggle/status section; uses `PushSupportStatus` / `PushPermissionState` from `pushService`
+
+## Multi-Project Support
+
+- `AppSettings.availableProjects?: string[]` — ordered list of saved project names; `project` is the active one.
+- **Migration**: `settingsService.load()` auto-populates `availableProjects` from `project` when the field is absent (backwards-compatible).
+- **Project list in Settings**: add manually, discover via API ("Projekte entdecken"), remove, set active — all autosaved immediately.
+- **`ProjectChip`** (`src/components/layout/ProjectChip.tsx`) — rendered inside `AppBar` below the page title; only visible when `availableProjects.length > 1`; opens a single-select sheet to switch the active project; invalidates all React Query caches on switch.
+- **`projectsService`** (`src/lib/services/projectsService.ts`) — `listProjects(client)` calls `/_apis/projects?api-version=7.1`; follows `isDemoClient` pattern (returns `[]` in demo mode).
 
 ---
 
@@ -305,6 +313,10 @@ All methods follow the `isDemoClient(client)` pattern:
 
 - `getCurrentUser(client)` — via `/_apis/connectionData` (stable GUID for vote/reviewer assignment)
 - `listTeamMembers(client, project)` — default team members (for reviewer picker in PR)
+
+### `projectsService` (`src/lib/services/projectsService.ts`)
+
+- `listProjects(client)` — GET `/_apis/projects?api-version=7.1`; returns `AzureProject[]`; demo-safe
 
 ---
 

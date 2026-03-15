@@ -9,7 +9,6 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import Link from "next/link";
 import { AppBar } from "@/components/layout/AppBar";
-import { BackLink } from "@/components/ui/BackButton";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { usePushState } from "@/lib/hooks/usePushState";
@@ -26,6 +25,7 @@ import {
   MessageSquare,
   Rocket,
   Play,
+  ChevronLeft,
   ChevronRight,
   Loader2,
 } from "lucide-react";
@@ -189,6 +189,17 @@ export default function PushTestPage() {
     webhookToken,
     isLoading: pushStateLoading,
   } = usePushState();
+
+  const tSettings = useTranslations("settings");
+  const appBarTitle = (
+    <Link
+      href="/settings"
+      className="flex items-center gap-0.5 text-[18px] font-semibold tracking-[-0.01em] text-slate-100 active:opacity-70 transition-opacity"
+    >
+      <ChevronLeft size={26} className="-ml-1.5" />
+      {tSettings("title")}
+    </Link>
+  );
   const { currentUser } = useCurrentUser();
 
   // Test-State
@@ -250,16 +261,7 @@ export default function PushTestPage() {
   if (pushStateLoading) {
     return (
       <div className="min-h-screen">
-        <AppBar
-          title={(
-            <div className="flex min-w-0 items-center gap-2">
-              <BackLink href="/settings" size="compact" />
-              <span className="truncate text-[18px] font-semibold tracking-[-0.01em] text-slate-100">
-                {t("testTitle")}
-              </span>
-            </div>
-          )}
-        />
+        <AppBar title={appBarTitle} />
         <PageLoader />
       </div>
     );
@@ -268,16 +270,7 @@ export default function PushTestPage() {
   if (!webhookToken) {
     return (
       <div className="min-h-screen">
-        <AppBar
-          title={(
-            <div className="flex min-w-0 items-center gap-2">
-              <BackLink href="/settings" size="compact" />
-              <span className="truncate text-[18px] font-semibold tracking-[-0.01em] text-slate-100">
-                {t("testTitle")}
-              </span>
-            </div>
-          )}
-        />
+        <AppBar title={appBarTitle} />
 
         <div className="px-4 py-4 max-w-lg mx-auto">
           <section className="space-y-4 rounded-2xl border border-blue-700/30 bg-slate-800/40 p-4">
@@ -310,16 +303,7 @@ export default function PushTestPage() {
 
   return (
     <div className="min-h-screen">
-      <AppBar
-        title={(
-          <div className="flex min-w-0 items-center gap-2">
-            <BackLink href="/settings" size="compact" />
-            <span className="truncate text-[18px] font-semibold tracking-[-0.01em] text-slate-100">
-              {t("testTitle")}
-            </span>
-          </div>
-        )}
-      />
+      <AppBar title={appBarTitle} />
 
       <div className="px-4 py-4 space-y-5 max-w-lg mx-auto">
 

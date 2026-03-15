@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppBar } from "@/components/layout/AppBar";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
@@ -10,6 +10,7 @@ import { PushNotificationsSection } from "@/components/settings/PushNotification
 import { createAzureClient } from "@/lib/api/client";
 import { demoSettings } from "@/lib/mocks/demoData";
 import { identityService, type AzureCurrentUser } from "@/lib/services/identityService";
+import { projectsService } from "@/lib/services/projectsService";
 import { pushService } from "@/lib/services/pushService";
 import { useTranslations } from "next-intl";
 import { DEFAULT_PUSH_EVENT_PREFERENCES } from "@/lib/utils/pushEventPreferences";
@@ -18,6 +19,7 @@ import type { AppSettings, PushEventPreferences, PushEventType, ThemeMode, Local
 const EMPTY_SETTINGS: AppSettings = {
   organization: "",
   project: "",
+  availableProjects: [],
   pat: "",
   demoMode: false,
   theme: "dark",
@@ -34,14 +36,41 @@ export default function SettingsPage() {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
   const [testError, setTestError] = useState("");
-  const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  // Verhindert Autosave beim ersten Mount
+  const didMount = useRef(false);
 
   const { supportStatus: pushSupportStatus, permissionState, isSubscribed, webhookToken, refresh: refreshPushState } = usePushState();
   const [pushLoading, setPushLoading] = useState(false);
   const [pushError, setPushError] = useState("");
   const [currentUser, setCurrentUser] = useState<AzureCurrentUser | null>(null);
+  const [discoveringProjects, setDiscoveringProjects] = useState(false);
+  // Projekte, die die API kennt, aber noch nicht in availableProjects gespeichert sind
+  const [discoveredProjects, setDiscoveredProjects] = useState<string[]>([]);
 
   useEffect(() => { setForm(settings || EMPTY_SETTINGS); }, [settings]);
+
+  // Einstellungen im localStorage speichern (Demo-Mode normalisiert Org/Projekt)
+  const saveNow = (data: AppSettings) => {
+    try {
+      const normalized = data.demoMode
+        ? { ...data, organization: data.organization || demoSettings.organization, project: data.project || demoSettings.project }
+        : data;
+      setSettings(normalized);
+      setSaveError("");
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : t("saveFailed"));
+    }
+  };
+
+  // Autosave: 600ms nach der letzten Formularaenderung speichern
+  useEffect(() => {
+    if (!didMount.current) { didMount.current = true; return; }
+    const timer = setTimeout(() => saveNow(form), 600);
+    return () => clearTimeout(timer);
+  // saveNow absichtlich nicht als Dependency (referenziell stabil)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form]);
 
   useEffect(() => {
     const org = form.organization || settings?.organization;
@@ -68,18 +97,18 @@ export default function SettingsPage() {
   const handleChangeField = (field: keyof AppSettings, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     setTestResult(null);
-    setSaved(false);
   };
 
   const handleToggleDemoMode = () => {
-    setForm((prev) => ({
-      ...prev,
-      demoMode: !prev.demoMode,
-      organization: prev.demoMode ? prev.organization : prev.organization || demoSettings.organization,
-      project: prev.demoMode ? prev.project : prev.project || demoSettings.project,
-    }));
+    const newForm = {
+      ...form,
+      demoMode: !form.demoMode,
+      organization: form.demoMode ? form.organization : form.organization || demoSettings.organization,
+      project: form.demoMode ? form.project : form.project || demoSettings.project,
+    };
+    setForm(newForm);
     setTestResult(null);
-    setSaved(false);
+    saveNow(newForm);
   };
 
   const handleTest = async () => {
@@ -99,16 +128,6 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSave = () => {
-    const normalized: AppSettings = form.demoMode
-      ? { ...form, organization: form.organization || demoSettings.organization, project: form.project || demoSettings.project }
-      : form;
-    setSettings(normalized);
-    setForm(normalized);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
-
   const handleClear = () => {
     if (confirm(t("confirmClear"))) {
       clearSettings();
@@ -116,7 +135,7 @@ export default function SettingsPage() {
       setShowPat(false);
       setTestResult(null);
       setTestError("");
-      setSaved(false);
+      setSaveError("");
       queryClient.clear();
     }
   };
@@ -197,6 +216,47 @@ export default function SettingsPage() {
     }
   };
 
+  const handleAddProject = (name: string) => {
+    const existing = form.availableProjects ?? [];
+    if (existing.includes(name)) return;
+    const updated = [...existing, name];
+    const activeProject = form.project || name;
+    const newForm = { ...form, availableProjects: updated, project: activeProject };
+    setForm(newForm);
+    saveNow(newForm);
+    setDiscoveredProjects((prev) => prev.filter((p) => p !== name));
+  };
+
+  const handleRemoveProject = (name: string) => {
+    const updated = (form.availableProjects ?? []).filter((p) => p !== name);
+    const newActive = form.project === name ? (updated[0] ?? "") : form.project;
+    const newForm = { ...form, availableProjects: updated, project: newActive };
+    setForm(newForm);
+    saveNow(newForm);
+  };
+
+  const handleSetActiveProject = (name: string) => {
+    const newForm = { ...form, project: name };
+    setForm(newForm);
+    saveNow(newForm);
+  };
+
+  const handleDiscoverProjects = async () => {
+    if (!form.organization || !form.pat) return;
+    setDiscoveringProjects(true);
+    try {
+      const client = createAzureClient({ ...form, project: form.project || "_" });
+      const projects = await projectsService.listProjects(client);
+      const existingNames = form.availableProjects ?? [];
+      const newProjects = projects.map((p) => p.name).filter((n) => !existingNames.includes(n));
+      setDiscoveredProjects(newProjects);
+    } catch {
+      setDiscoveredProjects([]);
+    } finally {
+      setDiscoveringProjects(false);
+    }
+  };
+
   const canTest = form.demoMode || !!(form.organization && form.project && form.pat);
   const canSubscribe = !!(form.organization || settings?.organization);
   const t = useTranslations("settings");
@@ -212,17 +272,23 @@ export default function SettingsPage() {
           testing={testing}
           testResult={testResult}
           testError={testError}
-          saved={saved}
           canTest={canTest}
           hasExistingSettings={!!settings}
+          availableProjects={form.availableProjects ?? []}
+          discoveringProjects={discoveringProjects}
+          discoveredProjects={discoveredProjects}
           onChangeField={handleChangeField}
           onToggleShowPat={() => setShowPat((v) => !v)}
           onToggleDemoMode={handleToggleDemoMode}
-          onChangeTheme={(theme: ThemeMode) => { setForm((prev) => ({ ...prev, theme })); setSaved(false); }}
-          onChangeLocale={(locale: Locale) => { setForm((prev) => ({ ...prev, locale })); setSettings({ ...(settings || EMPTY_SETTINGS), ...form, locale }); }}
+          onChangeTheme={(theme: ThemeMode) => { setForm((prev) => ({ ...prev, theme })); }}
+          onChangeLocale={(locale: Locale) => { setForm((prev) => ({ ...prev, locale })); }}
+          onAddProject={handleAddProject}
+          onRemoveProject={handleRemoveProject}
+          onSetActiveProject={handleSetActiveProject}
+          onDiscoverProjects={() => { void handleDiscoverProjects(); }}
           onTest={handleTest}
-          onSave={handleSave}
           onClear={handleClear}
+          saveError={saveError}
         />
 
         <PushNotificationsSection
