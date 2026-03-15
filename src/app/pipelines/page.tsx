@@ -160,7 +160,11 @@ export default function PipelinesPage() {
           ) : (
             <div className="divide-y divide-slate-800/50">
               {pipelines.map((pipeline) => (
-                <div key={pipeline.id} className="flex items-center gap-3 px-4 py-3.5">
+                <Link
+                  key={pipeline.id}
+                  href={`/pipelines/definition/${pipeline.id}`}
+                  className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-slate-800/30"
+                >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-slate-100">{pipeline.name}</p>
                     {pipeline.folder && pipeline.folder !== "\\" && (
@@ -168,7 +172,8 @@ export default function PipelinesPage() {
                     )}
                   </div>
                   <button
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.preventDefault();
                       startMutation.reset();
                       setStartModal(pipeline);
                     }}
@@ -177,7 +182,7 @@ export default function PipelinesPage() {
                     <Play size={12} />
                     {t("start")}
                   </button>
-                </div>
+                </Link>
               ))}
             </div>
           ))}
