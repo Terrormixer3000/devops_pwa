@@ -136,7 +136,10 @@ export default function ReleasesPage() {
               <EmptyState icon={Rocket} title={t("noReleasePipelines")} />
             ) : (
               <div className="divide-y divide-slate-800/50">
-                {definitions.map((def) => (
+                {(selectedDefIds.length > 0
+                  ? definitions.filter((d) => selectedDefIds.includes(String(d.id)))
+                  : definitions
+                ).map((def) => (
                   <div key={def.id} className="flex items-center gap-3 px-4 py-3.5">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-slate-100 truncate">{def.name}</p>
