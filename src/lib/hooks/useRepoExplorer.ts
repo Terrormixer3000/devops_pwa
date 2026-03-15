@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAzureClient } from "@/lib/hooks/useAzureClient";
 import { repositoriesService, GitChangeEntry } from "@/lib/services/repositoriesService";
 import { pullRequestsService } from "@/lib/services/pullRequestsService";
+import { searchService, CodeSearchResult } from "@/lib/services/searchService";
+import { createSearchClient } from "@/lib/api/client";
 import { getChangeKey } from "@/lib/utils/gitUtils";
 import { isImagePath } from "@/lib/utils/fileTypes";
 import type { AppSettings, Branch, Commit, Repository, TreeEntry } from "@/types";
@@ -20,7 +22,8 @@ export type ActiveView =
   | "files"
   | "file-content"
   | "file-history"
-  | "compare";
+  | "compare"
+  | "search";
 
 /** Gesamter State, Queries und Handler für den Repo-Explorer. */
 export function useRepoExplorer(repo: Repository, settings: AppSettings) {
@@ -38,9 +41,15 @@ export function useRepoExplorer(repo: Repository, settings: AppSettings) {
   const [commitSheetOpen, setCommitSheetOpen] = useState(false);
   const [newFileSheetOpen, setNewFileSheetOpen] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<CodeSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   const { client } = useAzureClient();
   const queryClient = useQueryClient();
+
+  // Search-Client fuer die almsearch-API
+  const searchClient = useMemo(() => createSearchClient(settings), [settings]);
 
   const { data: tags, isLoading: tagsLoading, error: tagError } = useQuery({
     queryKey: ["tags", repo.id, settings.project, settings.demoMode],
@@ -326,6 +335,89 @@ export function useRepoExplorer(repo: Repository, settings: AppSettings) {
     setTimeout(() => setSaveSuccess(null), 4000);
   };
 
+  // Mutation: Datei loeschen
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!client || !selectedBranch || !selectedFile) throw new Error("Kein Client oder keine Datei");
+      const commitMessage = `Datei ${selectedFile} gelöscht`;
+      await repositoriesService.deleteFile(
+        client,
+        settings.project,
+        repo.id,
+        selectedFile,
+        selectedBranch.name,
+        commitMessage,
+        selectedBranch.objectId
+      );
+    },
+    onSuccess: async () => {
+      if (selectedBranch) {
+        await queryClient.invalidateQueries({ queryKey: ["tree", repo.id, selectedBranch.name, currentPath] });
+      }
+      setSelectedFile(null);
+      setView("files");
+    },
+  });
+
+  // Mutation: Datei umbenennen
+  const renameMutation = useMutation({
+    mutationFn: async (newPath: string) => {
+      if (!client || !selectedBranch || !selectedFile) throw new Error("Kein Client oder keine Datei");
+      const commitMessage = `${selectedFile} umbenannt in ${newPath}`;
+      await repositoriesService.renameFile(
+        client,
+        settings.project,
+        repo.id,
+        selectedFile,
+        newPath,
+        selectedBranch.name,
+        commitMessage,
+        selectedBranch.objectId
+      );
+    },
+    onSuccess: async (_, newPath) => {
+      if (selectedBranch) {
+        await queryClient.invalidateQueries({ queryKey: ["tree", repo.id, selectedBranch.name, currentPath] });
+      }
+      setSelectedFile(newPath);
+    },
+  });
+
+  const handleDeleteFile = () => {
+    deleteMutation.mutate();
+  };
+
+  const handleRenameFile = (newPath: string) => {
+    renameMutation.mutate(newPath);
+  };
+
+  // Suche ausfuehren und Ergebnisse im State speichern
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const results = await searchService.searchCode(
+        searchClient,
+        settings.project,
+        repo.name,
+        query
+      );
+      setSearchResults(results);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleOpenSearch = () => {
+    setSearchQuery("");
+    setSearchResults([]);
+    setView("search");
+  };
+
   const handleOpenFileHistory = (filePath: string) => {
     setFileHistoryFile(filePath);
     setView("file-history");
@@ -357,6 +449,7 @@ export function useRepoExplorer(repo: Repository, settings: AppSettings) {
     if (view === "commits") { setView("files"); return; }
     if (view === "file-history") { setView("file-content"); setFileHistoryFile(null); return; }
     if (view === "compare") { setView("branches"); setCompareBranch(null); return; }
+    if (view === "search") { setView("files"); setSearchQuery(""); setSearchResults([]); return; }
 
     const prev = pathHistory[pathHistory.length - 1] || "/";
     setPathHistory((history) => history.slice(0, -1));
@@ -366,6 +459,12 @@ export function useRepoExplorer(repo: Repository, settings: AppSettings) {
 
   const handleOpenFile = (entry: TreeEntry) => {
     setSelectedFile(entry.path);
+    setView("file-content");
+  };
+
+  // Datei per Pfad-String oeffnen (z.B. aus Suchergebnissen)
+  const handleOpenFileByPath = (filePath: string) => {
+    setSelectedFile(filePath);
     setView("file-content");
   };
 
@@ -391,6 +490,13 @@ export function useRepoExplorer(repo: Repository, settings: AppSettings) {
     commitSheetOpen, setCommitSheetOpen,
     newFileSheetOpen, setNewFileSheetOpen,
     saveSuccess,
+    searchQuery,
+    searchResults,
+    isSearching,
+    isDeletingFile: deleteMutation.isPending,
+    deleteFileError: deleteMutation.error instanceof Error ? deleteMutation.error.message : null,
+    isRenamingFile: renameMutation.isPending,
+    renameFileError: renameMutation.error instanceof Error ? renameMutation.error.message : null,
 
     // query data
     tags: tags || [],
@@ -427,7 +533,12 @@ export function useRepoExplorer(repo: Repository, settings: AppSettings) {
     handleNavigateFolder,
     handleBack,
     handleOpenFile,
+    handleOpenFileByPath,
     handleOpenCommit,
+    handleSearch,
+    handleOpenSearch,
+    handleDeleteFile,
+    handleRenameFile,
     refetchBranches,
   };
 }

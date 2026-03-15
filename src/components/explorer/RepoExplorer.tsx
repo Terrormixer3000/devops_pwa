@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { GitBranch } from "lucide-react";
+import { GitBranch, Search } from "lucide-react";
 import { BackActionButton } from "@/components/ui/BackButton";
 import { BranchList } from "./BranchList";
 import { CommitList } from "./CommitList";
@@ -12,6 +12,7 @@ import { FileHistoryView } from "./FileHistoryView";
 import { BranchCompareView } from "./BranchCompareView";
 import { CommitSheet } from "./CommitSheet";
 import { NewFileSheet } from "./NewFileSheet";
+import { SearchView } from "./SearchView";
 import { getChangeKey } from "@/lib/utils/gitUtils";
 import { useRepoExplorer } from "@/lib/hooks/useRepoExplorer";
 import type { AppSettings, Repository } from "@/types";
@@ -33,6 +34,7 @@ export function RepoExplorer({ repo, settings }: { repo: Repository; settings: A
     commitSheetOpen, setCommitSheetOpen,
     newFileSheetOpen, setNewFileSheetOpen,
     saveSuccess,
+    searchQuery, searchResults, isSearching,
     tags, branches, commits, treeItems, fileContent, fileHistoryCommits, branchDiff,
     commitChanges, commitFileDiff, selectedCommitChange,
     branchesLoading, tagsLoading, commitsLoading, treeLoading, fileLoading,
@@ -40,7 +42,8 @@ export function RepoExplorer({ repo, settings }: { repo: Repository; settings: A
     branchError, tagError,
     handleSelectBranch, handleSaveFile, handleCreateFile, handleOpenFileHistory,
     handleOpenCompare, handleCreateBranch, handleNavigateFolder, handleBack,
-    handleOpenFile, handleOpenCommit, refetchBranches,
+    handleOpenFile, handleOpenFileByPath, handleOpenCommit, handleSearch, handleOpenSearch,
+    handleDeleteFile, handleRenameFile, refetchBranches,
   } = useRepoExplorer(repo, settings);
 
   const t = useTranslations("explorer");
@@ -51,6 +54,7 @@ export function RepoExplorer({ repo, settings }: { repo: Repository; settings: A
     view === "file-content" ||
     view === "file-history" ||
     view === "compare" ||
+    view === "search" ||
     pathHistory.length > 0;
 
   return (
@@ -59,14 +63,21 @@ export function RepoExplorer({ repo, settings }: { repo: Repository; settings: A
         <div className="fixed-below-appbar bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-2">
           <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar">
             {canGoBack && (
-              <BackActionButton onClick={handleBack} iconOnly size="compact" className="flex-shrink-0" />
+              <BackActionButton onClick={handleBack} iconOnly size="compact" className="shrink-0" />
             )}
             <button
               onClick={() => setView("branches")}
-              className="flex items-center gap-1 text-xs text-blue-400 flex-shrink-0"
+              className="flex items-center gap-1 text-xs text-blue-400 shrink-0"
             >
               <GitBranch size={12} />
               <span>{selectedBranch.name}</span>
+            </button>
+            <button
+              onClick={handleOpenSearch}
+              title={t("search")}
+              className="flex items-center gap-1 text-xs text-slate-400 hover:text-blue-400 transition-colors shrink-0"
+            >
+              <Search size={14} />
             </button>
             <div className="flex items-center gap-1 ml-auto">
               {(["files", "commits", "compare"] as const).map((entry) => {
@@ -162,6 +173,14 @@ export function RepoExplorer({ repo, settings }: { repo: Repository; settings: A
             diff={branchDiff}
             loading={branchDiffLoading}
           />
+        ) : view === "search" ? (
+          <SearchView
+            searchQuery={searchQuery}
+            searchResults={searchResults}
+            isSearching={isSearching}
+            onSearch={handleSearch}
+            onOpenFile={handleOpenFileByPath}
+          />
         ) : (
           <>
             <FileViewer
@@ -178,6 +197,8 @@ export function RepoExplorer({ repo, settings }: { repo: Repository; settings: A
               onEditCancel={() => { setEditMode(false); setEditedContent(null); }}
               onEditChange={setEditedContent}
               onRequestCommit={() => setCommitSheetOpen(true)}
+              onDeleteFile={handleDeleteFile}
+              onRenameFile={handleRenameFile}
             />
             <CommitSheet
               open={commitSheetOpen}

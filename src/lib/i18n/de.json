@@ -387,7 +387,17 @@
     "sourceBranchNotFound": "Quell-Branch nicht gefunden.",
     "commitHashEmpty": "Commit-Hash darf nicht leer sein.",
     "branchCreated": "Branch \"{name}\" wurde erstellt.",
-    "createBranchError": "Fehler beim Erstellen des Branches."
+    "createBranchError": "Fehler beim Erstellen des Branches.",
+    "search": "Suchen",
+    "searchPlaceholder": "Code durchsuchen...",
+    "searchResults": "Suchergebnisse",
+    "noSearchResults": "Keine Ergebnisse gefunden",
+    "searching": "Suche läuft...",
+    "newFolder": "Als Ordner anlegen",
+    "deleteFile": "Datei löschen",
+    "confirmDelete": "Diese Datei wirklich löschen?",
+    "renameFile": "Umbenennen",
+    "newName": "Neuer Name"
   },
   "releases": {
     "title": "Releases",
