@@ -366,29 +366,34 @@ html[data-theme="light"] nav.fixed .pointer-events-auto {
 }
 
 /* ======================================================
-   Prism.js Syntax Highlighting – YAML Editor (Dark Mode)
+   Prism.js Syntax Highlighting – YAML Editor
+   Reihenfolge wichtig: spezifischere Regeln kommen zuletzt.
+   Prism-Klassen fuer YAML:
+     key      → class="token key atrule"   (Schluessel vor :)
+     boolean  → class="token boolean important"
+     null     → class="token null important"
+     scalar   → class="token scalar string"  (Block-Skalare |/>)
+     datetime → class="token datetime number"
+     directive→ class="token directive important"
+     important→ class="token important"  (Anker & Aliase)
    ====================================================== */
 .prism-yaml .token.comment      { color: #64748b; font-style: italic; }
-.prism-yaml .token.tag          { color: #67e8f9; } /* cyan – YAML-Tags (!!str) */
-.prism-yaml .token.important    { color: #f59e0b; font-weight: 600; } /* Anchors & Aliases */
-.prism-yaml .token.boolean      { color: #818cf8; } /* indigo */
-.prism-yaml .token.number       { color: #c084fc; } /* purple */
-.prism-yaml .token.null         { color: #f87171; } /* red */
-.prism-yaml .token.string       { color: #86efac; } /* green */
+.prism-yaml .token.tag          { color: #67e8f9; }
 .prism-yaml .token.punctuation  { color: #94a3b8; }
-.prism-yaml .token.attr-name,
-.prism-yaml .token.key          { color: #7dd3fc; } /* blue – Schluessel */
-.prism-yaml .token.atrule       { color: #f59e0b; }
+.prism-yaml .token.string       { color: #86efac; } /* quoted strings & block scalars */
+.prism-yaml .token.number       { color: #c084fc; } /* Zahlen & Datumsangaben */
+.prism-yaml .token.important    { color: #f59e0b; } /* Anker, Aliase, Direktiven */
+.prism-yaml .token.boolean      { color: #818cf8; } /* ueberschreibt .important */
+.prism-yaml .token.null         { color: #f87171; } /* ueberschreibt .important */
+.prism-yaml .token.key          { color: #7dd3fc; } /* ueberschreibt .atrule (gleiche Klasse) */
 
 /* Light Mode Overrides */
 html[data-theme="light"] .prism-yaml .token.comment     { color: #64748b; }
 html[data-theme="light"] .prism-yaml .token.tag         { color: #0891b2; }
+html[data-theme="light"] .prism-yaml .token.punctuation { color: #475569; }
+html[data-theme="light"] .prism-yaml .token.string      { color: #15803d; }
+html[data-theme="light"] .prism-yaml .token.number      { color: #7c3aed; }
 html[data-theme="light"] .prism-yaml .token.important   { color: #d97706; }
 html[data-theme="light"] .prism-yaml .token.boolean     { color: #4f46e5; }
-html[data-theme="light"] .prism-yaml .token.number      { color: #7c3aed; }
 html[data-theme="light"] .prism-yaml .token.null        { color: #dc2626; }
-html[data-theme="light"] .prism-yaml .token.string      { color: #15803d; }
-html[data-theme="light"] .prism-yaml .token.punctuation { color: #475569; }
-html[data-theme="light"] .prism-yaml .token.attr-name,
 html[data-theme="light"] .prism-yaml .token.key         { color: #0369a1; }
-html[data-theme="light"] .prism-yaml .token.atrule      { color: #d97706; }
