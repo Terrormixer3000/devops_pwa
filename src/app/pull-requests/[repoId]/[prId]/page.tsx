@@ -63,9 +63,19 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
 
   const pr = h.pr;
 
+  const abandonButton = pr.status === "active" ? (
+    <button
+      onClick={() => h.setAbandonModal(true)}
+      className="p-1.5 text-slate-500 hover:text-red-400 transition-colors"
+      title={tPrs("abandon")}
+    >
+      <Trash2 size={18} />
+    </button>
+  ) : null;
+
   return (
     <div className="min-h-screen">
-      <AppBar title={BackLink} hideProjectChip />
+      <AppBar title={BackLink} rightSlot={abandonButton} hideProjectChip />
 
       {/* PR-Kopfbereich */}
       <div className="px-4 pb-4 border-b border-slate-800">
@@ -120,13 +130,6 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
                 <GitMerge size={14} /> {tAct("complete")}
               </button>
             </div>
-            {/* PR aufgeben */}
-            <button
-              onClick={() => h.setAbandonModal(true)}
-              className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-red-800/40 bg-red-950/30 text-xs font-medium text-red-400 hover:bg-red-900/40 transition-colors"
-            >
-              <Trash2 size={12} /> {tPrs("abandon")}
-            </button>
           </>
         )}
       </div>
