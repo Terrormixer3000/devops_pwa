@@ -29,6 +29,7 @@ export function NewFileSheet({
   onSave: SaveHandler;
 }) {
   const tn = useTranslations("explorer.newFile");
+  const te = useTranslations("explorer");
   const [fileName, setFileName] = useState("");
   const [fileContent, setFileContent] = useState("");
   const [commitMessage, setCommitMessage] = useState("");
@@ -38,6 +39,7 @@ export function NewFileSheet({
   const [prTitle, setPrTitle] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isFolder, setIsFolder] = useState(false);
 
   const reset = () => {
     setFileName("");
@@ -48,6 +50,7 @@ export function NewFileSheet({
     setCreatePR(false);
     setPrTitle("");
     setError(null);
+    setIsFolder(false);
   };
 
   const handleClose = () => {
@@ -55,12 +58,13 @@ export function NewFileSheet({
     onClose();
   };
 
-  const fullPath = currentPath === "/" ? `/${fileName.trim()}` : `${currentPath}/${fileName.trim()}`;
+  // Bei Ordner-Modus wird .gitkeep als Platzhalterdatei im Verzeichnis angelegt
+  const basePath = currentPath === "/" ? `/${fileName.trim()}` : `${currentPath}/${fileName.trim()}`;
+  const fullPath = isFolder ? `${basePath}/.gitkeep` : basePath;
 
   const isDisabled =
     pending ||
     !fileName.trim() ||
-    !commitMessage.trim() ||
     (targetMode === "new-branch" && !newBranchName.trim()) ||
     (createPR && !prTitle.trim());
 
@@ -68,9 +72,14 @@ export function NewFileSheet({
     setPending(true);
     setError(null);
     try {
+      // Commit-Nachricht je nach Modus (Ordner oder Datei) anpassen
+      const effectiveCommitMessage = commitMessage.trim() ||
+        (isFolder
+          ? `Verzeichnis ${fileName.trim()} anlegen`
+          : `Datei ${fileName.trim()} anlegen`);
       await onSave(
-        fileContent,
-        commitMessage.trim(),
+        isFolder ? "" : fileContent,
+        effectiveCommitMessage,
         targetMode,
         newBranchName.trim(),
         createPR,
@@ -102,6 +111,18 @@ export function NewFileSheet({
           {fileName.trim() && <p className="text-xs text-slate-500 font-mono">{fullPath}</p>}
         </div>
 
+        {/* Ordner-Modus: .gitkeep wird als Platzhalterdatei angelegt */}
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={isFolder}
+            onChange={(e) => setIsFolder(e.target.checked)}
+            className="rounded border-slate-600 bg-slate-800 text-blue-500"
+          />
+          <span className="text-sm text-slate-300">{te("newFolder")}</span>
+        </label>
+
+        {!isFolder && (
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-slate-300">{tn("content")}</label>
           <textarea
@@ -115,6 +136,7 @@ export function NewFileSheet({
             className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-xs font-mono resize-none"
           />
         </div>
+        )}
 
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-slate-300">{tn("commitMessage")}</label>
