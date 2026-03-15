@@ -159,7 +159,10 @@ export default function PipelinesPage() {
             <EmptyState icon={PlayCircle} title={t("noPipelinesFound")} />
           ) : (
             <div className="divide-y divide-slate-800/50">
-              {pipelines.map((pipeline) => (
+              {(selectedDefNumbers.length > 0
+                ? pipelines.filter((p) => selectedDefNumbers.includes(p.id))
+                : pipelines
+              ).map((pipeline) => (
                 <Link
                   key={pipeline.id}
                   href={`/pipelines/definition/${pipeline.id}`}
