@@ -661,7 +661,8 @@
     "step2": "Enter your organisation, project and PAT in the settings",
     "step3": "Done – all data is loaded directly from Azure DevOps",
     "privacyTitle": "Privacy",
-    "privacyDesc": "Your PAT and all credentials are stored exclusively in your browser's local storage. There is no backend server, no tracking and no analytics. All API calls go directly to dev.azure.com.",
+    "privacyDesc": "Your PAT and all credentials are stored exclusively in your browser's local storage. All API calls go directly to dev.azure.com – no tracking, no analytics.",
+    "privacyPushNote": "Optional push notifications require your own server (self-hosting). Webhook events from Azure DevOps are forwarded to your server – no data is shared with third parties.",
     "cta": "Set up now"
   }
 }
