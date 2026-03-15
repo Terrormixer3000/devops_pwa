@@ -479,9 +479,18 @@
     "confirmClear": "Delete all settings?",
     "connectionFailedFallback": "Connection failed",
     "noUserError": "Could not determine Azure DevOps user. Please test the connection first.",
+    "saveFailed": "Settings could not be saved",
     "activationFailed": "Activation failed",
     "deactivationFailed": "Deactivation failed",
-    "preferencesUpdateFailed": "Could not update notification types"
+    "preferencesUpdateFailed": "Could not update notification types",
+    "projects": "Projects",
+    "activeProject": "Active",
+    "addProject": "Add project",
+    "projectPlaceholderManual": "Enter project name",
+    "discoverProjects": "Discover projects",
+    "discoveringProjects": "Loading projects…",
+    "noProjectsDiscovered": "No additional projects found",
+    "projectSwitcher": "Switch project"
   },
   "push": {
     "title": "Notifications",
