@@ -15,6 +15,8 @@ import {
 interface SettingsState {
   settings: AppSettings | null;
   isConfigured: boolean;
+  /** Gibt an, ob die Einstellungen bereits aus dem localStorage geladen wurden. */
+  loaded: boolean;
   /** Setzt neue Einstellungen und persistiert sie im localStorage. */
   setSettings: (settings: AppSettings) => void;
   /** Setzt alle Einstellungen zurueck und raeumt abhaengige Stores auf. */
@@ -27,11 +29,12 @@ interface SettingsState {
 export const useSettingsStore = create<SettingsState>((set) => ({
   settings: null,
   isConfigured: false,
+  loaded: false,
 
   // Einstellungen aus localStorage in den Store laden
   loadSettings: () => {
     const settings = settingsService.load();
-    set({ settings, isConfigured: settingsService.isConfigured(settings) });
+    set({ settings, isConfigured: settingsService.isConfigured(settings), loaded: true });
   },
 
   // Neue Einstellungen speichern und persistieren

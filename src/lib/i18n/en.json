@@ -646,5 +646,22 @@
     "pwaInstallDesc": "Push notifications only work when the app is installed via \"Add to Home Screen\" (iOS 16.4+).",
     "swTitle": "Service worker not active",
     "swDesc": "No active service worker found. Please check {path} and hard reload the page (Shift+Reload)."
+  },
+  "intro": {
+    "tagline": "Azure DevOps right on your iPhone",
+    "howTitle": "How does the app work?",
+    "how1Title": "Direct connection",
+    "how1Desc": "Connects directly to your Azure DevOps organisation via the official REST API.",
+    "how2Title": "Everything at a glance",
+    "how2Desc": "Pull requests, pipelines, releases and code – all in one place.",
+    "how3Title": "Local & fast",
+    "how3Desc": "No intermediate server. Your data stays on your device.",
+    "setupTitle": "Setup",
+    "step1": "Create a PAT in Azure DevOps (Settings → Personal Access Tokens)",
+    "step2": "Enter your organisation, project and PAT in the settings",
+    "step3": "Done – all data is loaded directly from Azure DevOps",
+    "privacyTitle": "Privacy",
+    "privacyDesc": "Your PAT and all credentials are stored exclusively in your browser's local storage. There is no backend server, no tracking and no analytics. All API calls go directly to dev.azure.com.",
+    "cta": "Set up now"
   }
 }
