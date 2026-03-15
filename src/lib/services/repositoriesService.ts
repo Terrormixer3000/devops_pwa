@@ -364,4 +364,74 @@ export const repositoriesService = {
       }
     );
   },
+
+  /**
+   * Loescht eine Datei per Push-API.
+   * @param oldObjectId SHA des aktuellen Branch-Commits (nicht Blob-SHA)
+   */
+  async deleteFile(
+    client: AxiosInstance,
+    project: string,
+    repoId: string,
+    filePath: string,
+    branch: string,
+    commitMessage: string,
+    oldObjectId: string
+  ): Promise<void> {
+    if (isDemoClient(client)) return Promise.resolve();
+
+    await client.post(
+      `/${project}/_apis/git/repositories/${repoId}/pushes?api-version=7.1`,
+      {
+        refUpdates: [{ name: `refs/heads/${branch}`, oldObjectId }],
+        commits: [
+          {
+            comment: commitMessage,
+            changes: [
+              {
+                changeType: "delete",
+                item: { path: filePath },
+              },
+            ],
+          },
+        ],
+      }
+    );
+  },
+
+  /**
+   * Benennt eine Datei per Push-API um.
+   * @param oldObjectId SHA des aktuellen Branch-Commits
+   */
+  async renameFile(
+    client: AxiosInstance,
+    project: string,
+    repoId: string,
+    oldPath: string,
+    newPath: string,
+    branch: string,
+    commitMessage: string,
+    oldObjectId: string
+  ): Promise<void> {
+    if (isDemoClient(client)) return Promise.resolve();
+
+    await client.post(
+      `/${project}/_apis/git/repositories/${repoId}/pushes?api-version=7.1`,
+      {
+        refUpdates: [{ name: `refs/heads/${branch}`, oldObjectId }],
+        commits: [
+          {
+            comment: commitMessage,
+            changes: [
+              {
+                changeType: "rename",
+                item: { path: newPath },
+                sourceServerItem: oldPath,
+              },
+            ],
+          },
+        ],
+      }
+    );
+  },
 };

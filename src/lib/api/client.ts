@@ -90,6 +90,41 @@ export function createVsrmClient(settings: AppSettings): AxiosInstance {
   return vsrmClient;
 }
 
+// Erstellt einen Axios-Client fuer die Azure DevOps Search-API (anderer Host!)
+export function createSearchClient(settings: AppSettings): AxiosInstance {
+  if (settings.demoMode) {
+    const client = axios.create({
+      baseURL: "https://demo.almsearch.azure.local",
+    }) as DemoAxiosInstance;
+    client.__demoMode = true;
+    return client;
+  }
+
+  const token = btoa(`:${settings.pat}`);
+  const searchClient = axios.create({
+    baseURL: `https://almsearch.dev.azure.com/${settings.organization}`,
+    headers: {
+      Authorization: `Basic ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  // Fehler-Interceptor: gleiche Logik wie beim Azure-Client
+  searchClient.interceptors.response.use(
+    (res) => res,
+    (error: AxiosError) => {
+      const status = error.response?.status;
+      if (status === 401) throw new ApiError("Nicht autorisiert: PAT-Token ueberpruefen", 401);
+      if (status === 403) throw new ApiError("Zugriff verweigert: unzureichende Berechtigungen", 403);
+      if (status === 404) throw new ApiError("Nicht gefunden", 404);
+      const message = (error.response?.data as { message?: string })?.message || error.message;
+      throw new ApiError(message, status);
+    }
+  );
+
+  return searchClient;
+}
+
 /**
  * Prueft ob ein Axios-Client im Demo-Modus laeuft.
  * Demo-Clients tragen ein privates `__demoMode`-Flag, damit Services

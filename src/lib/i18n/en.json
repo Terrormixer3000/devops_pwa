@@ -402,7 +402,17 @@
     "sourceBranchNotFound": "Source branch not found.",
     "commitHashEmpty": "Commit hash must not be empty.",
     "branchCreated": "Branch \"{name}\" was created.",
-    "createBranchError": "Error creating the branch."
+    "createBranchError": "Error creating the branch.",
+    "search": "Search",
+    "searchPlaceholder": "Search code...",
+    "searchResults": "Search results",
+    "noSearchResults": "No results found",
+    "searching": "Searching...",
+    "newFolder": "Create as folder",
+    "deleteFile": "Delete file",
+    "confirmDelete": "Really delete this file?",
+    "renameFile": "Rename",
+    "newName": "New name"
   },
   "releases": {
     "title": "Releases",
