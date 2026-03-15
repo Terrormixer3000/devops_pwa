@@ -308,6 +308,13 @@ All methods follow the `isDemoClient(client)` pattern:
 
 ---
 
+## Git Commits
+
+- Commit messages must be written in **English**.
+- Do not add Claude or any AI tool as a co-author.
+
+---
+
 ## When Making Changes
 
 - Check the nearest file in the same folder and follow its local pattern first.

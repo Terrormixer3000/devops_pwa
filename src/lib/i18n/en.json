@@ -618,6 +618,10 @@
   "offline": {
     "message": "Offline mode – data may be outdated"
   },
+  "desktopWarning": {
+    "message": "This app is optimized for mobile devices. Display may be limited on larger screens.",
+    "dismiss": "Dismiss notice"
+  },
   "webhookBox": {
     "copy": "Copy",
     "copied": "Copied",
