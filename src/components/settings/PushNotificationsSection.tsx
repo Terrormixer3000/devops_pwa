@@ -120,43 +120,45 @@ export function PushNotificationsSection({
         </>
       )}
 
-      <div className="space-y-3 rounded-xl border border-slate-700/50 bg-slate-800/30 p-4">
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-slate-400">{t("notificationsFor")}</p>
-          <p className="text-xs text-slate-500">{t("notificationTypesHint")}</p>
-        </div>
+      {isSubscribed && (
+        <div className="space-y-3 rounded-xl border border-slate-700/50 bg-slate-800/30 p-4">
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-slate-400">{t("notificationsFor")}</p>
+            <p className="text-xs text-slate-500">{t("notificationTypesHint")}</p>
+          </div>
 
-        {PUSH_EVENT_TYPES.map((eventType) => {
-          const enabled = pushEventPreferences[eventType];
-          const label = {
-            "pr.reviewer": t("prReviewRequest"),
-            "pr.comment": t("prComment"),
-            "build.failed": t("buildFailed"),
-            "build.succeeded": t("buildSuccess"),
-            "release.approval": t("releasePending"),
-          }[eventType];
+          {PUSH_EVENT_TYPES.map((eventType) => {
+            const enabled = pushEventPreferences[eventType];
+            const label = {
+              "pr.reviewer": t("prReviewRequest"),
+              "pr.comment": t("prComment"),
+              "build.failed": t("buildFailed"),
+              "build.succeeded": t("buildSuccess"),
+              "release.approval": t("releasePending"),
+            }[eventType];
 
-          return (
-            <div key={eventType} className="flex items-start justify-between gap-4 rounded-xl border border-slate-700/60 bg-slate-900/30 p-3">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-slate-200">{label}</p>
-                <p className="text-xs text-slate-500">
-                  {enabled ? t("typeEnabled") : t("typeDisabled")}
-                </p>
+            return (
+              <div key={eventType} className="flex items-start justify-between gap-4 rounded-xl border border-slate-700/60 bg-slate-900/30 p-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-slate-200">{label}</p>
+                  <p className="text-xs text-slate-500">
+                    {enabled ? t("typeEnabled") : t("typeDisabled")}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onToggleEventPreference(eventType)}
+                  disabled={pushLoading}
+                  className={`relative h-6 w-12 flex-shrink-0 rounded-full transition-colors disabled:opacity-40 ${enabled ? "bg-blue-600" : "bg-slate-700"}`}
+                  aria-pressed={enabled}
+                >
+                  <div className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-transform ${enabled ? "translate-x-7" : "translate-x-1"}`} />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => onToggleEventPreference(eventType)}
-                disabled={pushLoading}
-                className={`relative h-6 w-12 flex-shrink-0 rounded-full transition-colors disabled:opacity-40 ${enabled ? "bg-blue-600" : "bg-slate-700"}`}
-                aria-pressed={enabled}
-              >
-                <div className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-transform ${enabled ? "translate-x-7" : "translate-x-1"}`} />
-              </button>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {pushSupportStatus === "supported" && !isSubscribed && (
         <Link
