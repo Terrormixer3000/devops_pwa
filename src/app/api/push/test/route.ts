@@ -1,14 +1,12 @@
 /**
  * POST /api/push/test
  *
- * Test-Endpunkt: Sendet eine Web Push Notification direkt an alle Subscriptions
- * einer Org/Projekt-Kombination fuer genau einen Azure DevOps User, ohne einen
+ * Test-Endpunkt: Sendet eine Web Push Notification direkt an genau die
+ * Browser-Subscription, die zum uebergebenen Webhook-Token gehoert, ohne einen
  * echten Azure DevOps Service Hook zu brauchen.
  *
  * Body: {
- *   org: string
- *   project: string
- *   azureUserId: string
+ *   token: string
  *   eventType: "build.failed" | "build.succeeded" | "pr.reviewer" | "pr.comment" | "release.approval"
  * }
  *
@@ -17,8 +15,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { dedupeSubscriptionsByEndpoint, normalizeText } from "@/lib/server/pushRouteUtils";
-import { getSubscriptionsForUsers, removeSubscription } from "@/lib/server/subscriptionDb";
+import { getSubscriptionByToken, removeSubscription } from "@/lib/server/subscriptionDb";
 import {
   ensureWebPushConfigured,
   getWebPushClient,
@@ -33,67 +30,67 @@ type TestEventType = PushEventType;
 
 const TEST_NOTIFICATIONS: Record<TestEventType, WebhookNotificationPayload> = {
   "build.failed": {
-    title: "Build fehlgeschlagen",
-    body: "CI Pipeline #42 ist fehlgeschlagen (branch: feature/push-test)",
+    title: "Build failed",
+    body: "CI Pipeline #42 failed (branch: feature/push-test)",
     tag: "build-test-failed",
     url: "/pipelines",
   },
   "build.succeeded": {
-    title: "Build erfolgreich",
-    body: "CI Pipeline #43 wurde erfolgreich abgeschlossen",
+    title: "Build succeeded",
+    body: "CI Pipeline #43 completed successfully",
     tag: "build-test-succeeded",
     url: "/pipelines",
   },
   "pr.reviewer": {
-    title: "Review angefragt",
-    body: "Du wurdest als Reviewer hinzugefuegt: feat: Web Push Notifications",
+    title: "Review requested",
+    body: "You were added as a reviewer: feat: Web Push Notifications",
     tag: "pr-reviewer-test",
     url: "/pull-requests",
   },
   "pr.comment": {
-    title: "Neuer PR-Kommentar",
-    body: "feat: Web Push Notifications: \"Sieht gut aus, bitte noch die Tests ergaenzen\"",
+    title: "New PR comment",
+    body: "feat: Web Push Notifications: \"Looks good, please add the tests\"",
     tag: "pr-comment-test",
     url: "/pull-requests",
   },
   "release.approval": {
-    title: "Approval ausstehend",
-    body: "Release-2026.03 wartet auf Freigabe fuer Production",
+    title: "Approval pending",
+    body: "Release-2026.03 is waiting for approval for Production",
     tag: "approval-test",
     url: "/releases",
   },
 };
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  const isEnabled =
+    process.env.NODE_ENV !== "production" ||
+    process.env.ENABLE_PUSH_TEST_API === "true";
+  if (!isEnabled) {
+    return NextResponse.json({ error: "Push test API is disabled" }, { status: 403 });
+  }
+
   let body: {
-    org: string;
-    project: string;
-    azureUserId: string;
+    token?: string;
     eventType: TestEventType;
   };
 
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Ungueltiger Request-Body" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const org = normalizeText(body.org);
-  const project = normalizeText(body.project);
-  const azureUserId = normalizeText(body.azureUserId);
+  const token = (body.token ?? "").trim();
   const eventType = body.eventType;
 
-  if (!org || !project || !azureUserId) {
-    return NextResponse.json(
-      { error: "org, project und azureUserId sind Pflichtfelder" },
-      { status: 400 }
-    );
+  if (!token) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const template = TEST_NOTIFICATIONS[eventType];
   if (!template) {
     return NextResponse.json(
-      { error: `Unbekannter eventType: ${eventType}. Erlaubt: ${Object.keys(TEST_NOTIFICATIONS).join(", ")}` },
+      { error: `Unknown eventType: ${eventType}. Allowed: ${Object.keys(TEST_NOTIFICATIONS).join(", ")}` },
       { status: 400 }
     );
   }
@@ -108,18 +105,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
   const webPush = getWebPushClient();
 
-  const subscriptions = getSubscriptionsForUsers(org, project, [azureUserId]);
-  const uniqueSubscriptions = dedupeSubscriptionsByEndpoint(subscriptions).filter(
-    (subscription) => subscription.eventPreferences[eventType]
-  );
+  const subscription = getSubscriptionByToken(token);
+  if (!subscription) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-  if (uniqueSubscriptions.length === 0) {
+  if (!subscription.eventPreferences[eventType]) {
     return NextResponse.json(
       {
         ok: false,
-        error: "Keine aktive Subscription mit diesem Benachrichtigungstyp gefunden. Bitte Notifications aktivieren oder den Event-Typ in den Einstellungen einschalten.",
+        error: "This notification type is disabled for this browser subscription.",
       },
-      { status: 404 }
+      { status: 403 }
     );
   }
 
@@ -128,7 +125,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const errors: string[] = [];
 
   await Promise.allSettled(
-    uniqueSubscriptions.map(async (sub) => {
+    [subscription].map(async (sub) => {
       try {
         await webPush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } },
@@ -140,10 +137,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         const status = getWebPushErrorStatusCode(err);
         if (isExpiredSubscriptionError(err)) {
           removeSubscription(sub.endpoint);
-          errors.push(`Abgelaufene Subscription entfernt (${status})`);
+          errors.push(`Expired subscription removed (${status})`);
         } else {
           const suffix = status ? ` (${status})` : "";
-          errors.push(`Sendefehler${suffix}: ${err instanceof Error ? err.message : String(err)}`);
+          errors.push(`Send failed${suffix}: ${err instanceof Error ? err.message : String(err)}`);
         }
       }
     })
@@ -152,7 +149,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   return NextResponse.json({
     ok: sent > 0,
     sent,
-    total: uniqueSubscriptions.length,
+    total: 1,
     notification,
     errors: errors.length > 0 ? errors : undefined,
   });

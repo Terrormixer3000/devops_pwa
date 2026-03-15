@@ -44,9 +44,16 @@ function normalizeEndpoint(value: string): string {
 function dedupeByEndpoint(records: PushSubscriptionRecord[]): PushSubscriptionRecord[] {
   const byEndpoint = new Map<string, PushSubscriptionRecord>();
   for (const record of records) {
-    byEndpoint.set(record.endpoint, record);
+    byEndpoint.set(record.endpoint, normalizeRecord(record));
   }
   return [...byEndpoint.values()];
+}
+
+function tokensEqual(expectedToken: string, providedToken: string): boolean {
+  const expected = Buffer.from(expectedToken, "utf-8");
+  const provided = Buffer.from(providedToken, "utf-8");
+  if (expected.length !== provided.length) return false;
+  return timingSafeEqual(expected, provided);
 }
 
 function normalizeRecord(record: PushSubscriptionRecord): PushSubscriptionRecord {
@@ -197,20 +204,24 @@ export function getSubscriptionByToken(token: string): PushSubscriptionRecord | 
   const db = readDb();
   const all = Object.values(db).flat();
 
-  const tokenBuf = Buffer.from(token, "utf-8");
-
   for (const sub of all) {
     if (!sub.webhookToken) continue;
-    const subBuf = Buffer.from(sub.webhookToken, "utf-8");
-    if (tokenBuf.length !== subBuf.length) continue;
-    if (timingSafeEqual(tokenBuf, subBuf)) return sub;
+    if (tokensEqual(sub.webhookToken, token)) return normalizeRecord(sub);
   }
 
   return null;
 }
 
+export function matchesSubscriptionToken(
+  subscription: Pick<PushSubscriptionRecord, "webhookToken"> | null | undefined,
+  token: string
+): boolean {
+  if (!subscription?.webhookToken || !token) return false;
+  return tokensEqual(subscription.webhookToken, token);
+}
+
 /** Gibt alle Subscriptions aus der gesamten DB zurueck (fuer Admin-Zwecke). */
 export function getAllSubscriptions(): PushSubscriptionRecord[] {
   const db = readDb();
-  return Object.values(db).flat();
+  return Object.values(db).flat().map((subscription) => normalizeRecord(subscription));
 }

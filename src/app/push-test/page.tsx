@@ -209,14 +209,8 @@ export default function PushTestPage() {
 
   // Test-Notification senden
   const handleTest = async (eventType: TestEventType) => {
-    if (!settings?.organization || !settings?.project) {
-      setLastResult({ ok: false, error: t("configureHint") });
-      setLastTestedEvent(eventType);
-      return;
-    }
-
-    if (!currentUser) {
-      setLastResult({ ok: false, error: t("noUserError") });
+    if (!webhookToken) {
+      setLastResult({ ok: false, error: t("missingWebhookToken") });
       setLastTestedEvent(eventType);
       return;
     }
@@ -230,9 +224,7 @@ export default function PushTestPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          org: settings.organization,
-          project: settings.project,
-          azureUserId: currentUser.id,
+          token: webhookToken,
           eventType,
         }),
       });
@@ -254,9 +246,7 @@ export default function PushTestPage() {
   const canTest =
     supportStatus === "supported" &&
     isSubscribed &&
-    !!settings?.organization &&
-    !!settings?.project &&
-    !!currentUser;
+    !!webhookToken;
 
   if (pushStateLoading) {
     return (

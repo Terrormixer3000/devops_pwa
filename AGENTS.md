@@ -75,9 +75,11 @@ Minimum validation:
 - Push notifications use API routes under `src/app/api/push/*`, a local JSON subscription store in `data/subscriptions.json`, and `public/sw-custom.js`.
 - Each push subscription has a `webhookToken` (64 hex chars, 256-bit entropy) generated at registration time and stored in `data/subscriptions.json`.
 - Each browser subscription also stores per-event notification preferences; settings and server-side delivery must stay aligned so disabled event types are not sent.
-- The webhook endpoint `POST /api/push/webhook` requires `?t=<webhookToken>` — no global secret.
+- The webhook endpoint `POST /api/push/webhook` requires `?t=<webhookToken>` and treats that token as a capability for exactly one browser subscription, not as a project-wide secret.
 - The token is stored in the browser under `localStorage` key `azdevops_push_token` by `pushService`.
-- Push setup happens directly on `/settings`: activate notifications there, then manually register the generated personal webhook URL in Azure DevOps. `/push-setup` is redirect-only compatibility. `/push-test` requires an active subscription plus token present in `localStorage`.
+- Push setup happens directly on `/settings`: activate notifications there, then manually register the generated personal webhook URL for that browser/device in Azure DevOps. `/push-setup` is redirect-only compatibility.
+- `POST` and `DELETE /api/push/subscribe` accept updates for an existing endpoint only when the matching `webhookToken` is provided; `org`, `project`, and `azureUserId` are immutable after first registration.
+- `/api/push/test` is token-authenticated, sends only to the token owner's subscription, and should only be enabled in development or with `ENABLE_PUSH_TEST_API=true`.
 
 ---
 

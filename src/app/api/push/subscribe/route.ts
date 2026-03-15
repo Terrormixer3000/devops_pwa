@@ -5,7 +5,12 @@ import { NextRequest, NextResponse } from "next/server";
  * POST: Speichert eine neue PushSubscription inkl. Webhook-Token.
  * DELETE: Entfernt eine bestehende PushSubscription anhand des Endpoints.
  */
-import { getSubscriptionByEndpoint, upsertSubscription, removeSubscription } from "@/lib/server/subscriptionDb";
+import {
+  getSubscriptionByEndpoint,
+  matchesSubscriptionToken,
+  upsertSubscription,
+  removeSubscription,
+} from "@/lib/server/subscriptionDb";
 import { generateWebhookToken, isSecureSubscriptionEndpoint, normalizeText } from "@/lib/server/pushRouteUtils";
 import type { PushEventPreferences, PushSubscriptionRecord } from "@/types";
 import { normalizePushEventPreferences } from "@/lib/utils/pushEventPreferences";
@@ -47,7 +52,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Ungueltiger Request-Body" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
   const subscription = parseSubscription(body);
@@ -55,6 +60,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const project = normalizeText((body as { project?: string })?.project);
   const azureUserId = normalizeText((body as { azureUserId?: string })?.azureUserId);
   const displayName = normalizeText((body as { displayName?: string })?.displayName);
+  const token = normalizeText((body as { token?: string })?.token);
   const existingRecord = subscription ? getSubscriptionByEndpoint(subscription.endpoint) : null;
   const eventPreferences = normalizePushEventPreferences(
     (body as { eventPreferences?: Partial<PushEventPreferences> })?.eventPreferences
@@ -62,17 +68,34 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   );
 
   if (!subscription) {
-    return NextResponse.json({ error: "Unvollstaendige Subscription-Daten" }, { status: 400 });
+    return NextResponse.json({ error: "Incomplete subscription data" }, { status: 400 });
   }
   if (!isSecureSubscriptionEndpoint(subscription.endpoint)) {
-    return NextResponse.json({ error: "Ungueltiger Subscription-Endpoint" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid subscription endpoint" }, { status: 400 });
   }
 
   if (!org || !project || !azureUserId) {
     return NextResponse.json(
-      { error: "org, project und azureUserId sind Pflichtfelder" },
+      { error: "org, project, and azureUserId are required" },
       { status: 400 }
     );
+  }
+
+  if (existingRecord) {
+    if (!matchesSubscriptionToken(existingRecord, token)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    if (
+      existingRecord.org !== org.toLowerCase() ||
+      existingRecord.project !== project.toLowerCase() ||
+      existingRecord.azureUserId !== azureUserId.toLowerCase()
+    ) {
+      return NextResponse.json(
+        { error: "org, project, and azureUserId cannot be changed for an existing subscription" },
+        { status: 403 }
+      );
+    }
   }
 
   const webhookToken = existingRecord?.webhookToken ?? generateWebhookToken();
@@ -83,10 +106,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       p256dh: subscription.p256dh,
       auth: subscription.auth,
     },
-    org,
-    project,
-    azureUserId,
-    displayName: displayName || "Unbekannter Benutzer",
+    org: existingRecord?.org ?? org,
+    project: existingRecord?.project ?? project,
+    azureUserId: existingRecord?.azureUserId ?? azureUserId,
+    displayName: displayName || "Unknown user",
     createdAt: new Date().toISOString(),
     eventPreferences,
     webhookToken,
@@ -95,8 +118,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     upsertSubscription(record);
   } catch (err) {
-    console.error("[push/subscribe] Fehler beim Speichern der Subscription:", err);
-    return NextResponse.json({ error: "Speicherfehler" }, { status: 500 });
+    console.error("[push/subscribe] Failed to store subscription:", err);
+    return NextResponse.json({ error: "Storage error" }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true, webhookToken }, { status: 201 });
@@ -106,7 +129,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
  * DELETE /api/push/subscribe
  * Loescht eine PushSubscription anhand ihres Endpoints.
  *
- * Body: { endpoint: string }
+ * Body: { endpoint: string, token: string }
  */
 export async function DELETE(req: NextRequest): Promise<NextResponse> {
   let body: unknown;
@@ -114,20 +137,30 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Ungueltiger Request-Body" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
   const endpoint = normalizeText((body as { endpoint?: string })?.endpoint);
+  const token = normalizeText((body as { token?: string })?.token);
 
   if (!endpoint) {
-    return NextResponse.json({ error: "endpoint ist ein Pflichtfeld" }, { status: 400 });
+    return NextResponse.json({ error: "endpoint is required" }, { status: 400 });
+  }
+
+  if (!token) {
+    return NextResponse.json({ error: "token is required" }, { status: 401 });
+  }
+
+  const existingRecord = getSubscriptionByEndpoint(endpoint);
+  if (!existingRecord || !matchesSubscriptionToken(existingRecord, token)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   try {
     removeSubscription(endpoint);
   } catch (err) {
-    console.error("[push/subscribe] Fehler beim Loeschen der Subscription:", err);
-    return NextResponse.json({ error: "Loeschfehler" }, { status: 500 });
+    console.error("[push/subscribe] Failed to delete subscription:", err);
+    return NextResponse.json({ error: "Delete failed" }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });
