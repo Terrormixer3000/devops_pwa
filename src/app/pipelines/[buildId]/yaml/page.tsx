@@ -5,9 +5,8 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, FileCode2, GitBranch, Save } from "lucide-react";
 import Link from "next/link";
-import Prism from "prismjs";
-import "prismjs/components/prism-yaml";
 import { AppBar } from "@/components/layout/AppBar";
+import { YamlEditor } from "@/components/pipelines/YamlEditor";
 import { PipelineYamlCommitModal, type PipelineYamlCommitRequest } from "@/components/pipelines/PipelineYamlCommitModal";
 import { Button } from "@/components/ui/Button";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
@@ -22,51 +21,6 @@ import { extractErrorMessage } from "@/lib/utils/errorUtils";
 import { useTranslations } from "next-intl";
 
 const NEW_BRANCH_OLD_OBJECT_ID = "0000000000000000000000000000000000000000";
-
-/** YAML-Code mit Prism hervorheben (gibt HTML-String zurueck). */
-function highlightYaml(code: string): string {
-  return Prism.highlight(code, Prism.languages.yaml, "yaml");
-}
-
-/** Editor mit Syntax Highlighting: transparentes Textarea ueber hervorgehobenem Pre. */
-function YamlEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  // Leerzeile am Ende damit Cursor in letzter Zeile korrekt positioniert wird
-  const highlighted = highlightYaml(value) + "\n";
-
-  const sharedStyle: React.CSSProperties = {
-    fontFamily: "'SF Mono', 'Fira Code', 'Roboto Mono', monospace",
-    fontSize: 12,
-    lineHeight: "1.6",
-    padding: 16,
-    margin: 0,
-    border: "none",
-    whiteSpace: "pre-wrap",
-    wordBreak: "break-all",
-    tabSize: 2,
-  };
-
-  return (
-    <div className="relative flex-1" style={{ minHeight: "65vh" }}>
-      {/* Highlighted-Hintergrund */}
-      <pre
-        aria-hidden
-        className="prism-yaml absolute inset-0 overflow-auto pointer-events-none text-slate-200"
-        style={sharedStyle}
-        dangerouslySetInnerHTML={{ __html: highlighted }}
-      />
-      {/* Eingabe-Textarea (transparenter Text, sichtbarer Cursor) */}
-      <textarea
-        className="absolute inset-0 w-full h-full resize-none bg-transparent text-transparent caret-white focus:outline-none"
-        style={sharedStyle}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        spellCheck={false}
-        autoCapitalize="none"
-        autoCorrect="off"
-      />
-    </div>
-  );
-}
 
 /** Editor-Seite zum Bearbeiten der YAML-Datei einer bestehenden Pipeline. */
 export default function PipelineYamlEditPage({ params }: { params: Promise<{ buildId: string }> }) {
@@ -251,7 +205,7 @@ export default function PipelineYamlEditPage({ params }: { params: Promise<{ bui
 
       {/* Datei-Info-Leiste */}
       <div className="px-4 py-2.5 border-b border-slate-800 flex items-center gap-3">
-        <FileCode2 size={14} className="text-blue-400 flex-shrink-0" />
+        <FileCode2 size={14} className="text-blue-400 shrink-0" />
         <p className="text-xs font-mono text-slate-400 flex-1 truncate">{yamlFilename}</p>
         <span className="inline-flex items-center gap-1 text-xs text-slate-500">
           <GitBranch size={11} />

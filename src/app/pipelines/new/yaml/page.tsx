@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, FileCode2, GitBranch, Save } from "lucide-react";
 import { AppBar } from "@/components/layout/AppBar";
+import { YamlEditor } from "@/components/pipelines/YamlEditor";
 import {
   PipelineYamlCommitModal,
   type PipelineYamlCommitRequest,
@@ -582,17 +583,10 @@ export default function PipelineYamlEditorPage() {
               {existingYaml?.exists ? "Bestehende Datei" : "Neue Datei"}
             </span>
           </div>
-          <textarea
-            className="min-h-[65vh] w-full resize-none border-0 bg-slate-950 p-4 font-mono text-xs text-slate-200 focus:outline-none"
+          <YamlEditor
             value={editorContent}
-            onChange={(e) => {
-              setEditorContent(e.target.value);
-              patchDraft({ editorContent: e.target.value });
-            }}
+            onChange={(v) => { setEditorContent(v); patchDraft({ editorContent: v }); }}
             readOnly={!!retryAction}
-            spellCheck={false}
-            autoCapitalize="none"
-            autoCorrect="off"
           />
         </div>
       </div>
