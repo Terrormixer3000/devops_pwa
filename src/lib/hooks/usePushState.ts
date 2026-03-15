@@ -17,16 +17,11 @@ interface PushState {
  * Ersetzt manuelle useEffect+useState Bloecke auf settings und push-test Seiten.
  */
 export function usePushState(): PushState {
-  const [supportStatus, setSupportStatus] = useState<PushSupportStatus>(() =>
-    typeof window === "undefined" ? "unsupported" : pushService.getSupportStatus()
-  );
-  const [permissionState, setPermissionState] = useState<PushPermissionState>(() =>
-    typeof window === "undefined" ? "default" : pushService.getPermissionState()
-  );
+  // SSR-sichere Initialwerte – refresh() im useEffect setzt die echten Werte nach dem Mount
+  const [supportStatus, setSupportStatus] = useState<PushSupportStatus>("unsupported");
+  const [permissionState, setPermissionState] = useState<PushPermissionState>("default");
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const [webhookToken, setWebhookToken] = useState<string | null>(() =>
-    typeof window === "undefined" ? null : pushService.getStoredToken()
-  );
+  const [webhookToken, setWebhookToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const refresh = useCallback(async () => {
