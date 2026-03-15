@@ -36,44 +36,52 @@ export function ConnectionSettings({
   return (
     <>
       {/* Darstellung */}
-      <section className="space-y-4">
+      <section className="space-y-3">
         <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">{t("theme")}</h2>
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-slate-300">{t("colorScheme")}</p>
-          <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-800/70 p-1.5">
-            {[
-              { value: "dark", label: t("darkMode") },
-              { value: "light", label: t("lightMode") },
-            ].map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => onChangeTheme(option.value as ThemeMode)}
-                className={`rounded-[0.95rem] px-4 py-3 text-sm font-medium transition-colors ${
-                  form.theme === option.value ? "bg-blue-600 text-white" : "text-slate-400 hover:bg-slate-700/80"
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-slate-300">{t("language")}</p>
-          <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-800/70 p-1.5">
-            {(["de", "en"] as Locale[]).map((loc) => (
-              <button
-                key={loc}
-                type="button"
-                onClick={() => onChangeLocale(loc)}
-                className={`rounded-[0.95rem] px-4 py-3 text-sm font-medium transition-colors ${
-                  (form.locale ?? "de") === loc ? "bg-blue-600 text-white" : "text-slate-400 hover:bg-slate-700/80"
-                }`}
-              >
-                {loc === "de" ? t("german") : t("english")}
-              </button>
-            ))}
+        <div className="rounded-xl border border-slate-700/60 bg-slate-800/30 divide-y divide-slate-700/60">
+          {/* Farbschema */}
+          <div className="flex items-center justify-between gap-4 px-4 py-3">
+            <p className="text-sm font-medium text-slate-300">{t("colorScheme")}</p>
+            <div className="flex gap-1 rounded-xl bg-slate-800/80 p-1">
+              {[
+                { value: "dark", label: t("darkMode") },
+                { value: "light", label: t("lightMode") },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => onChangeTheme(option.value as ThemeMode)}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                    form.theme === option.value ? "bg-blue-600 text-white" : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Sprache */}
+          <div className="flex items-center justify-between gap-4 px-4 py-3">
+            <p className="text-sm font-medium text-slate-300">{t("language")}</p>
+            <div className="flex gap-1 rounded-xl bg-slate-800/80 p-1">
+              {([
+                { loc: "de", label: "Deutsch" },
+                { loc: "en", label: "English" },
+              ] as { loc: Locale; label: string }[]).map(({ loc, label }) => (
+                <button
+                  key={loc}
+                  type="button"
+                  onClick={() => onChangeLocale(loc)}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                    (form.locale ?? "de") === loc ? "bg-blue-600 text-white" : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </section>
