@@ -12,6 +12,7 @@ const LOCALE_COOKIE = "azdevops_locale";
 const DEFAULT_SETTINGS: AppSettings = {
   organization: "",
   project: "",
+  availableProjects: [],
   pat: "",
   demoMode: false,
   theme: "dark",
@@ -25,7 +26,13 @@ export const settingsService = {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
-      return { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<AppSettings>) };
+      const parsed = JSON.parse(raw) as Partial<AppSettings>;
+      const merged = { ...DEFAULT_SETTINGS, ...parsed };
+      // Migration: availableProjects aus bestehendem project-Wert befuellen
+      if (!parsed.availableProjects && merged.project) {
+        merged.availableProjects = [merged.project];
+      }
+      return merged;
     } catch {
       return null;
     }
