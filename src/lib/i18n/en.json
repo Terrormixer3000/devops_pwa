@@ -53,6 +53,17 @@
       "workItems": "Work Items"
     }
   },
+  "prs": {
+    "abandon": "Abandon PR",
+    "abandonConfirm": "Really abandon this pull request? This action cannot be undone.",
+    "policies": "Policies",
+    "policyApproved": "Approved",
+    "policyRejected": "Rejected",
+    "policyRunning": "Running",
+    "policyNotApplicable": "Not applicable",
+    "policyQueued": "Queued",
+    "policyRequired": "Required"
+  },
   "pipelines": {
     "title": "Pipelines",
     "runs": "Runs",
@@ -64,6 +75,10 @@
     "loadError": "Could not load builds",
     "noClient": "No client",
     "buildLoadError": "Could not load build",
+    "cancelBuild": "Cancel build",
+    "variables": "Variables",
+    "noVariables": "No overridable variables",
+    "secretVariable": "Secret variable",
     "buildDetail": {
       "title": "Build details",
       "overview": "Overview",

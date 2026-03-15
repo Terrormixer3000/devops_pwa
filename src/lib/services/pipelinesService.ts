@@ -160,6 +160,28 @@ export const pipelinesService = {
     return (res.data.value || []).map((f) => f.path);
   },
 
+  /** Gibt die Build-Definition mit Variablen und YAML-Pfad zurueck. */
+  async getBuildDefinition(
+    client: AxiosInstance,
+    project: string,
+    definitionId: number
+  ): Promise<{
+    variables?: Record<string, { value?: string; allowOverride?: boolean; isSecret?: boolean }>;
+    process?: { yamlFilename?: string };
+  }> {
+    if (isDemoClient(client)) {
+      return { variables: {}, process: {} };
+    }
+
+    const res = await client.get<{
+      variables?: Record<string, { value?: string; allowOverride?: boolean; isSecret?: boolean }>;
+      process?: { yamlFilename?: string };
+    }>(
+      `/${project}/_apis/build/definitions/${definitionId}?api-version=7.1`
+    );
+    return res.data;
+  },
+
   /** Erstellt eine neue YAML-Pipeline-Definition im Projekt. */
   async createPipeline(
     client: AxiosInstance,
