@@ -251,7 +251,7 @@ export default function PushTestPage() {
   if (pushStateLoading) {
     return (
       <div className="min-h-screen">
-        <AppBar title={appBarTitle} />
+        <AppBar title={appBarTitle} hideProjectChip />
         <PageLoader />
       </div>
     );
@@ -260,7 +260,7 @@ export default function PushTestPage() {
   if (!webhookToken) {
     return (
       <div className="min-h-screen">
-        <AppBar title={appBarTitle} />
+        <AppBar title={appBarTitle} hideProjectChip />
 
         <div className="px-4 py-4 max-w-lg mx-auto">
           <section className="space-y-4 rounded-2xl border border-blue-700/30 bg-slate-800/40 p-4">
@@ -293,7 +293,7 @@ export default function PushTestPage() {
 
   return (
     <div className="min-h-screen">
-      <AppBar title={appBarTitle} />
+      <AppBar title={appBarTitle} hideProjectChip />
 
       <div className="px-4 py-4 space-y-5 max-w-lg mx-auto">
 
