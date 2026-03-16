@@ -30,7 +30,7 @@ import {
   WorkItem,
 } from "@/types";
 
-const STORAGE_KEY_PREFIX = "azdevops_demo_state";
+const STORAGE_KEY_PREFIX = "azdevops_demo_state_v3";
 let demoLocale = "en";
 
 /** Setzt die aktive Sprache fuer die Demo-Datengenerierung und leert den In-Memory-Cache. */
@@ -618,16 +618,70 @@ function createBuildTimeline(buildId: number, seed: number, inProgress = false):
     },
   ];
 
+  const R = "\x1b[0m";
+  const BOLD = "\x1b[1m";
+  const DIM = "\x1b[90m";
+  const GREEN = "\x1b[32m";
+  const RED = "\x1b[31m";
+  const YELLOW = "\x1b[33m";
+  const CYAN = "\x1b[36m";
+
   const logs: Record<string, string> = {
-    [logKey(buildId, logIds[0])]: `[setup] Installing dependencies\nnpm ci\nadded 482 packages in 8s\n`,
-    [logKey(buildId, logIds[1])]: `[test] Running suites\nPASS src/domain/service.test.ts\nPASS src/app/routes.test.ts\ncoverage: 86.3%\n`,
-    [logKey(buildId, logIds[2])]: `[publish] Packing artifacts\nartifact: drop\nartifact: sbom\n`,
+    [logKey(buildId, logIds[0])]: [
+      `${DIM}##[section]Starting: Install Dependencies${R}`,
+      `${CYAN}> npm ci${R}`,
+      `${DIM}npm warn deprecated inflight@1.0.6${R}`,
+      `added 482 packages in ${8 + (seed % 4)}s`,
+      `${GREEN}${BOLD}✓ Dependencies installed successfully${R}`,
+      ``,
+    ].join("\n"),
+    [logKey(buildId, logIds[1])]: [
+      `${DIM}##[section]Starting: Run Test Suites${R}`,
+      `${CYAN}> jest --ci --coverage${R}`,
+      ``,
+      `${GREEN}PASS${R} src/domain/service.test.ts ${DIM}(${2 + seed % 3}s)${R}`,
+      `${GREEN}PASS${R} src/app/routes.test.ts ${DIM}(${1 + seed % 2}s)${R}`,
+      `${GREEN}PASS${R} src/app/index.test.ts ${DIM}(${1 + seed % 3}s)${R}`,
+      ``,
+      `${BOLD}Coverage summary${R}`,
+      `  Statements : ${YELLOW}${82 + seed % 12}%${R}`,
+      `  Branches   : ${YELLOW}${74 + seed % 15}%${R}`,
+      `  Functions  : ${GREEN}${88 + seed % 10}%${R}`,
+      `  Lines      : ${YELLOW}${83 + seed % 11}%${R}`,
+      ``,
+      `${GREEN}${BOLD}Tests: 3 passed, 3 total${R}`,
+      ``,
+    ].join("\n"),
+    [logKey(buildId, logIds[2])]: [
+      `${DIM}##[section]Starting: Publish Artifacts${R}`,
+      `${CYAN}> az pipelines runs artifact upload${R}`,
+      `Uploading artifact ${BOLD}drop${R} ...  ${GREEN}done${R}`,
+      `Uploading artifact ${BOLD}sbom${R} ...  ${GREEN}done${R}`,
+      `${GREEN}${BOLD}✓ Artifacts published${R}`,
+      ``,
+    ].join("\n"),
   };
 
   if (seed % 5 === 0 && !inProgress) {
     records[2].result = "failed";
     records[0].result = "failed";
-    logs[logKey(buildId, logIds[1])] = `[test] Running suites\nFAIL src/domain/service.test.ts\nAssertionError: expected feature toggle to be enabled\n`;
+    logs[logKey(buildId, logIds[1])] = [
+      `${DIM}##[section]Starting: Run Test Suites${R}`,
+      `${CYAN}> jest --ci --coverage${R}`,
+      ``,
+      `${GREEN}PASS${R} src/app/routes.test.ts ${DIM}(2s)${R}`,
+      `${RED}FAIL${R} src/domain/service.test.ts`,
+      ``,
+      `  ${RED}●${R} ${BOLD}ServiceTest › feature toggle should be enabled${R}`,
+      ``,
+      `    ${RED}AssertionError: expected feature toggle to be enabled${R}`,
+      `      at Object.<anonymous> (src/domain/service.test.ts:42:5)`,
+      ``,
+      `${RED}${BOLD}Tests: 1 failed, 1 passed, 2 total${R}`,
+      ``,
+      `${DIM}##[error]Process completed with exit code 1.${R}`,
+      ``,
+    ].join("\n");
   }
 
   return { timeline: { records }, logs };
