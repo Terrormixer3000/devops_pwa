@@ -19,6 +19,7 @@ import { pipelinesService } from "@/lib/services/pipelinesService";
 import { buildTimelineView, parseLogId, getBuildStatusVariant, getBuildStatusLabel, EMPTY_TIMELINE_RECORDS } from "@/lib/utils/timelineUtils";
 import { JobsSummaryCards, TimelineNodeSection, LogSelector } from "@/components/pipelines/TimelineView";
 import { Loader, RotateCcw, StopCircle, Download, ChevronLeft, FileCode } from "lucide-react";
+import AnsiToHtml from "ansi-to-html";
 
 type Tab = "uebersicht" | "log" | "artefakte";
 
@@ -195,9 +196,15 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
                 {logLoading ? (
                   <PageLoader />
                 ) : (
-                  <pre className="text-xs text-slate-300 font-mono whitespace-pre-wrap break-all bg-slate-900 p-3 rounded-xl border border-slate-800 overflow-x-auto">
-                    {logContent || tBd("noLogContent")}
-                  </pre>
+                  <pre
+                    className="text-xs text-slate-300 font-mono whitespace-pre-wrap break-all bg-slate-900 p-3 rounded-xl border border-slate-800 overflow-x-auto"
+                    // ANSI-Escape-Codes in farbiges HTML umwandeln
+                    dangerouslySetInnerHTML={{
+                      __html: logContent
+                        ? new AnsiToHtml({ escapeXML: true }).toHtml(logContent)
+                        : tBd("noLogContent"),
+                    }}
+                  />
                 )}
               </div>
             )}
