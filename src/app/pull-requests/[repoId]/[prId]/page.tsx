@@ -152,12 +152,24 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
 
       {/* Tabs */}
       <TabBar
-        variant="underline"
+        variant="segment"
         tabs={[
-          { key: "uebersicht", label: tTabs("overview"), icon: <FileText size={14} /> },
-          { key: "dateien", label: `${tTabs("files")}${h.changes?.changeEntries ? ` (${h.changes.changeEntries.length})` : ""}`, icon: <FileText size={14} /> },
-          { key: "commits", label: tTabs("commits"), icon: <GitCommit size={14} /> },
-          { key: "kommentare", label: `${tTabs("comments")}${h.commentThreads.length ? ` (${h.commentThreads.length})` : ""}`, icon: <MessageCircle size={14} /> },
+          { key: "uebersicht", label: tTabs("overview"), icon: <FileText size={17} /> },
+          {
+            key: "dateien",
+            icon: h.changes?.changeEntries?.length
+              ? <span className="relative inline-flex"><GitMerge size={17} /><span className="absolute -top-1.5 -right-2.5 min-w-3.5 h-3.5 flex items-center justify-center rounded-full bg-slate-600 text-[9px] font-semibold text-slate-200 px-0.5">{h.changes.changeEntries.length}</span></span>
+              : <GitMerge size={17} />,
+            label: tTabs("files"),
+          },
+          { key: "commits", label: tTabs("commits"), icon: <GitCommit size={17} /> },
+          {
+            key: "kommentare",
+            icon: h.commentThreads.length
+              ? <span className="relative inline-flex"><MessageCircle size={17} /><span className="absolute -top-1.5 -right-2.5 min-w-3.5 h-3.5 flex items-center justify-center rounded-full bg-slate-600 text-[9px] font-semibold text-slate-200 px-0.5">{h.commentThreads.length}</span></span>
+              : <MessageCircle size={17} />,
+            label: tTabs("comments"),
+          },
         ]}
         activeKey={h.activeTab}
         onChange={(key) => h.setActiveTab(key as Tab)}
