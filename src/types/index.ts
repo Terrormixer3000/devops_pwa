@@ -259,6 +259,60 @@ export interface BuildArtifact {
   };
 }
 
+// ─── Task-Katalog (Azure DevOps Distributed Task) ────────────────────────────
+
+/** Einzelnes Input-Feld einer Task-Definition. */
+export interface TaskInputDefinition {
+  name: string;
+  label: string;
+  type: string;
+  defaultValue: string;
+  required: boolean;
+  helpMarkDown?: string;
+  options?: Record<string, string>;
+  visibleRule?: string;
+  groupName?: string;
+}
+
+/** Vollstaendige Task-Definition aus dem Azure DevOps Distributed Task Catalog. */
+export interface AzureTaskDefinition {
+  id: string;
+  name: string;
+  friendlyName: string;
+  description: string;
+  category: string;
+  version: { major: number; minor: number; patch: number };
+  inputs: TaskInputDefinition[];
+  deprecated?: boolean;
+  preview?: boolean;
+}
+
+// ─── Release Pipeline Erstellung ─────────────────────────────────────────────
+
+/** Einzelner Deployment-Task innerhalb einer Release-Stage. */
+export interface WorkflowTask {
+  taskId: string;
+  version: string;
+  name: string;
+  enabled: boolean;
+  inputs: Record<string, string>;
+}
+
+/** Pre- oder Post-Deployment-Approval-Konfiguration einer Stage. */
+export interface StageApprovalConfig {
+  isAutomated: boolean;
+  approvers: string[];
+}
+
+/** Vollstaendige Konfiguration einer Stage beim Erstellen einer Release-Pipeline. */
+export interface ReleaseStageConfig {
+  name: string;
+  agentSpec: string;
+  tasks: WorkflowTask[];
+  preApprovals: StageApprovalConfig;
+  postApprovals: StageApprovalConfig;
+}
+
 // ─── Release Pipeline ────────────────────────────────────────────────────────
 
 /** Release-Pipeline-Definition (Vorlage fuer Releases). */
@@ -324,8 +378,8 @@ export interface ReleaseApproval {
   comments?: string;
   createdOn: string;
   modifiedOn: string;
-  releaseEnvironmentReference: { id: number; name: string };
-  releaseReference: { id: number; name: string };
+  releaseEnvironment: { id: number; name: string };
+  release: { id: number; name: string };
 }
 
 // ─── API-Antwortwrapper ────────────────────────────────────────────────────

@@ -1105,8 +1105,8 @@ function seedDemoState(): DemoState {
         comments: index % 2 === 0 && position === 0 ? "" : ls().approvalComment,
         createdOn,
         modifiedOn: createdOn,
-        releaseEnvironmentReference: { id: definition.environments?.[2].id || 0, name: "Prod" },
-        releaseReference: { id: releaseId, name: releaseName },
+        releaseEnvironment: { id: definition.environments?.[2].id || 0, name: "Prod" },
+        release: { id: releaseId, name: releaseName },
       };
 
       const environments: ReleaseEnvironment[] = [
@@ -1545,10 +1545,10 @@ function updateApprovalState(
   approval.modifiedOn = new Date().toISOString();
   approval.approvedBy = status === "approved" ? approval.approver : undefined;
 
-  const release = state.releases.find((candidate) => candidate.id === approval.releaseReference.id);
+  const release = state.releases.find((candidate) => candidate.id === approval.release.id);
   if (release) {
     const environment = release.environments.find(
-      (candidate) => candidate.id === approval.releaseEnvironmentReference.id
+      (candidate) => candidate.id === approval.releaseEnvironment.id
     );
     if (environment) {
       environment.preDeployApprovals = environment.preDeployApprovals.map((entry) =>
@@ -2083,8 +2083,8 @@ export const demoApi = {
           comments: "",
           createdOn: new Date().toISOString(),
           modifiedOn: new Date().toISOString(),
-          releaseEnvironmentReference: { id: definition.environments?.[2].id || 0, name: "Prod" },
-          releaseReference: { id: releaseId, name: releaseName },
+          releaseEnvironment: { id: definition.environments?.[2].id || 0, name: "Prod" },
+          release: { id: releaseId, name: releaseName },
         };
 
         const release: Release = {
@@ -2142,6 +2142,26 @@ export const demoApi = {
 
     rejectApproval(approvalId: number, comments?: string): ReleaseApproval {
       return withDemoState((state) => updateApprovalState(state, approvalId, "rejected", comments));
+    },
+
+    createDefinition(name: string, description?: string, stages: string[] = ["Production"]): ReleaseDefinition {
+      return withDemoState((state) => {
+        const maxId = state.releaseDefinitions.reduce((acc, d) => Math.max(acc, d.id), 0);
+        const newDef: ReleaseDefinition = {
+          id: maxId + 1,
+          name,
+          description,
+          createdBy: { id: "0", displayName: "Demo" },
+          modifiedOn: new Date().toISOString(),
+          environments: stages.map((stageName, index) => ({
+            id: (maxId + 1) * 10 + index + 1,
+            name: stageName,
+            rank: index + 1,
+          })),
+        };
+        state.releaseDefinitions.push(newDef);
+        return newDef;
+      });
     },
 
     getEnvironmentLogs(releaseId: number, environmentId: number): string {
