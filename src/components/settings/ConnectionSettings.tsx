@@ -138,16 +138,13 @@ export function ConnectionSettings({
         <div className="space-y-2">
           <label className="text-sm font-medium text-slate-300">{t("projects")}</label>
 
-          {/* Gespeicherte Projekte */}
-          {availableProjects.length > 0 && (
+          {/* Gespeicherte Projekte (im Demo-Modus: Demo-Projekt anzeigen) */}
+          {(form.demoMode ? [demoSettings.project] : availableProjects).length > 0 && (
             <div className="rounded-xl border border-slate-700/60 bg-slate-800/30 divide-y divide-slate-700/60">
-              {availableProjects.map((proj) => {
+              {(form.demoMode ? [demoSettings.project] : availableProjects).map((proj) => {
                 const isActive = proj === form.project;
                 return (
-                  <div
-                    key={proj}
-                    className="flex items-center gap-2 px-3 py-1.5"
-                  >
+                  <div key={proj} className="flex items-center gap-2 px-3 py-1.5">
                     <button
                       type="button"
                       onClick={() => !form.demoMode && onSetActiveProject(proj)}
