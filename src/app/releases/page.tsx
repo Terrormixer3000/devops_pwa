@@ -5,9 +5,9 @@
  * das Ausloesen neuer Deployments sowie die Freigabe ausstehender Approvals.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppBar } from "@/components/layout/AppBar";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
@@ -25,7 +25,7 @@ import { useReleaseDefStore } from "@/lib/stores/selectionStore";
 import { ReleaseSelector } from "@/components/layout/selectors/ReleaseSelector";
 import { DeliveryTitleSelector } from "@/components/layout/DeliveryTitleSelector";
 import { ReleaseDefinition, ReleaseApproval, ReleaseEnvironment } from "@/types";
-import { Rocket, ChevronRight, Play, ThumbsUp, ThumbsDown, AlertCircle } from "lucide-react";
+import { Rocket, ChevronRight, Play, Plus, ThumbsUp, ThumbsDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { timeAgo } from "@/lib/utils/timeAgo";
 
@@ -33,17 +33,32 @@ type Tab = "releases" | "definitionen" | "approvals";
 
 /** Haupt-Seite fuer Releases und Release-Definitionen mit Tab-Navigation. */
 export default function ReleasesPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("releases");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const t = useTranslations("releases");
+  const tc = useTranslations("common");
+
+  // Zustand direkt aus URL-Param initialisieren (kein setState im Effect)
+  const createdParam = searchParams.get("created");
+  const [activeTab, setActiveTab] = useState<Tab>(createdParam ? "definitionen" : "releases");
   const [startModal, setStartModal] = useState<ReleaseDefinition | null>(null);
   const [approvalModal, setApprovalModal] = useState<ReleaseApproval | null>(null);
   const [approvalError, setApprovalError] = useState<string | null>(null);
-  const router = useRouter();
+  const [flashMessage, setFlashMessage] = useState<string | null>(
+    createdParam ? t("pipelineCreated", { name: createdParam }) : null
+  );
 
   const { settings } = useSettingsStore();
   const { vsrmClient } = useAzureClient();
   const qc = useQueryClient();
-  const t = useTranslations("releases");
-  const tc = useTranslations("common");
+
+  // URL-Param bereinigen und Flash-Banner nach Ablauf loeschen
+  useEffect(() => {
+    if (!createdParam) return;
+    router.replace("/releases");
+    const timeoutId = window.setTimeout(() => setFlashMessage(null), 4000);
+    return () => window.clearTimeout(timeoutId);
+  }, [createdParam, router]);
 
   // Ausgewaehlte Release-Definitionen aus dem Tab-spezifischen Store
   const { selectedIds: selectedDefIds } = useReleaseDefStore();
@@ -128,6 +143,15 @@ export default function ReleasesPage() {
         onChange={(key) => setActiveTab(key as Tab)}
       />
 
+      {/* Flash-Banner nach Pipeline-Erstellung */}
+      {flashMessage && (
+        <div className="px-4 pt-2">
+          <div className="rounded-2xl border border-green-700/40 bg-green-900/20 px-4 py-3 text-sm text-green-300">
+            {flashMessage}
+          </div>
+        </div>
+      )}
+
       <div className="pt-[3.85rem]">
         {/* Definitionen */}
         {activeTab === "definitionen" && (
@@ -205,32 +229,35 @@ export default function ReleasesPage() {
               <div className="divide-y divide-slate-800/50">
                 {approvals.map((approval) => (
                   <div key={approval.id} className="px-4 py-4">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div>
-                        <p className="text-sm font-medium text-slate-100">{approval.releaseReference?.name}</p>
-                        <p className="text-xs text-slate-500">{approval.releaseEnvironmentReference?.name}</p>
-                      </div>
-                      <AlertCircle size={16} className="text-yellow-400 flex-shrink-0 mt-0.5" />
+                    <div className="mb-2">
+                      <p className="text-sm font-medium text-slate-100">{approval.release?.name}</p>
+                      <p className="text-xs text-slate-500">{approval.releaseEnvironment?.name}</p>
                     </div>
                     <p className="text-xs text-slate-500 mb-3">
                       {timeAgo(approval.createdOn)}
                     </p>
                     <div className="flex gap-2">
-                      {approval.releaseReference?.id ? (
+                      {approval.release?.id ? (
                         <Link
-                          href={`/releases/${approval.releaseReference.id}`}
+                          href={`/releases/${approval.release.id}`}
                           className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700/70 bg-slate-800/70 px-3 py-2 text-xs font-medium text-slate-200 hover:bg-slate-700/80"
                         >
                           {t("details")}
                           <ChevronRight size={13} />
                         </Link>
                       ) : null}
-                      <Button size="sm" variant="primary" onClick={() => setApprovalModal(approval)}>
-                        <ThumbsUp size={14} /> {t("approve")}
-                      </Button>
-                      <Button size="sm" variant="danger" onClick={() => setApprovalModal(approval)}>
-                        <ThumbsDown size={14} /> {t("reject")}
-                      </Button>
+                      <button
+                        onClick={() => setApprovalModal(approval)}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-green-800/50 bg-green-900/20 px-3 py-2 text-xs font-medium text-green-400 hover:bg-green-900/35 transition-colors"
+                      >
+                        <ThumbsUp size={13} /> {t("approve")}
+                      </button>
+                      <button
+                        onClick={() => setApprovalModal(approval)}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-red-800/50 bg-red-900/20 px-3 py-2 text-xs font-medium text-red-400 hover:bg-red-900/35 transition-colors"
+                      >
+                        <ThumbsDown size={13} /> {t("reject")}
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -239,6 +266,18 @@ export default function ReleasesPage() {
           </div>
         )}
       </div>
+
+      {/* FAB: Neue Release-Pipeline erstellen (nur im Definitionen-Tab) */}
+      {activeTab === "definitionen" && (
+        <button
+          onClick={() => router.push("/releases/new")}
+          className="fixed right-4 z-50 flex items-center gap-2 rounded-full bg-purple-600 px-4 py-3 text-sm font-medium text-white shadow-lg shadow-purple-900/40 transition-colors hover:bg-purple-500"
+          style={{ bottom: "var(--fab-bottom-offset)" }}
+        >
+          <Plus size={18} />
+          {t("newReleasePipeline")}
+        </button>
+      )}
 
       {/* Release starten Modal */}
       <Modal open={!!startModal} onClose={() => setStartModal(null)} title={t("startRelease")}>
@@ -259,8 +298,8 @@ export default function ReleasesPage() {
         open={!!approvalModal}
         approval={approvalModal ? {
           id: approvalModal.id,
-          releaseName: approvalModal.releaseReference?.name,
-          environmentName: approvalModal.releaseEnvironmentReference?.name,
+          releaseName: approvalModal.release?.name,
+          environmentName: approvalModal.releaseEnvironment?.name,
         } : null}
         isPending={approveMutation.isPending}
         error={approvalError}
