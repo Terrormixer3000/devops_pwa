@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Loader } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
-import { Button } from "@/components/ui/Button";
 
 interface ApprovalInfo {
   id: number;
@@ -52,22 +52,28 @@ export function ApprovalModal({ open, approval, isPending, error, onApprove, onR
         {error && (
           <p className="text-sm text-red-400">{error}</p>
         )}
-        <Button
-          fullWidth
-          loading={isPending}
+        <button
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-green-800/50 bg-green-900/20 py-2.5 text-sm font-medium text-green-400 hover:bg-green-900/35 transition-colors disabled:opacity-40"
+          disabled={isPending}
           onClick={() => approval && onApprove(approval.id, comment)}
         >
-          <ThumbsUp size={16} /> {t("approve")}
-        </Button>
-        <Button
-          fullWidth
-          variant="danger"
-          loading={isPending}
+          {isPending ? <Loader size={14} className="animate-spin" /> : <ThumbsUp size={14} />}
+          {t("approve")}
+        </button>
+        <button
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-800/50 bg-red-900/20 py-2.5 text-sm font-medium text-red-400 hover:bg-red-900/35 transition-colors disabled:opacity-40"
+          disabled={isPending}
           onClick={() => approval && onReject(approval.id, comment)}
         >
-          <ThumbsDown size={16} /> {t("reject")}
-        </Button>
-        <Button fullWidth variant="ghost" onClick={handleClose}>{t("cancel")}</Button>
+          {isPending ? <Loader size={14} className="animate-spin" /> : <ThumbsDown size={14} />}
+          {t("reject")}
+        </button>
+        <button
+          className="w-full py-2.5 text-sm text-slate-500 hover:text-slate-300 transition-colors"
+          onClick={handleClose}
+        >
+          {t("cancel")}
+        </button>
       </div>
     </Modal>
   );
