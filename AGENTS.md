@@ -42,7 +42,7 @@ Follow repository conventions over generic framework defaults. Keep changes narr
 
 ```bash
 npm install          # Install dependencies
-npm run dev          # Dev server with HTTPS (webpack mode)
+npm run dev          # Dev server with HTTPS (Turbopack mode)
 npm run build        # Production build (webpack mode)
 npm run start        # Production server
 npm run lint         # Lint
