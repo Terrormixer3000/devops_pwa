@@ -16,6 +16,7 @@ const withPWA = require("next-pwa")({
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  turbopack: {},
   env: {
     NEXT_PUBLIC_PWA_IN_DEV: enablePwaInDev ? "true" : "false",
   },
