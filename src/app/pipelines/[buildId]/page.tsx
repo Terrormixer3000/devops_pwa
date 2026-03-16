@@ -11,7 +11,6 @@ import { stripRefPrefix } from "@/lib/utils/gitUtils";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Badge } from "@/components/ui/Badge";
-import { BackActionButton } from "@/components/ui/BackButton";
 import Link from "next/link";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { useAzureClient } from "@/lib/hooks/useAzureClient";
@@ -189,9 +188,17 @@ export default function BuildDetailPage({ params }: { params: Promise<{ buildId:
               )
             ) : (
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <BackActionButton onClick={() => setSelectedLog(null)} label={tc("back")} size="compact" />
-                  <span className="text-xs text-slate-400">{selectedLog.name}</span>
+                <div className="flex items-center gap-1 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedLog(null)}
+                    className="flex items-center gap-0.5 text-sm font-medium text-blue-400 active:opacity-60 transition-opacity"
+                  >
+                    <ChevronLeft size={18} className="-ml-1" />
+                    {tc("back")}
+                  </button>
+                  <span className="text-xs text-slate-600">·</span>
+                  <span className="text-xs text-slate-400 truncate">{selectedLog.name}</span>
                 </div>
                 {logLoading ? (
                   <PageLoader />
