@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useState } from "react";
-import { Check, Star, ChevronDown, X } from "lucide-react";
+import { Check, Star, ChevronDown, X, Search } from "lucide-react";
 import { Drawer } from "vaul";
 import { useTranslations } from "next-intl";
 import { LoadingSpinner } from "./LoadingSpinner";
@@ -65,6 +65,8 @@ export function SelectionSheet({
   const t = useTranslations("selectionSheet");
   // Filtermodus: Favoriten oder alle anzeigen
   const [showAll, setShowAll] = useState(false);
+  // Suchbegriff fuer den Alle-Tab
+  const [searchQuery, setSearchQuery] = useState("");
 
   useLayoutEffect(() => {
     if (!open) return undefined;
@@ -83,10 +85,17 @@ export function SelectionSheet({
     description ||
     `${sheetTitle}. ${multiSelect ? t("descriptionMulti") : t("descriptionSingle")}`;
 
-  // Angezeigte Eintraege: Favoriten oder alle
-  const displayed = hasFavorites && !showAll && favoriteIds!.length > 0
+  // Angezeigte Eintraege: Favoriten oder alle, gefiltert nach Suchbegriff
+  const baseList = hasFavorites && !showAll && favoriteIds!.length > 0
     ? items.filter((i) => favoriteIds!.includes(i.id))
     : items;
+  const q = searchQuery.trim().toLowerCase();
+  const displayed = q
+    ? baseList.filter((i) =>
+        i.label.toLowerCase().includes(q) ||
+        (i.sublabel?.toLowerCase().includes(q) ?? false)
+      )
+    : baseList;
 
   const handleSelect = (item: SelectionItem) => {
     if (!multiSelect) {
@@ -106,6 +115,7 @@ export function SelectionSheet({
         if (nextOpen && document.activeElement instanceof HTMLElement) {
           document.activeElement.blur();
         }
+        if (!nextOpen) setSearchQuery("");
         setOpen(nextOpen);
       }}
       direction="bottom"
@@ -166,7 +176,7 @@ export function SelectionSheet({
             {/* Segmentierte Steuerung orientiert sich an iOS und bleibt in der bestehenden Farbwelt. */}
             <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-800/90 p-1">
             <button
-              onClick={() => setShowAll(false)}
+              onClick={() => { setShowAll(false); setSearchQuery(""); }}
               className={`rounded-[0.9rem] py-2.5 text-sm font-medium transition-colors ${!showAll ? "bg-slate-700 text-slate-100 shadow-[0_6px_16px_rgba(0,0,0,0.18)]" : "text-slate-400"}`}
             >
               {t("favorites")}
@@ -177,6 +187,27 @@ export function SelectionSheet({
             >
               {t("all")}
             </button>
+            </div>
+          </div>
+        )}
+
+        {/* Suchfeld im Alle-Tab */}
+        {(showAll || !hasFavorites) && (
+          <div className="border-b border-slate-800 px-4 py-2.5">
+            <div className="flex items-center gap-2 rounded-xl bg-slate-800/80 px-3 py-2">
+              <Search size={14} className="text-slate-500 shrink-0" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t("searchPlaceholder")}
+                className="flex-1 bg-transparent text-sm text-slate-100 placeholder-slate-500 outline-none"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery("")} className="text-slate-500">
+                  <X size={14} />
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -197,7 +228,7 @@ export function SelectionSheet({
             <LoadingSpinner size="md" />
           </div>
         ) : displayed.length === 0 ? (
-          <p className="p-6 text-center text-sm text-slate-500">{emptyMessage ?? t("emptyMessage")}</p>
+          <p className="p-6 text-center text-sm text-slate-500">{q ? t("noSearchResults") : (emptyMessage ?? t("emptyMessage"))}</p>
         ) : (
           <div className="divide-y divide-slate-800/50">
             {displayed.map((item) => {
@@ -245,10 +276,10 @@ export function SelectionSheet({
 
         {/* Bestaetigen-Button bei Multi-Select */}
         {multiSelect && selectedIds.length > 0 && (
-          <div className="p-4 border-t border-slate-800">
+          <div className="px-4 py-3 border-t border-slate-800">
             <button
               onClick={() => setOpen(false)}
-              className="w-full rounded-2xl border border-blue-400/30 bg-blue-600 py-3.5 text-sm font-medium text-white shadow-[0_10px_24px_rgba(0,120,212,0.28)] transition-colors hover:bg-blue-500"
+              className="w-full rounded-xl border border-blue-500/40 bg-blue-600/20 py-2.5 text-sm font-medium text-blue-300 transition-colors hover:bg-blue-600/30"
             >
               {t("confirmSelection", { count: selectedIds.length })}
             </button>

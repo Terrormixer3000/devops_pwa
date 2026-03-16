@@ -660,7 +660,9 @@
     "emptyMessage": "Keine Einträge gefunden",
     "descriptionMulti": "Wähle einen oder mehrere Einträge aus.",
     "descriptionSingle": "Wähle einen Eintrag aus.",
-    "confirmSelection": "{count, plural, one {1 Eintrag ausgewählt} other {# Einträge ausgewählt}}"
+    "confirmSelection": "{count, plural, one {1 Eintrag ausgewählt} other {# Einträge ausgewählt}}",
+    "searchPlaceholder": "Suchen…",
+    "noSearchResults": "Keine Treffer"
   },
   "selectors": {
     "allRepos": "Alle Repos",
