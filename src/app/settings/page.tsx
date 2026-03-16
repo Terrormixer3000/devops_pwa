@@ -37,6 +37,8 @@ export default function SettingsPage() {
   const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
   const [testError, setTestError] = useState("");
   const [saveError, setSaveError] = useState("");
+  // Sicherung der echten Verbindungsdaten, während Demo-Modus aktiv ist
+  const [demoBackup, setDemoBackup] = useState({ organization: "", project: "" });
   // Verhindert Autosave beim ersten Mount
   const didMount = useRef(false);
 
@@ -100,12 +102,15 @@ export default function SettingsPage() {
   };
 
   const handleToggleDemoMode = () => {
-    const newForm = {
-      ...form,
-      demoMode: !form.demoMode,
-      organization: form.demoMode ? form.organization : form.organization || demoSettings.organization,
-      project: form.demoMode ? form.project : form.project || demoSettings.project,
-    };
+    let newForm: AppSettings;
+    if (!form.demoMode) {
+      // Demo einschalten: echte Werte sichern, Demo-Werte setzen
+      setDemoBackup({ organization: form.organization, project: form.project });
+      newForm = { ...form, demoMode: true, organization: demoSettings.organization, project: demoSettings.project };
+    } else {
+      // Demo ausschalten: echte Werte wiederherstellen
+      newForm = { ...form, demoMode: false, organization: demoBackup.organization, project: demoBackup.project };
+    }
     setForm(newForm);
     setTestResult(null);
     saveNow(newForm);
