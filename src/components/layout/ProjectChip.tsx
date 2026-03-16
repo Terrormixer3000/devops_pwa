@@ -20,8 +20,8 @@ export function ProjectChip() {
   const [open, setOpen] = useState(false);
 
   const availableProjects = settings?.availableProjects ?? [];
-  // Chip nur anzeigen wenn mehrere Projekte gespeichert sind
-  if (!settings || availableProjects.length <= 1) return null;
+  // Im Demo-Modus oder wenn nur ein Projekt vorhanden: Chip ausblenden
+  if (!settings || settings.demoMode || availableProjects.length <= 1) return null;
 
   const activeProject = settings.project;
 
