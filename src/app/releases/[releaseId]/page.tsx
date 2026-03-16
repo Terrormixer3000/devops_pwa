@@ -7,6 +7,7 @@
 
 import { useTranslations } from "next-intl";
 import { use, useState } from "react";
+import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppBar } from "@/components/layout/AppBar";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
@@ -14,12 +15,11 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Badge } from "@/components/ui/Badge";
 import { TabBar } from "@/components/ui/TabBar";
 import { ApprovalModal } from "@/components/ui/ApprovalModal";
-import { BackLink } from "@/components/ui/BackButton";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { useAzureClient } from "@/lib/hooks/useAzureClient";
 import { releasesService } from "@/lib/services/releasesService";
 import { ReleaseEnvironment, ReleaseApproval } from "@/types";
-import { CheckCircle, XCircle, Clock, Loader, ThumbsUp, ScrollText } from "lucide-react";
+import { CheckCircle, ChevronLeft, XCircle, Clock, Loader, ThumbsUp, ScrollText } from "lucide-react";
 import { timeAgo } from "@/lib/utils/timeAgo";
 
 /** Detailseite fuer ein einzelnes Release mit Umgebungs-Karten und Approval-Dialog. */
@@ -73,20 +73,25 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
     enabled: !!vsrmClient && !!settings && !!selectedEnvId && activeTab === "logs",
   });
 
-  if (isLoading) return <div className="min-h-screen"><AppBar title={trd("title")} hideProjectChip /><PageLoader /></div>;
-  if (error || !release) return <div className="min-h-screen"><AppBar title={trd("title")} hideProjectChip /><ErrorMessage message={trd("loadError")} error={error} /></div>;
+  const BackTitle = (
+    <Link
+      href="/releases"
+      className="flex items-center gap-0.5 text-[18px] font-semibold tracking-[-0.01em] text-slate-100 active:opacity-70 transition-opacity"
+    >
+      <ChevronLeft size={26} className="-ml-1.5" />
+      {tReleases("title")}
+    </Link>
+  );
+
+  if (isLoading) return <div className="min-h-screen"><AppBar title={BackTitle} hideProjectChip /><PageLoader /></div>;
+  if (error || !release) return <div className="min-h-screen"><AppBar title={BackTitle} hideProjectChip /><ErrorMessage message={trd("loadError")} error={error} /></div>;
 
   return (
     <div className="min-h-screen">
-      <AppBar title={trd("title")} hideProjectChip />
-
-      {/* Zurueck */}
-      <div className="px-4 pt-4">
-        <BackLink href="/releases" label={tReleases("title")} className="mb-3" />
-      </div>
+      <AppBar title={BackTitle} hideProjectChip />
 
       {/* Release-Kopfbereich */}
-      <div className="px-4 pb-4 border-b border-slate-800">
+      <div className="px-4 pt-4 pb-4 border-b border-slate-800">
         <h1 className="text-base font-semibold text-slate-100 mb-1">{release.name}</h1>
         <p className="text-xs text-slate-500">{release.releaseDefinition.name}</p>
         <p className="text-xs text-slate-600 mt-1">
@@ -159,7 +164,7 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ releas
         approval={approvalModal ? {
           id: approvalModal.id,
           releaseName: release.name,
-          environmentName: approvalModal.releaseEnvironmentReference?.name || trd("environmentFallback"),
+          environmentName: approvalModal.releaseEnvironment?.name || trd("environmentFallback"),
         } : null}
         isPending={approveMutation.isPending}
         error={approveError}
