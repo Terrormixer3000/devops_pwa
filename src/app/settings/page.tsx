@@ -37,8 +37,8 @@ export default function SettingsPage() {
   const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
   const [testError, setTestError] = useState("");
   const [saveError, setSaveError] = useState("");
-  // Sicherung der echten Verbindungsdaten, während Demo-Modus aktiv ist
-  const [demoBackup, setDemoBackup] = useState({ organization: "", project: "" });
+  // Sicherung der echten Verbindungsdaten, während Demo-Modus aktiv ist (localStorage für Session-Persistenz)
+  const DEMO_BACKUP_KEY = "azdevops_demo_backup";
   // Verhindert Autosave beim ersten Mount
   const didMount = useRef(false);
 
@@ -104,12 +104,15 @@ export default function SettingsPage() {
   const handleToggleDemoMode = () => {
     let newForm: AppSettings;
     if (!form.demoMode) {
-      // Demo einschalten: echte Werte sichern, Demo-Werte setzen
-      setDemoBackup({ organization: form.organization, project: form.project });
+      // Demo einschalten: echte Werte in localStorage sichern, Demo-Werte setzen
+      localStorage.setItem(DEMO_BACKUP_KEY, JSON.stringify({ organization: form.organization, project: form.project }));
       newForm = { ...form, demoMode: true, organization: demoSettings.organization, project: demoSettings.project };
     } else {
-      // Demo ausschalten: echte Werte wiederherstellen
-      newForm = { ...form, demoMode: false, organization: demoBackup.organization, project: demoBackup.project };
+      // Demo ausschalten: echte Werte aus localStorage wiederherstellen
+      const raw = localStorage.getItem(DEMO_BACKUP_KEY);
+      const backup = raw ? JSON.parse(raw) as { organization: string; project: string } : { organization: "", project: "" };
+      localStorage.removeItem(DEMO_BACKUP_KEY);
+      newForm = { ...form, demoMode: false, organization: backup.organization, project: backup.project };
     }
     setForm(newForm);
     setTestResult(null);
