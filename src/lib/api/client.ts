@@ -46,6 +46,8 @@ export function createAzureClient(settings: AppSettings): AxiosInstance {
       if (status === 401) throw new ApiError("Nicht autorisiert: PAT-Token ueberpruefen", 401);
       if (status === 403) throw new ApiError("Zugriff verweigert: unzureichende Berechtigungen", 403);
       if (status === 404) throw new ApiError("Nicht gefunden", 404);
+      // Kein status → Netzwerkfehler (z.B. CORS, kein Internet)
+      if (!status) throw new ApiError(`Netzwerkfehler (${error.code ?? "unbekannt"}): ${error.message}`, undefined, error.code);
       const message = (error.response?.data as { message?: string })?.message || error.message;
       throw new ApiError(message, status);
     }
