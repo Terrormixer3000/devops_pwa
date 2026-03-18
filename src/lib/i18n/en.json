@@ -214,7 +214,8 @@
     "actions": {
       "approve": "Approve",
       "reject": "Reject",
-      "complete": "Complete"
+      "complete": "Complete",
+      "publish": "Publish"
     }
   },
   "createPR": {
@@ -242,12 +243,14 @@
   },
   "prComplete": {
     "title": "Complete PR",
+    "publishTitle": "Publish PR",
     "mergeStrategy": "Merge strategy",
     "mergeCommit": "Merge commit",
     "squash": "Squash",
     "rebase": "Rebase",
     "rebaseFF": "Rebase + FF",
     "deleteSourceBranch": "Delete source branch",
+    "publishNow": "Publish",
     "mergeNow": "Merge now",
     "cancel": "Cancel"
   },

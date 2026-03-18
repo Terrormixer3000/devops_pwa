@@ -137,6 +137,24 @@ export const pullRequestsService = {
     return res.data;
   },
 
+  /** Veröffentlicht einen Draft-PR und macht ihn reviewbar. */
+  async publish(
+    client: AxiosInstance,
+    project: string,
+    repoId: string,
+    prId: number
+  ): Promise<PullRequest> {
+    if (isDemoClient(client)) {
+      return demoApi.pullRequests.publish(repoId, prId);
+    }
+
+    const res = await client.patch<PullRequest>(
+      `/${project}/_apis/git/repositories/${repoId}/pullrequests/${prId}?api-version=7.1`,
+      { isDraft: false }
+    );
+    return res.data;
+  },
+
   /** Erstellt einen neuen Pull Request. */
   async create(
     client: AxiosInstance,
@@ -377,4 +395,3 @@ export const pullRequestsService = {
     );
   },
 };
-

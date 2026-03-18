@@ -129,10 +129,10 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
               <div className="w-px bg-slate-700/50 flex-shrink-0" />
               <button
                 onClick={() => h.setCompleteModal(true)}
-                disabled={h.mergeBlockers.length > 0}
+                disabled={!pr.isDraft && h.mergeBlockers.length > 0}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-700/50 hover:text-blue-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <GitMerge size={14} /> {tAct("complete")}
+                <GitMerge size={14} /> {pr.isDraft ? tAct("publish") : tAct("complete")}
               </button>
             </div>
           </>
@@ -264,15 +264,22 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
       />
       <PRCompleteModal
         open={h.completeModal}
+        isDraft={!!pr.isDraft}
         sourceBranch={h.sourceBranch}
         mergeStrategy={h.mergeStrategy}
         deleteSourceBranch={h.deleteSourceBranch}
-        completePending={h.completeMutation.isPending}
+        completePending={pr.isDraft ? h.publishMutation.isPending : h.completeMutation.isPending}
         completeError={h.completeError}
         onChangeMergeStrategy={h.setMergeStrategy}
         onToggleDeleteBranch={() => h.setDeleteSourceBranch((v) => !v)}
         onClose={() => { h.setCompleteModal(false); h.setCompleteError(null); }}
-        onComplete={() => h.completeMutation.mutate()}
+        onComplete={() => {
+          if (pr.isDraft) {
+            h.publishMutation.mutate();
+            return;
+          }
+          h.completeMutation.mutate();
+        }}
       />
       <PRReviewerModal
         open={h.reviewerModalOpen}
