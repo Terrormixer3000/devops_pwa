@@ -153,6 +153,7 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
       {/* Tabs */}
       <TabBar
         variant="segment"
+        className="bg-slate-900/95 border-b border-slate-800 backdrop-blur-md px-3 py-2 [html[data-theme='light']_&]:border-slate-300"
         tabs={[
           { key: "uebersicht", label: tTabs("overview"), icon: <FileText size={17} /> },
           {
