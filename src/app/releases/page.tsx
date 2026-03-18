@@ -20,6 +20,7 @@ import { TabBar } from "@/components/ui/TabBar";
 import { ApprovalModal } from "@/components/ui/ApprovalModal";
 import { PullToRefreshIndicator } from "@/components/ui/PullToRefreshIndicator";
 import { usePullToRefresh } from "@/lib/hooks/usePullToRefresh";
+import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { useAzureClient } from "@/lib/hooks/useAzureClient";
 import { releasesService } from "@/lib/services/releasesService";
@@ -52,6 +53,7 @@ export default function ReleasesPage() {
 
   const { settings } = useSettingsStore();
   const { vsrmClient } = useAzureClient();
+  const { currentUser, isLoading: currentUserLoading } = useCurrentUser();
   const qc = useQueryClient();
 
   // URL-Param bereinigen und Flash-Banner nach Ablauf loeschen
@@ -86,11 +88,11 @@ export default function ReleasesPage() {
 
   // Ausstehende Approvals laden
   const { data: approvals, isLoading: approvalsLoading, refetch: refetchApprovals } = useQuery({
-    queryKey: ["release-approvals", settings?.project, settings?.demoMode],
+    queryKey: ["release-approvals", settings?.project, settings?.demoMode, currentUser?.uniqueName],
     queryFn: () => vsrmClient && settings
-      ? releasesService.getPendingApprovals(vsrmClient, settings.project)
+      ? releasesService.getPendingApprovals(vsrmClient, settings.project, settings.demoMode ? undefined : currentUser?.uniqueName)
       : Promise.resolve([]),
-    enabled: !!vsrmClient && !!settings,
+    enabled: !!vsrmClient && !!settings && (settings.demoMode || !currentUserLoading),
     refetchInterval: 15000,
   });
 
@@ -99,13 +101,33 @@ export default function ReleasesPage() {
       void refetch();
       void refetchApprovals();
     },
-    isRefreshing: releasesLoading || approvalsLoading,
+    isRefreshing: releasesLoading || approvalsLoading || currentUserLoading,
   });
 
   // Releases nach ausgewaehlten Definitionen filtern (leer = alle anzeigen)
   const filteredReleases = selectedDefIds.length > 0
     ? (releases ?? []).filter((r) => selectedDefIds.includes(String(r.releaseDefinition?.id)))
     : (releases ?? []);
+
+  const matchesCurrentApprover = (approval: ReleaseApproval) => {
+    if (settings?.demoMode || !currentUser) return true;
+
+    const approvalId = approval.approver?.id?.toLowerCase();
+    const currentUserId = currentUser.id.toLowerCase();
+    if (approvalId && approvalId === currentUserId) return true;
+
+    const approvalUniqueName = approval.approver?.uniqueName?.toLowerCase();
+    const currentUserUniqueName = currentUser.uniqueName.toLowerCase();
+    return !!approvalUniqueName && approvalUniqueName === currentUserUniqueName;
+  };
+
+  // Approvals ueber die zugehoerigen Releases auf die ausgewaehlten Definitionen filtern.
+  const filteredReleaseIds = new Set(filteredReleases.map((release) => release.id));
+  const filteredApprovals = (approvals ?? []).filter((approval) => {
+    const matchesDefinition = selectedDefIds.length === 0
+      || (!!approval.release?.id && filteredReleaseIds.has(approval.release.id));
+    return matchesDefinition && matchesCurrentApprover(approval);
+  });
 
   // Release starten
   const startMutation = useMutation({
@@ -136,7 +158,7 @@ export default function ReleasesPage() {
     onError: (err: Error) => setApprovalError(err.message),
   });
 
-  const pendingCount = approvals?.length || 0;
+  const pendingCount = filteredApprovals.length;
 
   return (
     <div className="min-h-screen">
@@ -236,11 +258,11 @@ export default function ReleasesPage() {
         {/* Ausstehende Approvals */}
         {activeTab === "approvals" && (
           <div>
-            {approvalsLoading ? <PageLoader /> : !approvals?.length ? (
+            {approvalsLoading || currentUserLoading ? <PageLoader /> : !filteredApprovals.length ? (
               <EmptyState icon={ThumbsUp} title={t("noPendingApprovals")} />
             ) : (
               <div className="divide-y divide-slate-800/50">
-                {approvals.map((approval) => (
+                {filteredApprovals.map((approval) => (
                   <div key={approval.id} className="px-4 py-4">
                     <div className="mb-2">
                       <p className="text-sm font-medium text-slate-100">{approval.release?.name}</p>
