@@ -163,7 +163,13 @@ export default function PRDetailPage({ params }: { params: Promise<{ repoId: str
               : <GitMerge size={17} />,
             label: tTabs("files"),
           },
-          { key: "commits", label: tTabs("commits"), icon: <GitCommit size={17} /> },
+          {
+            key: "commits",
+            icon: h.iterations?.length
+              ? <span className="relative inline-flex"><GitCommit size={17} /><span className="absolute -top-1.5 -right-2.5 min-w-3.5 h-3.5 flex items-center justify-center rounded-full bg-slate-600 text-[9px] font-semibold text-slate-200 px-0.5">{h.iterations.length}</span></span>
+              : <GitCommit size={17} />,
+            label: tTabs("commits"),
+          },
           {
             key: "kommentare",
             icon: h.commentThreads.length

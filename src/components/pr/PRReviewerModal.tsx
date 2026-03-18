@@ -1,9 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Loader } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
-import { Button } from "@/components/ui/Button";
 
 /** Minimal-Typ für ein Team-Mitglied im Reviewer-Picker. */
 type Member = { id: string; displayName: string; uniqueName?: string };
@@ -84,13 +83,14 @@ export function PRReviewerModal({
                   >
                     {pendingIsRequired ? t("required") : t("optional")}
                   </button>
-                  <Button
-                    size="sm"
-                    loading={addPending}
+                  <button
+                    className="flex items-center justify-center gap-1.5 rounded-lg border border-blue-800/50 bg-blue-900/20 px-3 py-1.5 text-xs font-medium text-blue-400 hover:bg-blue-900/35 transition-colors disabled:opacity-40"
+                    disabled={addPending}
                     onClick={() => onAdd(m.id, pendingIsRequired)}
                   >
+                    {addPending && <Loader size={12} className="animate-spin" />}
                     Hinzufügen
-                  </Button>
+                  </button>
                 </div>
               )}
             </div>
