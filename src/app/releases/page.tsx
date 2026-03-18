@@ -18,6 +18,8 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { TabBar } from "@/components/ui/TabBar";
 import { ApprovalModal } from "@/components/ui/ApprovalModal";
+import { PullToRefreshIndicator } from "@/components/ui/PullToRefreshIndicator";
+import { usePullToRefresh } from "@/lib/hooks/usePullToRefresh";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { useAzureClient } from "@/lib/hooks/useAzureClient";
 import { releasesService } from "@/lib/services/releasesService";
@@ -83,13 +85,21 @@ export default function ReleasesPage() {
   });
 
   // Ausstehende Approvals laden
-  const { data: approvals, isLoading: approvalsLoading } = useQuery({
+  const { data: approvals, isLoading: approvalsLoading, refetch: refetchApprovals } = useQuery({
     queryKey: ["release-approvals", settings?.project, settings?.demoMode],
     queryFn: () => vsrmClient && settings
       ? releasesService.getPendingApprovals(vsrmClient, settings.project)
       : Promise.resolve([]),
     enabled: !!vsrmClient && !!settings,
     refetchInterval: 15000,
+  });
+
+  const { pullProgress, isPulling } = usePullToRefresh({
+    onRefresh: () => {
+      void refetch();
+      void refetchApprovals();
+    },
+    isRefreshing: releasesLoading || approvalsLoading,
   });
 
   // Releases nach ausgewaehlten Definitionen filtern (leer = alle anzeigen)
@@ -142,6 +152,9 @@ export default function ReleasesPage() {
         activeKey={activeTab}
         onChange={(key) => setActiveTab(key as Tab)}
       />
+
+      {/* Pull-to-Refresh Indikator */}
+      <PullToRefreshIndicator isPulling={isPulling} pullProgress={pullProgress} isRefreshing={releasesLoading || approvalsLoading} />
 
       {/* Flash-Banner nach Pipeline-Erstellung */}
       {flashMessage && (
