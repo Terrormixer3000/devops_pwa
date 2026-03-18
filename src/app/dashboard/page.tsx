@@ -6,12 +6,14 @@
  */
 
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { AppBar } from "@/components/layout/AppBar";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Badge } from "@/components/ui/Badge";
+import { PullToRefreshIndicator } from "@/components/ui/PullToRefreshIndicator";
+import { usePullToRefresh } from "@/lib/hooks/usePullToRefresh";
 import { BuildStatusDot } from "@/components/ui/BuildStatusIndicator";
 import { useSettingsStore } from "@/lib/stores/settingsStore";
 import { PullRequest } from "@/types";
@@ -38,6 +40,7 @@ export default function DashboardPage() {
   const { repositories } = useRepositoryStore();
   const { client } = useAzureClient();
   const settings = useSettingsStore((s) => s.settings);
+  const qc = useQueryClient();
   const t = useTranslations("dashboard");
   const tc = useTranslations("common");
 
@@ -48,7 +51,7 @@ export default function DashboardPage() {
     : repositories;
 
   // Aktive Pull Requests laden – aggregiert aus allen Ziel-Repositories
-  const { data: prs, isLoading: prsLoading } = useQuery({
+  const { data: prs, isLoading: prsLoading, refetch: refetchPrs } = useQuery({
     queryKey: ["dashboard-prs", selectedRepoIds, settings?.project, settings?.demoMode],
     queryFn: async () => {
       if (!client || !settings || targetRepos.length === 0) return [];
@@ -66,13 +69,22 @@ export default function DashboardPage() {
   });
 
   // Letzte Builds laden (global, kein Repo-Filter noetig)
-  const { data: builds, isLoading: buildsLoading, error: buildsError } = useQuery({
+  const { data: builds, isLoading: buildsLoading, error: buildsError, refetch: refetchBuilds } = useQuery({
     queryKey: ["dashboard-builds", settings?.project, settings?.demoMode],
     queryFn: () =>
       client && settings
         ? pipelinesService.listBuilds(client, settings.project, undefined, 5)
         : Promise.resolve([]),
     enabled: !!client && !!settings,
+  });
+
+  const isLoading = prsLoading || buildsLoading;
+  const { pullProgress, isPulling } = usePullToRefresh({
+    onRefresh: () => {
+      void qc.invalidateQueries({ queryKey: ["dashboard-prs"] });
+      void qc.invalidateQueries({ queryKey: ["dashboard-builds"] });
+    },
+    isRefreshing: isLoading,
   });
 
   // Wenn noch keine Einstellungen vorhanden: Hinweis anzeigen
@@ -104,6 +116,9 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen">
       <AppBar title={t("title")} rightSlot={<DashboardSelector />} />
+
+      {/* Pull-to-Refresh Indikator */}
+      <PullToRefreshIndicator isPulling={isPulling} pullProgress={pullProgress} isRefreshing={isLoading} />
 
       <div className="px-4 py-4 space-y-6">
         {/* Hinweis wenn keine Repositories konfiguriert */}

@@ -105,7 +105,7 @@ export default function PullRequestsPage() {
       />
 
       {/* Pull-to-Refresh Indikator */}
-      <PullToRefreshIndicator isPulling={isPulling} pullProgress={pullProgress} />
+      <PullToRefreshIndicator isPulling={isPulling} pullProgress={pullProgress} isRefreshing={isLoading} />
 
       {/* Inhalt */}
       <div className="pt-[3.85rem]">

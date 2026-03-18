@@ -15,7 +15,9 @@ import { BuildStatusIcon } from "@/components/ui/BuildStatusIndicator";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { PageLoader } from "@/components/ui/LoadingSpinner";
+import { PullToRefreshIndicator } from "@/components/ui/PullToRefreshIndicator";
 import { TabBar } from "@/components/ui/TabBar";
+import { usePullToRefresh } from "@/lib/hooks/usePullToRefresh";
 import { useAzureClient } from "@/lib/hooks/useAzureClient";
 import { pipelinesService } from "@/lib/services/pipelinesService";
 import { repositoriesService } from "@/lib/services/repositoriesService";
@@ -43,7 +45,7 @@ export default function PipelinesPage() {
   const selectedDefNumbers = selectedDefIds.map(Number).filter(Boolean);
   const activeView = flashMessage || createModal ? "pipelines" : view;
 
-  const { data: pipelines, isLoading: pipelinesLoading } = useQuery({
+  const { data: pipelines, isLoading: pipelinesLoading, refetch: refetchPipelines } = useQuery({
     queryKey: ["pipelines", settings?.project, settings?.demoMode],
     queryFn: () =>
       client && settings ? pipelinesService.listPipelines(client, settings.project) : Promise.resolve([]),
@@ -79,6 +81,14 @@ export default function PipelinesPage() {
       client && settings ? repositoriesService.listRepositories(client, settings.project) : Promise.resolve([]),
     enabled: !!client && !!settings && createModal,
     staleTime: 5 * 60 * 1000,
+  });
+
+  const { pullProgress, isPulling } = usePullToRefresh({
+    onRefresh: () => {
+      void refetchPipelines();
+      void refetch();
+    },
+    isRefreshing: buildsLoading || pipelinesLoading,
   });
 
   const startMutation = useMutation({
@@ -134,6 +144,9 @@ export default function PipelinesPage() {
         activeKey={activeView}
         onChange={(key) => setView(key as "pipelines" | "builds")}
       />
+
+      {/* Pull-to-Refresh Indikator */}
+      <PullToRefreshIndicator isPulling={isPulling} pullProgress={pullProgress} isRefreshing={buildsLoading || pipelinesLoading} />
 
       <div className="pt-[3.85rem]">
         {flashMessage && (
