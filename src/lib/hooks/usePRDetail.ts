@@ -319,6 +319,19 @@ export function usePRDetail(repoId: string, prIdNum: number) {
     onError: (err: Error) => setCompleteError(err.message || t("blockerMergeFailed")),
   });
 
+  const publishMutation = useMutation({
+    mutationFn: () => {
+      if (!client || !settings) throw new Error("Kein Client");
+      return pullRequestsService.publish(client, settings.project, repoId, prIdNum);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pr", repoId, prIdNum] });
+      setCompleteModal(false);
+      setCompleteError(null);
+    },
+    onError: (err: Error) => setCompleteError(err.message || t("blockerMergeFailed")),
+  });
+
   // PR aufgeben (abandon)
   const abandonMutation = useMutation({
     mutationFn: () => {
@@ -406,6 +419,7 @@ export function usePRDetail(repoId: string, prIdNum: number) {
     addCommentMutation, updateThreadStatusMutation, editCommentMutation,
     replyToThreadMutation, addReviewerMutation, removeReviewerMutation,
     deleteCommentMutation, voteMutation, autoCompleteMutation, completeMutation,
+    publishMutation,
     abandonMutation,
   };
 }

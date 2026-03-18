@@ -1843,6 +1843,15 @@ export const demoApi = {
       });
     },
 
+    publish(repoId: string, prId: number): PullRequest {
+      return withDemoState((state) => {
+        const pr = findPullRequest(state, repoId, prId);
+        if (!pr) throw new Error("Pull Request nicht gefunden");
+        pr.isDraft = false;
+        return clone(pr);
+      });
+    },
+
     create(
       repoId: string,
       payload: {
