@@ -1,9 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { ThumbsUp, ThumbsDown, Zap } from "lucide-react";
+import { ThumbsUp, Zap, Loader } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
-import { Button } from "@/components/ui/Button";
 
 /** Modal zum Abgeben eines Reviewer-Votes (Approve / Ablehnen / Zurücksetzen). */
 export function PRVoteModal({
@@ -25,15 +24,30 @@ export function PRVoteModal({
   return (
     <Modal open={open} onClose={onClose} title={t("title")}>
       <div className="space-y-3">
-        <Button fullWidth onClick={() => onVote(10)} loading={votePending}>
-          <ThumbsUp size={16} /> {t("approve")}
-        </Button>
-        <Button fullWidth variant="secondary" onClick={() => onVote(5)} loading={votePending}>
+        <button
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-green-800/50 bg-green-900/20 py-2.5 text-sm font-medium text-green-400 hover:bg-green-900/35 transition-colors disabled:opacity-40"
+          disabled={votePending}
+          onClick={() => onVote(10)}
+        >
+          {votePending ? <Loader size={14} className="animate-spin" /> : <ThumbsUp size={14} />}
+          {t("approve")}
+        </button>
+        <button
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-800/50 bg-amber-900/20 py-2.5 text-sm font-medium text-amber-400 hover:bg-amber-900/35 transition-colors disabled:opacity-40"
+          disabled={votePending}
+          onClick={() => onVote(5)}
+        >
+          {votePending ? <Loader size={14} className="animate-spin" /> : null}
           {t("approveWithSuggestions")}
-        </Button>
-        <Button fullWidth variant="ghost" onClick={() => onVote(-5)} loading={votePending}>
+        </button>
+        <button
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700/50 bg-slate-800/40 py-2.5 text-sm font-medium text-slate-400 hover:bg-slate-800/70 transition-colors disabled:opacity-40"
+          disabled={votePending}
+          onClick={() => onVote(-5)}
+        >
+          {votePending ? <Loader size={14} className="animate-spin" /> : null}
           {t("waitForAuthor")}
-        </Button>
+        </button>
 
         <div className="flex items-center justify-between py-2.5 px-3 bg-slate-800/50 rounded-xl border border-slate-700/60">
           <div className="flex items-center gap-2">
@@ -57,9 +71,6 @@ export function PRVoteModal({
           </button>
         </div>
 
-        <Button fullWidth variant="danger" onClick={() => onVote(-10)} loading={votePending}>
-          <ThumbsDown size={16} /> {t("reject")}
-        </Button>
       </div>
     </Modal>
   );

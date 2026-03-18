@@ -1,9 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { GitMerge, AlertCircle } from "lucide-react";
+import { GitMerge, AlertCircle, Loader } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
-import { Button } from "@/components/ui/Button";
 
 /** Merge-Strategie-Optionen beim Abschließen eines Pull Requests. */
 type MergeStrategy = "noFastForward" | "squash" | "rebase" | "rebaseMerge";
@@ -93,13 +92,20 @@ export function PRCompleteModal({
           </div>
         )}
 
-        <Button fullWidth onClick={onComplete} loading={completePending}>
-          <GitMerge size={16} />
+        <button
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-blue-800/50 bg-blue-900/20 py-2.5 text-sm font-medium text-blue-400 hover:bg-blue-900/35 transition-colors disabled:opacity-40"
+          disabled={completePending}
+          onClick={onComplete}
+        >
+          {completePending ? <Loader size={14} className="animate-spin" /> : <GitMerge size={14} />}
           {isDraft ? t("publishNow") : t("mergeNow")}
-        </Button>
-        <Button fullWidth variant="ghost" onClick={onClose}>
+        </button>
+        <button
+          className="w-full py-2.5 text-sm text-slate-500 hover:text-slate-300 transition-colors"
+          onClick={onClose}
+        >
           {t("cancel")}
-        </Button>
+        </button>
       </div>
     </Modal>
   );
